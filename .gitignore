@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 /.phpunit.cache
 /node_modules
 /public/build
@@ -20,6 +21,8 @@ yarn-error.log
 /.idea
 /.vscode
 =======
+=======
+>>>>>>> 9d232b109aecf155e6579d9acb42555e098c94c7
 /vendor/
 node_modules/
 npm-debug.log
@@ -43,4 +46,7 @@ Homestead.yaml
 Homestead.json
 /.vagrant
 .phpunit.result.cache
+<<<<<<< HEAD
 >>>>>>> 27ed7bc91210a569a176ae390612fd6f52ba3a28
+=======
+>>>>>>> 9d232b109aecf155e6579d9acb42555e098c94c7
