@@ -9,7 +9,7 @@ class Classification extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['classification', 'type_id'];
+    protected $fillable = ['classification', 'type_id', 'sort'];
 
     public function type()
     {
@@ -18,6 +18,6 @@ class Classification extends Model
 
     public function articles()
     {
-        return $this->hasMany(Article::class);
+        return $this->hasMany(Article::class)->orderBy('sort');
     }
 }

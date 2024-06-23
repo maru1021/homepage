@@ -9,10 +9,10 @@ class Type extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['type'];
+    protected $fillable = ['type', 'sort'];
 
     public function classifications()
     {
-        return $this->hasMany(Classification::class);
+        return $this->hasMany(Classification::class)->orderBy('sort');
     }
 }

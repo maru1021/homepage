@@ -73,6 +73,7 @@
     @auth
         @if (Auth::user()->authority === 'maru')
             <a href="{{ route('article.registar.form') }}"><i class="fas fa-edit"></i>記事登録</a>
+            <a href="{{ route('article.list') }}"><i class="fas fa-list"></i>記事一覧</a>
         @endif
     @endauth
 

@@ -23,7 +23,12 @@ class SidebarServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('*', function ($view) {
-            $types = Type::with('classifications.articles')->get();
+            $types = Type::with(['classifications' => function ($query) {
+                $query->orderBy('sort');
+            }, 'classifications.articles' => function ($query) {
+                $query->orderBy('sort');
+            }])->orderBy('sort')->get();
+
             $view->with('types', $types);
         });
     }

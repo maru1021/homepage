@@ -6,15 +6,24 @@
         background-color: #2d2d2d;
         color: #f8f8f2;
         font-family: 'Courier New', Courier, monospace;
-        white-space: pre-wrap; /* 改行を保持 */
+        white-space: pre-wrap;
         border-radius: 5px;
         padding: 1em;
-        line-height: 0.8;
+        line-height: 1.0;
+        margin-top: 0;
+    }
+    .nav-tabs {
+        margin-bottom: 0;
     }
     .container h1 {
         font-weight: bold !important;
         font-size: 2rem !important;
-        color: #333 !important; /* 必要に応じて追加 */
+        color: #333 !important;
+    }
+    .explanation h2 {
+        font-weight: bold !important;
+        font-size: 1.2rem !important;
+        color: #333 !important;
     }
     .explanation a {
         color: #007bff;
@@ -31,11 +40,11 @@
     .custom-context-menu {
         display: none;
         position: absolute;
-        background-color: #f8f9fa; /* 明るい背景色 */
-        border-radius: 8px; /* 角丸 */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 柔らかい影 */
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         z-index: 1000;
-        width: 200px; /* メニューを広く */
+        width: 200px;
     }
     .custom-context-menu div {
         padding: 12px 20px; /* 広めのパディング */
@@ -50,11 +59,15 @@
         background-color: #e2e6ea; /* 優しいホバー色 */
     }
     .update-button {
-        position: fixed;
+        position: relative;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
         display: none;
+    }
+    .nav-tabs .nav-link.active {
+        background-color: #f8f9fa;
+        border-color: #dee2e6 #dee2e6 #fff;
     }
 </style>
 @endsection
@@ -65,18 +78,28 @@
         <h1 id="article-title">{{ $article->title }}</h1>
     </div>
 
-    @if ($article->code)
-        <div class="my-4">
-            <h5>コード:</h5>
+    <ul class="nav nav-tabs" id="codeTab" role="tablist">
+        <li class="nav-item" role="presentation" style="{{ $article->code ? '' : 'display: none;' }}">
+            <a class="nav-link active" id="code-tab" data-bs-toggle="tab" href="#code" role="tab" aria-controls="code" aria-selected="true">{{ $article->language ?? 'Language 1' }}</a>
+        </li>
+        <li class="nav-item" role="presentation" style="{{ $article->code2 ? '' : 'display: none;' }}">
+            <a class="nav-link" id="code2-tab" data-bs-toggle="tab" href="#code2" role="tab" aria-controls="code2" aria-selected="false">{{ $article->language2 ?? 'Language 2' }}</a>
+        </li>
+        <li class="nav-item" role="presentation" style="{{ $article->code3 ? '' : 'display: none;' }}">
+            <a class="nav-link" id="code3-tab" data-bs-toggle="tab" href="#code3" role="tab" aria-controls="code3" aria-selected="false">{{ $article->language3 ?? 'Language 3' }}</a>
+        </li>
+    </ul>
+    <div class="tab-content my-4" id="codeTabContent">
+        <div class="tab-pane fade show active" id="code" role="tabpanel" aria-labelledby="code-tab" style="{{ $article->code ? '' : 'display: none;' }}">
             <pre class="code-block p-3" id="article-code">{{ $article->code }}</pre>
         </div>
-    @else
-        @auth
-        @if (Auth::user()->authority === 'maru')
-        <textarea id="edit-code" class="form-control" rows="10" style="display: none;"></textarea>
-        @endif
-        @endauth
-    @endif
+        <div class="tab-pane fade" id="code2" role="tabpanel" aria-labelledby="code2-tab" style="{{ $article->code2 ? '' : 'display: none;' }}">
+            <pre class="code-block p-3" id="article-code2">{{ $article->code2 }}</pre>
+        </div>
+        <div class="tab-pane fade" id="code3" role="tabpanel" aria-labelledby="code3-tab" style="{{ $article->code3 ? '' : 'display: none;' }}">
+            <pre class="code-block p-3" id="article-code3">{{ $article->code3 }}</pre>
+        </div>
+    </div>
 
     <div class="my-4">
         <div class="explanation" id="article-explanation">{!! nl2br($article->explanation) !!}</div>
@@ -121,16 +144,32 @@
 
             const titleElement = document.getElementById('article-title');
             const codeElement = document.getElementById('article-code');
+            const codeElement2 = document.getElementById('article-code2');
+            const codeElement3 = document.getElementById('article-code3');
             const explanationElement = document.getElementById('article-explanation');
+            const codeTabList = document.getElementById('codeTab');
+            const navItems = document.getElementsByClassName('nav-item');
 
             // タイトルを編集可能にする
             titleElement.innerHTML = `<input type="text" id="edit-title" value="${titleElement.textContent.trim()}" class="form-control"/>`;
 
+            // コードを編集可能にする
             if (codeElement) {
+                document.getElementById('code').style.display = 'block';
                 const codeText = codeElement.textContent.trim();
                 codeElement.innerHTML = `<textarea id="edit-code" class="form-control" rows="10">${codeText}</textarea>`;
-            } else {
-                document.getElementById('edit-code').style.display = 'block';
+            }
+
+            if (codeElement2) {
+                document.getElementById('code2').style.display = 'block';
+                const codeText2 = codeElement2.textContent.trim();
+                codeElement2.innerHTML = `<textarea id="edit-code2" class="form-control" rows="10">${codeText2}</textarea>`;
+            }
+
+            if (codeElement3) {
+                document.getElementById('code3').style.display = 'block';
+                const codeText3 = codeElement3.textContent.trim();
+                codeElement3.innerHTML = `<textarea id="edit-code3" class="form-control" rows="10">${codeText3}</textarea>`;
             }
 
             // 説明を編集可能にする（HTMLタグをエスケープして表示）
@@ -141,8 +180,17 @@
                 .replace(/&amp;/g, '&')
                 .replace(/&quot;/g, '"')
                 .replace(/&#039;/g, "'");
-            
+
             explanationElement.innerHTML = `<textarea id="edit-explanation" class="form-control" rows="10">${explanationHTML}</textarea>`;
+
+            // 言語タブを編集可能にする
+            Array.from(navItems).forEach(item => {
+                item.style.display = 'block';
+            });
+            codeTabList.querySelectorAll('.nav-link').forEach((tab, index) => {
+                const lang = tab.textContent.trim();
+                tab.innerHTML = `<input type="text" value="${lang}" class="form-control"/>`;
+            });
 
             // 更新ボタンを表示
             updateButton.style.display = 'block';
@@ -151,9 +199,14 @@
         updateButton.addEventListener('click', function() {
             const id = {{ $article->id }};
             const title = document.getElementById('edit-title').value;
-            const code = document.getElementById('edit-code').value;
+            const code = document.getElementById('edit-code') ? document.getElementById('edit-code').value : '';
+            const code2 = document.getElementById('edit-code2') ? document.getElementById('edit-code2').value : '';
+            const code3 = document.getElementById('edit-code3') ? document.getElementById('edit-code3').value : '';
+            const language = document.querySelector('#code-tab input').value;
+            const language2 = document.querySelector('#code2-tab input') ? document.querySelector('#code2-tab input').value : '';
+            const language3 = document.querySelector('#code3-tab input') ? document.querySelector('#code3-tab input').value : '';
             const explanation = document.getElementById('edit-explanation').value.replace(/\n/g, '<br>');
-
+            console.log('test')
             fetch(`/article/update/${id}`, {
                 method: 'POST',
                 headers: {
@@ -163,15 +216,18 @@
                 body: JSON.stringify({
                     title: title,
                     code: code,
+                    code2: code2,
+                    code3: code3,
+                    language: language,
+                    language2: language2,
+                    language3: language3,
                     explanation: explanation
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // 更新ボタンを非表示にする
                     updateButton.style.display = 'none';
-                    // 更新後の処理（例：ページのリロードなど）
                     location.reload();
                 } else {
                     alert('更新に失敗しました');
@@ -186,8 +242,27 @@
         document.getElementById('menu-delete').addEventListener('click', function() {
             contextMenu.style.display = 'none';
             if (confirm('本当に削除しますか？')) {
-                // 削除処理を実行する関数を呼び出す
-                // deleteArticle();
+                const id = {{ $article->id }};
+                fetch(`/article/update/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 成功した場合、指定のページにリダイレクト
+                        window.location.href = data.redirect;
+                    } else {
+                        alert('削除に失敗しました');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('削除に失敗しました');
+                });
             }
         });
     });

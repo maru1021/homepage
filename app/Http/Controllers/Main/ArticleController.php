@@ -34,10 +34,23 @@ class ArticleController extends Controller
         $article = Article::findOrFail($id);
         $article->title = $request->input('title');
         $article->code = $request->input('code');
+        $article->code2 = $request->input('code2');
+        $article->code3 = $request->input('code3');
+        $article->language = $request->input('language');
+        $article->language2 = $request->input('language2');
+        $article->language3 = $request->input('language3');
         $article->explanation = $request->input('explanation');
         $article->updated_at = now();
         $article->save();
 
         return response()->json(['success' => true]);
+    }
+
+    public function delete($id)
+    {
+        $article = Article::findOrFail($id);
+        $article->delete();
+
+        return response()->json(['success' => true, 'redirect' => route('main.edit')]);
     }
 }
