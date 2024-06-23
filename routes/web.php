@@ -21,5 +21,6 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/article/{type}/{classification}/{url}', [ArticleController::class, 'get'])->name('article.get');
+Route::post('/article/update/{id}', [ArticleController::class, 'update'])->name('article.update');
 
 require __DIR__.'/auth.php';

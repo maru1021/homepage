@@ -26,28 +26,25 @@
             top: 0;
             left: 0;
             width: 250px;
-            background-color: rgba(173, 216, 230, 0.8); /* 半透明の水色 */
-            padding-top: 56px; /* Navbar height */
-            z-index: 1100; /* ナビゲーションバーより前面に出す */
+            background-color: rgba(173, 216, 230, 0.8);
+            padding-top: 56px;
+            z-index: 1100;
         }
         .sidebar a {
             padding: 10px 15px;
-            text-decoration: none;
             font-size: 18px;
             color: #333;
             display: block;
         }
         .sidebar a:hover {
             color: #000;
-            background-color: rgba(240, 248, 255, 0.8); /* 薄い水色 */
+            background-color: rgba(240, 248, 255, 0.8);
         }
         .sidebar .user-info {
             font-size: 16px;
             font-weight: bold;
             color: #333;
             padding: 15px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            background-color: rgba(173, 216, 230, 0.8); /* 半透明の水色 */
         }
         .content {
             margin-left: 250px;
@@ -61,7 +58,7 @@
 
 <div class="sidebar">
     <div class="dropdown-content">
-        <div class="user-info">ユーザー:{{ Auth::check() ? Auth::user()->name : 'ゲスト' }}さんこんにちは</div>
+        <div class="user-info">{{ Auth::check() ? Auth::user()->name : 'ゲスト' }}さんこんにちは</div>
         @auth
         <a href="{{ route('profile.edit') }}">ユーザー情報</a>
         <form method="POST" action="{{ route('logout') }}">
@@ -86,7 +83,7 @@
         <div class="collapse" id="typeMenu-{{ $type->id }}">
             @foreach($type->classifications as $classification)
                 @php
-                    $icon = 'fas fa-folder'; // デフォルトアイコン
+                    $icon = 'fas fa-folder';
 
                     switch($classification->classification) {
                         case 'HTML':

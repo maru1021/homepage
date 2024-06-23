@@ -28,4 +28,16 @@ class ArticleController extends Controller
 
         return view('main.article', compact('article'));
     }
+
+    public function update(Request $request, $id)
+    {
+        $article = Article::findOrFail($id);
+        $article->title = $request->input('title');
+        $article->code = $request->input('code');
+        $article->explanation = $request->input('explanation');
+        $article->updated_at = now();
+        $article->save();
+
+        return response()->json(['success' => true]);
+    }
 }
