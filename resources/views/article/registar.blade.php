@@ -47,7 +47,10 @@
             <!-- タブの追加 -->
             <ul class="nav nav-tabs" id="codeTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link active" id="code-tab" data-bs-toggle="tab" href="#code" role="tab" aria-controls="code" aria-selected="true">Language 1</a>
+                    <a class="nav-link active" id="disp-tab" data-bs-toggle="tab" href="#disp" role="tab" aria-controls="disp" aria-selected="true">表示</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="code-tab" data-bs-toggle="tab" href="#code" role="tab" aria-controls="code" aria-selected="false">Language 1</a>
                 </li>
                 <li class="nav-item" role="presentation">
                     <a class="nav-link" id="code2-tab" data-bs-toggle="tab" href="#code2" role="tab" aria-controls="code2" aria-selected="false">Language 2</a>
@@ -58,7 +61,14 @@
             </ul>
 
             <div class="tab-content my-4" id="codeTabContent">
-                <div class="tab-pane fade show active" id="code" role="tabpanel" aria-labelledby="code-tab">
+                <div class="tab-pane fade show active" id="disp" role="tabpanel" aria-labelledby="disp-tab">
+                    <div class="mb-3">
+                        <x-input-label for="disp">表示</x-input-label>
+                        <textarea class="form-control" id="disp" name="disp" rows="10">{{ old('disp') }}</textarea>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="code" role="tabpanel" aria-labelledby="code-tab">
                     <div class="mb-3">
                         <x-input-label for="language">言語 1</x-input-label>
                         <x-text-input id="language" name="language" type="text" class="mt-1 block w-full" value="{{ old('language') }}"/>

@@ -63,6 +63,7 @@ class ArticleRegistarController extends Controller
     $article->type_id = $request->input('type');
     $article->url = $request->input('url');
     $article->title = $request->input('title');
+    $article->disp = $request->input('disp');
     $article->code = $request->input('code');
     $article->code2 = $request->input('code2');
     $article->code3 = $request->input('code3');

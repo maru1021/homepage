@@ -15,7 +15,13 @@ class Article extends Model
         'url',
         'title',
         'code',
+        'code2',
+        'code3',
+        'language',
+        'language2',
+        'language3',
         'explanation',
+        'disp',
         'sort'
     ];
 

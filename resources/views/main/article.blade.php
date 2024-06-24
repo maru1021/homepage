@@ -79,26 +79,48 @@
     </div>
 
     <ul class="nav nav-tabs" id="codeTab" role="tablist">
-        <li class="nav-item" role="presentation" style="{{ $article->code ? '' : 'display: none;' }}">
-            <a class="nav-link active" id="code-tab" data-bs-toggle="tab" href="#code" role="tab" aria-controls="code" aria-selected="true">{{ $article->language ?? 'Language 1' }}</a>
+        @if ($article->disp)
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="disp-tab" data-bs-toggle="tab" href="#disp" role="tab" aria-controls="disp" aria-selected="true">表示</a>
         </li>
-        <li class="nav-item" role="presentation" style="{{ $article->code2 ? '' : 'display: none;' }}">
+        @endif
+        @if ($article->code)
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {{ $article->disp ? '' : 'active' }}" id="code-tab" data-bs-toggle="tab" href="#code" role="tab" aria-controls="code" aria-selected="{{ $article->disp ? 'false' : 'true' }}">{{ $article->language ?? 'Language 1' }}</a>
+        </li>
+        @endif
+        @if ($article->code2)
+        <li class="nav-item" role="presentation">
             <a class="nav-link" id="code2-tab" data-bs-toggle="tab" href="#code2" role="tab" aria-controls="code2" aria-selected="false">{{ $article->language2 ?? 'Language 2' }}</a>
         </li>
-        <li class="nav-item" role="presentation" style="{{ $article->code3 ? '' : 'display: none;' }}">
+        @endif
+        @if ($article->code3)
+        <li class="nav-item" role="presentation">
             <a class="nav-link" id="code3-tab" data-bs-toggle="tab" href="#code3" role="tab" aria-controls="code3" aria-selected="false">{{ $article->language3 ?? 'Language 3' }}</a>
         </li>
+        @endif
     </ul>
     <div class="tab-content my-4" id="codeTabContent">
-        <div class="tab-pane fade show active" id="code" role="tabpanel" aria-labelledby="code-tab" style="{{ $article->code ? '' : 'display: none;' }}">
+        @if ($article->disp)
+        <div class="tab-pane fade show active" id="disp" role="tabpanel" aria-labelledby="disp-tab">
+            <div class="code-block p-3" id="article-disp">{!! $article->disp !!}</div>
+        </div>
+        @endif
+        @if ($article->code)
+        <div class="tab-pane fade {{ $article->disp ? '' : 'show active' }}" id="code" role="tabpanel" aria-labelledby="code-tab">
             <pre class="code-block p-3" id="article-code">{{ $article->code }}</pre>
         </div>
-        <div class="tab-pane fade" id="code2" role="tabpanel" aria-labelledby="code2-tab" style="{{ $article->code2 ? '' : 'display: none;' }}">
+        @endif
+        @if ($article->code2)
+        <div class="tab-pane fade" id="code2" role="tabpanel" aria-labelledby="code2-tab">
             <pre class="code-block p-3" id="article-code2">{{ $article->code2 }}</pre>
         </div>
-        <div class="tab-pane fade" id="code3" role="tabpanel" aria-labelledby="code3-tab" style="{{ $article->code3 ? '' : 'display: none;' }}">
+        @endif
+        @if ($article->code3)
+        <div class="tab-pane fade" id="code3" role="tabpanel" aria-labelledby="code3-tab">
             <pre class="code-block p-3" id="article-code3">{{ $article->code3 }}</pre>
         </div>
+        @endif
     </div>
 
     <div class="my-4">
@@ -131,6 +153,7 @@
             contextMenu.style.display = 'block';
             contextMenu.style.top = `${e.clientY}px`;
             contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.zIndex = '1000'; // z-indexを設定
         });
 
         document.addEventListener('click', function(e) {
@@ -143,6 +166,7 @@
             contextMenu.style.display = 'none';
 
             const titleElement = document.getElementById('article-title');
+            const dispElement = document.getElementById('article-disp');
             const codeElement = document.getElementById('article-code');
             const codeElement2 = document.getElementById('article-code2');
             const codeElement3 = document.getElementById('article-code3');
@@ -152,6 +176,13 @@
 
             // タイトルを編集可能にする
             titleElement.innerHTML = `<input type="text" id="edit-title" value="${titleElement.textContent.trim()}" class="form-control"/>`;
+
+            // 表示内容を編集可能にする
+            if (dispElement) {
+                document.getElementById('disp').style.display = 'block';
+                const dispText = dispElement.innerHTML.trim();
+                dispElement.innerHTML = `<textarea id="edit-disp" class="form-control" rows="10">${dispText}</textarea>`;
+            }
 
             // コードを編集可能にする
             if (codeElement) {
@@ -199,6 +230,7 @@
         updateButton.addEventListener('click', function() {
             const id = {{ $article->id }};
             const title = document.getElementById('edit-title').value;
+            const disp = document.getElementById('edit-disp') ? document.getElementById('edit-disp').value : '';
             const code = document.getElementById('edit-code') ? document.getElementById('edit-code').value : '';
             const code2 = document.getElementById('edit-code2') ? document.getElementById('edit-code2').value : '';
             const code3 = document.getElementById('edit-code3') ? document.getElementById('edit-code3').value : '';
@@ -206,7 +238,7 @@
             const language2 = document.querySelector('#code2-tab input') ? document.querySelector('#code2-tab input').value : '';
             const language3 = document.querySelector('#code3-tab input') ? document.querySelector('#code3-tab input').value : '';
             const explanation = document.getElementById('edit-explanation').value.replace(/\n/g, '<br>');
-            console.log('test')
+
             fetch(`/article/update/${id}`, {
                 method: 'POST',
                 headers: {
@@ -215,6 +247,7 @@
                 },
                 body: JSON.stringify({
                     title: title,
+                    disp: disp,
                     code: code,
                     code2: code2,
                     code3: code3,
