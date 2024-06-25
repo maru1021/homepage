@@ -33,6 +33,7 @@ class ArticleController extends Controller
     {
         $article = Article::findOrFail($id);
         $article->title = $request->input('title');
+        $article->disp = $request->input('disp');
         $article->code = $request->input('code');
         $article->code2 = $request->input('code2');
         $article->code3 = $request->input('code3');

@@ -29,6 +29,7 @@
             background-color: rgba(173, 216, 230, 0.8);
             padding-top: 56px;
             z-index: 1100;
+            overflow-y: auto; /* 追加: サイドバー内で縦方向のスクロールを可能にする */
         }
         .sidebar a {
             padding: 10px 15px;
