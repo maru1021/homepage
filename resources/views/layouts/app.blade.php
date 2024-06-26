@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'マルオモスキートのお勉強部屋' }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://use.fontawesome.com/releases/v6.3.0/css/all.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <link href="https://use.fontawesome.com/releases/v6.3.0/css/all.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     <style>
         .navbar {
             background-color: rgba(240, 248, 255, 0.8);
@@ -35,7 +37,6 @@
             font-size: 18px;
             color: #333;
             display: block;
-            cursor: pointer;
         }
         .sidebar a:hover {
             color: #000;
@@ -60,12 +61,6 @@
             z-index: 1200;
             cursor: pointer;
         }
-        .collapse {
-            display: none;
-        }
-        .collapse.show {
-            display: block;
-        }
         @media (max-width: 768px) {
             .navbar {
                 width: 100%;
@@ -88,6 +83,8 @@
             }
         }
     </style>
+    @yield('head')
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
 
@@ -117,7 +114,7 @@
     @endauth
 
     @foreach($types as $type)
-        <a href="#typeMenu-{{ $type->id }}" class="toggle-collapse">
+        <a href="#type-{{ $type->id }}" data-bs-toggle="collapse" data-bs-target="#typeMenu-{{ $type->id }}">
             <i class="fas fa-folder"></i>{{ $type->type }}
         </a>
         <div class="collapse" id="typeMenu-{{ $type->id }}">
@@ -149,7 +146,7 @@
                             break;
                     }
                 @endphp
-                <a href="#classificationMenu-{{ $classification->id }}" class="toggle-collapse ps-4">
+                <a href="#classification-{{ $classification->id }}" class="ps-4" data-bs-toggle="collapse" data-bs-target="#classificationMenu-{{ $classification->id }}">
                     <i class="{{ $icon }}"></i>{{ $classification->classification }}
                 </a>
                 <div class="collapse" id="classificationMenu-{{ $classification->id }}">
@@ -168,25 +165,39 @@
     @yield('content')
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+
+@yield('Javascript')
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const sidebar = document.getElementById('sidebar');
-        const hamburgerMenu = document.getElementById('hamburgerMenu');
-        const sidebarLinks = document.querySelectorAll('.toggle-collapse');
+    const sidebar = document.getElementById('sidebar');
+    const hamburgerMenu = document.getElementById('hamburgerMenu');
+    const sidebarLinks = document.querySelectorAll('.sidebar a[data-bs-toggle="collapse"]');
 
-        hamburgerMenu.addEventListener('click', function() {
-            sidebar.classList.toggle('open');
-        });
+    hamburgerMenu.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+        console.log('Hamburger menu clicked');
+    });
 
-        sidebarLinks.forEach(link => {
+    sidebarLinks.forEach(link => {
             link.addEventListener('click', function(event) {
+                console.log('test');
                 event.preventDefault();
                 const targetId = link.getAttribute('href');
+                console.log('targetId:', targetId);
                 const target = document.querySelector(targetId);
-                target.classList.toggle('show');
+                if (target) {
+                    console.log('target found:', target);
+                    target.classList.toggle('show');
+                    console.log('toggle show class:', target.classList);
+                } else {
+                    console.log('target not found for:', targetId);
+                }
             });
         });
-    });
+});
 </script>
 
 </body>

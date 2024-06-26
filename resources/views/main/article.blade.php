@@ -86,17 +86,17 @@
         @endif
         @if ($article->code)
         <li class="nav-item" role="presentation">
-            <a class="nav-link {{ $article->disp ? '' : 'active' }}" id="code-tab" data-bs-toggle="tab" href="#code" role="tab" aria-controls="code" aria-selected="{{ $article->disp ? 'false' : 'true' }}">{{ $article->language ?? 'Language 1' }}</a>
+            <a class="nav-link {{ $article->disp ? '' : 'active' }}" id="code-tab" data-bs-toggle="tab" href="#code" role="tab" aria-controls="code" aria-selected="{{ $article->disp ? 'false' : 'true' }}">{{ $article->language }}</a>
         </li>
         @endif
         @if ($article->code2)
         <li class="nav-item" role="presentation">
-            <a class="nav-link" id="code2-tab" data-bs-toggle="tab" href="#code2" role="tab" aria-controls="code2" aria-selected="false">{{ $article->language2 ?? 'Language 2' }}</a>
+            <a class="nav-link" id="code2-tab" data-bs-toggle="tab" href="#code2" role="tab" aria-controls="code2" aria-selected="false">{{ $article->language2 }}</a>
         </li>
         @endif
         @if ($article->code3)
         <li class="nav-item" role="presentation">
-            <a class="nav-link" id="code3-tab" data-bs-toggle="tab" href="#code3" role="tab" aria-controls="code3" aria-selected="false">{{ $article->language3 ?? 'Language 3' }}</a>
+            <a class="nav-link" id="code3-tab" data-bs-toggle="tab" href="#code3" role="tab" aria-controls="code3" aria-selected="false">{{ $article->language3 }}</a>
         </li>
         @endif
     </ul>
@@ -225,7 +225,6 @@
             .replace(/<br\s*\/?>/gi, '\n')
             .replace(/&lt;/g, '&amp;lt;')
             .replace(/&gt;/g, '&amp;gt;')
-            .replace(/&amp;/g, '&amp;amp;')
             .replace(/&quot;/g, '&amp;quot;')
             .replace(/&#039;/g, '&amp;#039;');
 
