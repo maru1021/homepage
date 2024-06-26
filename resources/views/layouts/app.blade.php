@@ -217,16 +217,13 @@
         }
     }
 
-    // 一度既存のクリックイベントをすべて解除
+    // クリックイベントを一度解除してから再設定
     sidebarLinks.forEach(link => {
         link.removeEventListener('click', handleClick);
-    });
-
-    // 新しいクリックイベントを追加
-    sidebarLinks.forEach(link => {
         link.addEventListener('click', handleClick);
     });
 });
+
 
 
 
