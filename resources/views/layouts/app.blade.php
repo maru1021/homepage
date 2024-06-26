@@ -37,6 +37,7 @@
             font-size: 18px;
             color: #333;
             display: block;
+            cursor: pointer;
         }
         .sidebar a:hover {
             color: #000;
@@ -60,6 +61,13 @@
             left: 10px;
             z-index: 1200;
             cursor: pointer;
+        }
+        .submenu {
+            display: none;
+            padding-left: 15px;
+        }
+        .submenu a {
+            font-size: 16px;
         }
         @media (max-width: 768px) {
             .navbar {
@@ -114,10 +122,8 @@
     @endauth
 
     @foreach($types as $type)
-        <a href="#type-{{ $type->id }}" data-bs-toggle="collapse" data-bs-target="#typeMenu-{{ $type->id }}">
-            <i class="fas fa-folder"></i>{{ $type->type }}
-        </a>
-        <div class="collapse" id="typeMenu-{{ $type->id }}">
+        <a class="toggle-submenu">{{ $type->type }}</a>
+        <div class="submenu">
             @foreach($type->classifications as $classification)
                 @php
                     $icon = 'fas fa-folder';
@@ -146,14 +152,10 @@
                             break;
                     }
                 @endphp
-                <a href="#classification-{{ $classification->id }}" class="ps-4" data-bs-toggle="collapse" data-bs-target="#classificationMenu-{{ $classification->id }}">
-                    <i class="{{ $icon }}"></i>{{ $classification->classification }}
-                </a>
-                <div class="collapse" id="classificationMenu-{{ $classification->id }}">
+                <a class="toggle-submenu">{{ $classification->classification }}</a>
+                <div class="submenu">
                     @foreach($classification->articles as $article)
-                        <a href="{{ url('/article/'. $article->type->type.'/'. $article->classification->classification .'/'. $article->url) }}" class="ps-5 article-link">
-                            {{ $article->title }}
-                        </a>
+                        <a href="{{ url('/article/'. $article->type->type.'/'. $article->classification->classification .'/'. $article->url) }}">{{ $article->title }}</a>
                     @endforeach
                 </div>
             @endforeach
@@ -161,7 +163,7 @@
     @endforeach
 </div>
 
-<div class="content" id="content">   
+<div class="content" id="content">
     @yield('content')
 </div>
 
@@ -172,13 +174,25 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('test')
         const sidebar = document.getElementById('sidebar');
         const hamburgerMenu = document.getElementById('hamburgerMenu');
-        const sidebarLinks = document.querySelectorAll('.toggle-collapse');
+        const submenuLinks = document.querySelectorAll('.toggle-submenu');
 
         hamburgerMenu.addEventListener('click', function() {
             sidebar.classList.toggle('open');
+        });
+
+        submenuLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                const submenu = this.nextElementSibling;
+                if (submenu && submenu.classList.contains('submenu')) {
+                    if (submenu.style.display === "none" || submenu.style.display === "") {
+                        submenu.style.display = "block";
+                    } else {
+                        submenu.style.display = "none";
+                    }
+                }
+            });
         });
     });
 </script>
