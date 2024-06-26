@@ -172,6 +172,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('test')
         const sidebar = document.getElementById('sidebar');
         const hamburgerMenu = document.getElementById('hamburgerMenu');
         const sidebarLinks = document.querySelectorAll('.toggle-collapse');
