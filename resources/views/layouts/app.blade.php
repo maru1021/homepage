@@ -29,7 +29,8 @@
             background-color: rgba(173, 216, 230, 0.8);
             padding-top: 56px;
             z-index: 1100;
-            overflow-y: auto; /* 追加: サイドバー内で縦方向のスクロールを可能にする */
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         .sidebar a {
             padding: 10px 15px;
@@ -51,13 +52,47 @@
             margin-left: 250px;
             padding: 20px;
         }
+        .hamburger-menu {
+            display: none;
+            font-size: 30px;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1200;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .navbar {
+                width: 100%;
+                left: 0;
+            }
+            .sidebar {
+                width: 100%;
+                height: 100%;
+                left: -100%;
+                transition: left 0.3s;
+            }
+            .sidebar.open {
+                left: 0;
+            }
+            .content {
+                margin-left: 0;
+            }
+            .hamburger-menu {
+                display: block;
+            }
+        }
     </style>
     @yield('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
 
-<div class="sidebar">
+<div class="hamburger-menu" id="hamburgerMenu">
+    <i class="fas fa-bars"></i>
+</div>
+
+<div class="sidebar" id="sidebar">
     <div class="dropdown-content">
         <div class="user-info">{{ Auth::check() ? Auth::user()->name : 'ゲスト' }}さんこんにちは</div>
         @auth
@@ -126,7 +161,7 @@
     @endforeach
 </div>
 
-<div class="content">   
+<div class="content" id="content">   
     @yield('content')
 </div>
 
@@ -137,6 +172,14 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const content = document.getElementById('content');
+
+        hamburgerMenu.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+        });
+
         const sidebarLinks = document.querySelectorAll('.sidebar a[data-bs-toggle="collapse"]');
 
         sidebarLinks.forEach(link => {

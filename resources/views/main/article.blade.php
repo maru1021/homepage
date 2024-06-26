@@ -140,165 +140,183 @@
 
 @endsection
 
+@section('Javascript')
+<script>
+    @if ($article->language === 'Javascript' && $article->code)
+        document.addEventListener('DOMContentLoaded', function() {
+            {!! $article->code !!}
+        });
+    @endif
+    @if ($article->language2 === 'Javascript' && $article->code2)
+        document.addEventListener('DOMContentLoaded', function() {
+            {!! $article->code2 !!}
+        });
+    @endif
+    @if ($article->language3 === 'Javascript' && $article->code3)
+        document.addEventListener('DOMContentLoaded', function() {
+            {!! $article->code3 !!}
+        });
+    @endif
+</script>
 @auth
     @if (Auth::user()->authority === 'maru')
-        @section('Javascript')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const contextMenu = document.getElementById('contextMenu');
-        const updateButton = document.getElementById('update-button');
+    const contextMenu = document.getElementById('contextMenu');
+    const updateButton = document.getElementById('update-button');
 
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            contextMenu.style.display = 'block';
-            contextMenu.style.top = `${e.clientY}px`;
-            contextMenu.style.left = `${e.clientX}px`;
-            contextMenu.style.zIndex = '1000'; // z-indexを設定
-        });
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        contextMenu.style.display = 'block';
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.zIndex = '1000'; // z-indexを設定
+    });
 
-        document.addEventListener('click', function(e) {
-            if (!contextMenu.contains(e.target)) {
-                contextMenu.style.display = 'none';
-            }
-        });
-
-        document.getElementById('menu-edit').addEventListener('click', function() {
+    document.addEventListener('click', function(e) {
+        if (!contextMenu.contains(e.target)) {
             contextMenu.style.display = 'none';
+        }
+    });
 
-            const titleElement = document.getElementById('article-title');
-            const dispElement = document.getElementById('article-disp');
-            const codeElement = document.getElementById('article-code');
-            const codeElement2 = document.getElementById('article-code2');
-            const codeElement3 = document.getElementById('article-code3');
-            const explanationElement = document.getElementById('article-explanation');
-            const codeTabList = document.getElementById('codeTab');
-            const navItems = document.getElementsByClassName('nav-item');
+    document.getElementById('menu-edit').addEventListener('click', function() {
+        contextMenu.style.display = 'none';
 
-            // タイトルを編集可能にする
-            titleElement.innerHTML = `<input type="text" id="edit-title" value="${titleElement.textContent.trim()}" class="form-control"/>`;
+        const titleElement = document.getElementById('article-title');
+        const dispElement = document.getElementById('article-disp');
+        const codeElement = document.getElementById('article-code');
+        const codeElement2 = document.getElementById('article-code2');
+        const codeElement3 = document.getElementById('article-code3');
+        const explanationElement = document.getElementById('article-explanation');
+        const codeTabList = document.getElementById('codeTab');
+        const navItems = document.getElementsByClassName('nav-item');
 
-            // 表示内容を編集可能にする
-            if (dispElement) {
-                document.getElementById('disp').style.display = 'block';
-                const dispText = dispElement.innerHTML.trim();
-                dispElement.innerHTML = `<textarea id="edit-disp" class="form-control" rows="10">${dispText}</textarea>`;
-            }
+        // タイトルを編集可能にする
+        titleElement.innerHTML = `<input type="text" id="edit-title" value="${titleElement.textContent.trim()}" class="form-control"/>`;
 
-            // コードを編集可能にする
-            if (codeElement) {
-                document.getElementById('code').style.display = 'block';
-                const codeText = codeElement.textContent.trim();
-                codeElement.innerHTML = `<textarea id="edit-code" class="form-control" rows="10">${codeText}</textarea>`;
-            }
+        // 表示内容を編集可能にする
+        if (dispElement) {
+            document.getElementById('disp').style.display = 'block';
+            const dispText = dispElement.innerHTML.trim();
+            dispElement.innerHTML = `<textarea id="edit-disp" class="form-control" rows="10">${dispText}</textarea>`;
+        }
 
-            if (codeElement2) {
-                document.getElementById('code2').style.display = 'block';
-                const codeText2 = codeElement2.textContent.trim();
-                codeElement2.innerHTML = `<textarea id="edit-code2" class="form-control" rows="10">${codeText2}</textarea>`;
-            }
+        // コードを編集可能にする
+        if (codeElement) {
+            document.getElementById('code').style.display = 'block';
+            const codeText = codeElement.textContent.trim();
+            codeElement.innerHTML = `<textarea id="edit-code" class="form-control" rows="10">${codeText}</textarea>`;
+        }
 
-            if (codeElement3) {
-                document.getElementById('code3').style.display = 'block';
-                const codeText3 = codeElement3.textContent.trim();
-                codeElement3.innerHTML = `<textarea id="edit-code3" class="form-control" rows="10">${codeText3}</textarea>`;
-            }
+        if (codeElement2) {
+            document.getElementById('code2').style.display = 'block';
+            const codeText2 = codeElement2.textContent.trim();
+            codeElement2.innerHTML = `<textarea id="edit-code2" class="form-control" rows="10">${codeText2}</textarea>`;
+        }
 
-            // 説明を編集可能にする（HTMLタグをエスケープして表示）
-            const explanationHTML = explanationElement.innerHTML
-                .replace(/<br\s*\/?>/gi, '\n')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&amp;/g, '&')
-                .replace(/&quot;/g, '"')
-                .replace(/&#039;/g, "'");
+        if (codeElement3) {
+            document.getElementById('code3').style.display = 'block';
+            const codeText3 = codeElement3.textContent.trim();
+            codeElement3.innerHTML = `<textarea id="edit-code3" class="form-control" rows="10">${codeText3}</textarea>`;
+        }
 
-            explanationElement.innerHTML = `<textarea id="edit-explanation" class="form-control" rows="10">${explanationHTML}</textarea>`;
+        // 説明を編集可能にする（HTMLタグをエスケープして表示）
+        const explanationHTML = explanationElement.innerHTML
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/&lt;/g, '&amp;lt;')
+            .replace(/&gt;/g, '&amp;gt;')
+            .replace(/&amp;/g, '&amp;amp;')
+            .replace(/&quot;/g, '&amp;quot;')
+            .replace(/&#039;/g, '&amp;#039;');
 
-            // 言語タブを編集可能にする
-            Array.from(navItems).forEach(item => {
-                item.style.display = 'block';
-            });
-            codeTabList.querySelectorAll('.nav-link').forEach((tab, index) => {
-                const lang = tab.textContent.trim();
-                tab.innerHTML = `<input type="text" value="${lang}" class="form-control"/>`;
-            });
+        explanationElement.innerHTML = `<textarea id="edit-explanation" class="form-control" rows="10">${explanationHTML}</textarea>`;
 
-            // 更新ボタンを表示
-            updateButton.style.display = 'block';
+        // 言語タブを編集可能にする
+        Array.from(navItems).forEach(item => {
+            item.style.display = 'block';
+        });
+        codeTabList.querySelectorAll('.nav-link').forEach((tab, index) => {
+            const lang = tab.textContent.trim();
+            tab.innerHTML = `<input type="text" value="${lang}" class="form-control"/>`;
         });
 
-        updateButton.addEventListener('click', function() {
-            const id = {{ $article->id }};
-            const title = document.getElementById('edit-title').value;
-            const disp = document.getElementById('edit-disp') ? document.getElementById('edit-disp').value : '';
-            const code = document.getElementById('edit-code') ? document.getElementById('edit-code').value : '';
-            const code2 = document.getElementById('edit-code2') ? document.getElementById('edit-code2').value : '';
-            const code3 = document.getElementById('edit-code3') ? document.getElementById('edit-code3').value : '';
-            const language = document.querySelector('#code-tab input').value;
-            const language2 = document.querySelector('#code2-tab input') ? document.querySelector('#code2-tab input').value : '';
-            const language3 = document.querySelector('#code3-tab input') ? document.querySelector('#code3-tab input').value : '';
-            const explanation = document.getElementById('edit-explanation').value.replace(/\n/g, '<br>');
+        // 更新ボタンを表示
+        updateButton.style.display = 'block';
+    });
 
+    updateButton.addEventListener('click', function() {
+        const id = {{ $article->id }};
+        const title = document.getElementById('edit-title').value;
+        const disp = document.getElementById('edit-disp') ? document.getElementById('edit-disp').value : '';
+        const code = document.getElementById('edit-code') ? document.getElementById('edit-code').value : '';
+        const code2 = document.getElementById('edit-code2') ? document.getElementById('edit-code2').value : '';
+        const code3 = document.getElementById('edit-code3') ? document.getElementById('edit-code3').value : '';
+        const language = document.querySelector('#code-tab input') ? document.querySelector('#code-tab input').value : '';
+        const language2 = document.querySelector('#code2-tab input') ? document.querySelector('#code2-tab input').value : '';
+        const language3 = document.querySelector('#code3-tab input') ? document.querySelector('#code3-tab input').value : '';
+        const explanation = document.getElementById('edit-explanation').value.replace(/\n/g, '<br>');
+
+        fetch(`/article/update/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                title: title,
+                disp: disp ? disp : null,
+                code: code ? code : null,
+                code2: code2 ? code2 : null,
+                code3: code3 ? code3 : null,
+                language: language ? language : null,
+                language2: language2 ? language2 : null,
+                language3: language3 ? language3 : null,
+                explanation: explanation
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateButton.style.display = 'none';
+                location.reload();
+            } else {
+                alert('更新に失敗しました');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('更新に失敗しました');
+        });
+    });
+
+    document.getElementById('menu-delete').addEventListener('click', function() {
+        contextMenu.style.display = 'none';
+        if (confirm('本当に削除しますか？')) {
+            const id = {{ $article->id }};
             fetch(`/article/update/${id}`, {
-                method: 'POST',
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    title: title,
-                    disp: disp,
-                    code: code,
-                    code2: code2,
-                    code3: code3,
-                    language: language,
-                    language2: language2,
-                    language3: language3,
-                    explanation: explanation
-                })
+                }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    updateButton.style.display = 'none';
-                    location.reload();
+                    // 成功した場合、指定のページにリダイレクト
+                    window.location.href = data.redirect;
                 } else {
-                    alert('更新に失敗しました');
+                    alert('削除に失敗しました');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('更新に失敗しました');
+                alert('削除に失敗しました');
             });
-        });
-
-        document.getElementById('menu-delete').addEventListener('click', function() {
-            contextMenu.style.display = 'none';
-            if (confirm('本当に削除しますか？')) {
-                const id = {{ $article->id }};
-                fetch(`/article/update/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 成功した場合、指定のページにリダイレクト
-                        window.location.href = data.redirect;
-                    } else {
-                        alert('削除に失敗しました');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('削除に失敗しました');
-                });
-            }
-        });
+        }
     });
+});
+
 </script>
         @endsection
     @endif
