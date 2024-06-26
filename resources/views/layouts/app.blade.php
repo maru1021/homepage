@@ -191,27 +191,11 @@
             console.log('Target:', target);
 
             if (target) {
-                // 他の開いている同レベルの項目を閉じる
-                const parent = link.closest('.collapse'); // 現在の親collapse要素を取得
-                const siblingLinks = parent ? parent.querySelectorAll('.collapse.show') : [];
-                
-                siblingLinks.forEach(sibling => {
-                    if (sibling !== target) {
-                        const bsSiblingCollapse = new bootstrap.Collapse(sibling, {
-                            toggle: false
-                        });
-                        bsSiblingCollapse.hide();
-                        console.log('Hide:', sibling);
-                    }
+                const bsCollapse = bootstrap.Collapse.getInstance(target) || new bootstrap.Collapse(target, {
+                    toggle: false
                 });
 
-                // クリックされた項目を開閉する
-                const isShowing = target.classList.contains('show');
-                const bsCollapse = new bootstrap.Collapse(target, {
-                    toggle: !isShowing
-                });
-
-                if (isShowing) {
+                if (target.classList.contains('show')) {
                     bsCollapse.hide();
                     console.log('Hide:', target);
                 } else {
@@ -222,6 +206,7 @@
         });
     });
 });
+
 
 
 
