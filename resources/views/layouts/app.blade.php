@@ -179,27 +179,6 @@
     hamburgerMenu.addEventListener('click', function() {
         sidebar.classList.toggle('open');
     });
-
-    function handleClick(event) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const target = document.querySelector(event.currentTarget.dataset.bsTarget);
-
-        if (target) {
-            const isShowing = target.classList.contains('show');
-
-            const bsCollapse = bootstrap.Collapse.getInstance(target) || new bootstrap.Collapse(target, {
-                toggle: false
-            });
-
-            if (isShowing) {
-                bsCollapse.hide();
-            } else {
-                bsCollapse.show();
-            }
-        }
-    }
 });
 </script>
 
