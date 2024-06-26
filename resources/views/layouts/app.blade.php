@@ -176,6 +176,8 @@
     const hamburgerMenu = document.getElementById('hamburgerMenu');
     const sidebarLinks = document.querySelectorAll('.sidebar a[data-bs-toggle="collapse"]');
 
+    let debounceTimeout;
+
     hamburgerMenu.addEventListener('click', function() {
         sidebar.classList.toggle('open');
         console.log('Hamburger menu clicked');
@@ -220,7 +222,10 @@
     // クリックイベントを一度解除してから再設定
     sidebarLinks.forEach(link => {
         link.removeEventListener('click', handleClick);
-        link.addEventListener('click', handleClick);
+        link.addEventListener('click', function(event) {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => handleClick(event), 300);
+        });
     });
 });
 
