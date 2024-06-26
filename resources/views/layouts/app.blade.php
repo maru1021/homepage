@@ -181,46 +181,52 @@
         console.log('Hamburger menu clicked');
     });
 
+    // 一度既存のクリックイベントをすべて解除
     sidebarLinks.forEach(link => {
-        link.addEventListener('click', function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            console.log('Sidebar link clicked:', link);
-
-            const target = document.querySelector(link.dataset.bsTarget);
-            console.log('Target:', target);
-
-            if (target) {
-                // Collapseインスタンスを取得または作成
-                const bsCollapse = bootstrap.Collapse.getInstance(target) || new bootstrap.Collapse(target, {
-                    toggle: false
-                });
-
-                if (target.classList.contains('show')) {
-                    bsCollapse.hide();
-                    console.log('Hide:', target);
-                } else {
-                    // まずすべての同レベルのcollapseを閉じる
-                    sidebarLinks.forEach(siblingLink => {
-                        const siblingTarget = document.querySelector(siblingLink.dataset.bsTarget);
-                        if (siblingTarget && siblingTarget !== target && siblingTarget.classList.contains('show')) {
-                            const siblingBsCollapse = bootstrap.Collapse.getInstance(siblingTarget);
-                            if (siblingBsCollapse) {
-                                siblingBsCollapse.hide();
-                                console.log('Hide sibling:', siblingTarget);
-                            }
-                        }
-                    });
-
-                    bsCollapse.show();
-                    console.log('Show:', target);
-                }
-            }
-        });
+        link.removeEventListener('click', handleClick);
     });
+
+    // 新しいクリックイベントを追加
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', handleClick);
+    });
+
+    function handleClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('Sidebar link clicked:', event.target);
+
+        const target = document.querySelector(event.target.dataset.bsTarget);
+        console.log('Target:', target);
+
+        if (target) {
+            const isShowing = target.classList.contains('show');
+            
+            // まずすべての同レベルのcollapseを閉じる
+            sidebarLinks.forEach(siblingLink => {
+                const siblingTarget = document.querySelector(siblingLink.dataset.bsTarget);
+                if (siblingTarget && siblingTarget !== target && siblingTarget.classList.contains('show')) {
+                    const siblingBsCollapse = bootstrap.Collapse.getInstance(siblingTarget) || new bootstrap.Collapse(siblingTarget, { toggle: false });
+                    siblingBsCollapse.hide();
+                    console.log('Hide sibling:', siblingTarget);
+                }
+            });
+
+            // クリックされた項目を開閉する
+            const bsCollapse = bootstrap.Collapse.getInstance(target) || new bootstrap.Collapse(target, {
+                toggle: !isShowing
+            });
+
+            if (isShowing) {
+                bsCollapse.hide();
+                console.log('Hide:', target);
+            } else {
+                bsCollapse.show();
+                console.log('Show:', target);
+            }
+        }
+    }
 });
-
-
 
 
 
