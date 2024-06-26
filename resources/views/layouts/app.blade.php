@@ -178,14 +178,17 @@
 
     hamburgerMenu.addEventListener('click', function() {
         sidebar.classList.toggle('open');
+        console.log('Hamburger menu clicked');
     });
 
     sidebarLinks.forEach(link => {
         link.addEventListener('click', function(event) {
             event.preventDefault(); // デフォルトのリンク動作を防ぐ
             event.stopPropagation(); // イベントの伝播を防ぐ
+            console.log('Sidebar link clicked:', link);
 
             const target = document.querySelector(link.dataset.bsTarget);
+            console.log('Target:', target);
 
             if (target) {
                 // クリックされた項目を開閉する
@@ -193,6 +196,7 @@
                     toggle: true
                 });
                 bsCollapse.toggle();
+                console.log('Toggle:', target);
 
                 // 他の開いている同じレベルの項目を閉じる
                 const siblingLinks = link.closest('.collapse') ? link.closest('.collapse').querySelectorAll('.collapse.show') : [];
@@ -202,12 +206,14 @@
                             toggle: false
                         });
                         bsSiblingCollapse.hide();
+                        console.log('Hide:', sibling);
                     }
                 });
             }
         });
     });
 });
+
 
 </script>
 
