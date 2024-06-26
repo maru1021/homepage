@@ -172,16 +172,15 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
-    const hamburgerMenu = document.getElementById('hamburgerMenu');
-    const sidebarLinks = document.querySelectorAll('.sidebar a[data-bs-toggle="collapse"]');
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const sidebarLinks = document.querySelectorAll('.toggle-collapse');
 
-    hamburgerMenu.addEventListener('click', function() {
-        sidebar.classList.toggle('open');
-        console.log('Hamburger menu clicked');
-    });
+        hamburgerMenu.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+        });
 
-    sidebarLinks.forEach(link => {
+        sidebarLinks.forEach(link => {
             link.addEventListener('click', function(event) {
                 console.log('test');
                 event.preventDefault();
@@ -197,7 +196,7 @@
                 }
             });
         });
-});
+    });
 </script>
 
 </body>
