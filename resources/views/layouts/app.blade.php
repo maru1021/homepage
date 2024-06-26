@@ -179,23 +179,6 @@
         hamburgerMenu.addEventListener('click', function() {
             sidebar.classList.toggle('open');
         });
-
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', function(event) {
-                console.log('test');
-                event.preventDefault();
-                const targetId = link.getAttribute('href');
-                console.log('targetId:', targetId);
-                const target = document.querySelector(targetId);
-                if (target) {
-                    console.log('target found:', target);
-                    target.classList.toggle('show');
-                    console.log('toggle show class:', target.classList);
-                } else {
-                    console.log('target not found for:', targetId);
-                }
-            });
-        });
     });
 </script>
 
