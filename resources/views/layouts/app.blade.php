@@ -192,27 +192,31 @@
 
             if (target) {
                 // クリックされた項目を開閉する
+                const isShowing = target.classList.contains('show');
                 const bsCollapse = new bootstrap.Collapse(target, {
                     toggle: true
                 });
                 bsCollapse.toggle();
                 console.log('Toggle:', target);
 
-                // 他の開いている同じレベルの項目を閉じる
-                const siblingLinks = link.closest('.collapse') ? link.closest('.collapse').querySelectorAll('.collapse.show') : [];
-                siblingLinks.forEach(sibling => {
-                    if (sibling !== target) {
-                        const bsSiblingCollapse = new bootstrap.Collapse(sibling, {
-                            toggle: false
-                        });
-                        bsSiblingCollapse.hide();
-                        console.log('Hide:', sibling);
-                    }
-                });
+                if (!isShowing) {
+                    // 他の開いている同じレベルの項目を閉じる
+                    const siblingLinks = link.closest('.collapse') ? link.closest('.collapse').querySelectorAll('.collapse.show') : [];
+                    siblingLinks.forEach(sibling => {
+                        if (sibling !== target) {
+                            const bsSiblingCollapse = new bootstrap.Collapse(sibling, {
+                                toggle: false
+                            });
+                            bsSiblingCollapse.hide();
+                            console.log('Hide:', sibling);
+                        }
+                    });
+                }
             }
         });
     });
 });
+
 
 
 </script>
