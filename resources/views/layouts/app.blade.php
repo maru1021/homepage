@@ -181,28 +181,18 @@
         console.log('Hamburger menu clicked');
     });
 
-    // 一度既存のクリックイベントをすべて解除
-    sidebarLinks.forEach(link => {
-        link.removeEventListener('click', handleClick);
-    });
-
-    // 新しいクリックイベントを追加
-    sidebarLinks.forEach(link => {
-        link.addEventListener('click', handleClick);
-    });
-
     function handleClick(event) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('Sidebar link clicked:', event.target);
+        console.log('Sidebar link clicked:', event.currentTarget);
 
-        const target = document.querySelector(event.target.dataset.bsTarget);
+        const target = document.querySelector(event.currentTarget.dataset.bsTarget);
         console.log('Target:', target);
 
         if (target) {
             const isShowing = target.classList.contains('show');
-            
-            // まずすべての同レベルのcollapseを閉じる
+
+            // 他の開いている同レベルの項目を閉じる
             sidebarLinks.forEach(siblingLink => {
                 const siblingTarget = document.querySelector(siblingLink.dataset.bsTarget);
                 if (siblingTarget && siblingTarget !== target && siblingTarget.classList.contains('show')) {
@@ -214,7 +204,7 @@
 
             // クリックされた項目を開閉する
             const bsCollapse = bootstrap.Collapse.getInstance(target) || new bootstrap.Collapse(target, {
-                toggle: !isShowing
+                toggle: false
             });
 
             if (isShowing) {
@@ -226,6 +216,16 @@
             }
         }
     }
+
+    // 一度既存のクリックイベントをすべて解除
+    sidebarLinks.forEach(link => {
+        link.removeEventListener('click', handleClick);
+    });
+
+    // 新しいクリックイベントを追加
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', handleClick);
+    });
 });
 
 
