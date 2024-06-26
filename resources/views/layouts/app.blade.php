@@ -176,62 +176,31 @@
     const hamburgerMenu = document.getElementById('hamburgerMenu');
     const sidebarLinks = document.querySelectorAll('.sidebar a[data-bs-toggle="collapse"]');
 
-    let debounceTimeout;
-
     hamburgerMenu.addEventListener('click', function() {
         sidebar.classList.toggle('open');
-        console.log('Hamburger menu clicked');
     });
 
     function handleClick(event) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('Sidebar link clicked:', event.currentTarget);
 
         const target = document.querySelector(event.currentTarget.dataset.bsTarget);
-        console.log('Target:', target);
 
         if (target) {
             const isShowing = target.classList.contains('show');
 
-            // 他の開いている同レベルの項目を閉じる
-            sidebarLinks.forEach(siblingLink => {
-                const siblingTarget = document.querySelector(siblingLink.dataset.bsTarget);
-                if (siblingTarget && siblingTarget !== target && siblingTarget.classList.contains('show')) {
-                    const siblingBsCollapse = bootstrap.Collapse.getInstance(siblingTarget) || new bootstrap.Collapse(siblingTarget, { toggle: false });
-                    siblingBsCollapse.hide();
-                    console.log('Hide sibling:', siblingTarget);
-                }
-            });
-
-            // クリックされた項目を開閉する
             const bsCollapse = bootstrap.Collapse.getInstance(target) || new bootstrap.Collapse(target, {
                 toggle: false
             });
 
             if (isShowing) {
                 bsCollapse.hide();
-                console.log('Hide:', target);
             } else {
                 bsCollapse.show();
-                console.log('Show:', target);
             }
         }
     }
-
-    // クリックイベントを一度解除してから再設定
-    sidebarLinks.forEach(link => {
-        link.removeEventListener('click', handleClick);
-        link.addEventListener('click', function(event) {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => handleClick(event), 300);
-        });
-    });
 });
-
-
-
-
 </script>
 
 </body>
