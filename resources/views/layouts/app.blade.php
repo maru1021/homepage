@@ -172,44 +172,43 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const sidebar = document.getElementById('sidebar');
-        const hamburgerMenu = document.getElementById('hamburgerMenu');
-        const content = document.getElementById('content');
+    const sidebar = document.getElementById('sidebar');
+    const hamburgerMenu = document.getElementById('hamburgerMenu');
+    const sidebarLinks = document.querySelectorAll('.sidebar a[data-bs-toggle="collapse"]');
 
-        hamburgerMenu.addEventListener('click', function() {
-            sidebar.classList.toggle('open');
-        });
+    hamburgerMenu.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+    });
 
-        const sidebarLinks = document.querySelectorAll('.sidebar a[data-bs-toggle="collapse"]');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function(event) {
+            event.preventDefault(); // デフォルトのリンク動作を防ぐ
+            event.stopPropagation(); // イベントの伝播を防ぐ
 
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', function(event) {
-                event.stopPropagation(); // イベントの伝播を防ぐ
+            const target = document.querySelector(link.dataset.bsTarget);
+
+            if (target) {
+                // クリックされた項目を開閉する
+                const bsCollapse = new bootstrap.Collapse(target, {
+                    toggle: true
+                });
+                bsCollapse.toggle();
 
                 // 他の開いている同じレベルの項目を閉じる
-                const parent = link.closest('.collapse'); // 現在の親collapse要素を取得
-                const siblingLinks = parent ? parent.querySelectorAll('.collapse.show') : [];
-
+                const siblingLinks = link.closest('.collapse') ? link.closest('.collapse').querySelectorAll('.collapse.show') : [];
                 siblingLinks.forEach(sibling => {
-                    if (sibling !== link) {
-                        const bsCollapse = new bootstrap.Collapse(sibling, {
+                    if (sibling !== target) {
+                        const bsSiblingCollapse = new bootstrap.Collapse(sibling, {
                             toggle: false
                         });
-                        bsCollapse.hide();
+                        bsSiblingCollapse.hide();
                     }
                 });
-
-                // クリックされた項目を開閉する
-                const target = document.querySelector(link.dataset.bsTarget);
-                if (target) {
-                    const bsCollapse = new bootstrap.Collapse(target, {
-                        toggle: true
-                    });
-                    bsCollapse.toggle();
-                }
-            });
+            }
         });
     });
+});
+
 </script>
 
 </body>
