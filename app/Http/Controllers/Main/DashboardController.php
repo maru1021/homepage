@@ -10,6 +10,7 @@ class DashboardController extends Controller
 {
     public function get(){
         $articles = Article::orderBy('created_at', 'desc')->take(15)->get();
+        dd($articles); 
         return view('main.main', compact('articles'));
     }
 }
