@@ -26,7 +26,9 @@ class ArticleController extends Controller
                         })
                         ->firstOrFail();
 
-        return view('main.article', compact('article'));
+        $title = $article->title;
+
+        return view('main.article', compact('article', 'title'));
     }
 
     public function update(Request $request, $id)
@@ -52,6 +54,6 @@ class ArticleController extends Controller
         $article = Article::findOrFail($id);
         $article->delete();
 
-        return response()->json(['success' => true, 'redirect' => route('main.edit')]);
+        return response()->json(['success' => true, 'redirect' => route('dashbord.get')]);
     }
 }

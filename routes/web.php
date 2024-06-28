@@ -1,17 +1,14 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Main\MainController;
+use App\Http\Controllers\Main\DashboardController;
 use App\Http\Controllers\Main\ArticleRegistarController;
 use App\Http\Controllers\Main\ArticleController;
 use App\Http\Controllers\Main\ArticleListController;
 use Illuminate\Support\Facades\Route;
+use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
-Route::get('/', [MainController::class, 'edit'])->name('main.edit');
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/', [DashboardController::class, 'get'])->name('dashbord.get');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -26,6 +23,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/article/{type}/{classification}/{url}', [ArticleController::class, 'get'])->name('article.get');
+Route::get('/3D/operation', function(){return view('3D.operation');})->name('3D.operation');
+Route::get('/3D/mirror', function(){return view('3D.mirror');})->name('3D.mirror');
+Route::get('/3D/universe', function(){return view('3D.universe');})->name('3D.universe');
+Route::get('/3D/MMD', function(){return view('3D.MMD');})->name('3D.MMD');
 
 
 require __DIR__.'/auth.php';

@@ -13,8 +13,8 @@
         .navbar {
             background-color: rgba(240, 248, 255, 0.8);
             position: fixed;
-            width: calc(100% - 250px);
-            left: 250px;
+            width: calc(100% - 300px);
+            left: 300px;
             z-index: 1000;
             display: flex;
             align-items: center;
@@ -25,7 +25,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 250px;
+            width: 300px;
             background-color: rgba(173, 216, 230, 0.8);
             padding-top: 56px;
             z-index: 1100;
@@ -50,7 +50,7 @@
             padding: 15px;
         }
         .content {
-            margin-left: 250px;
+            margin-left: 300px;
             padding: 20px;
         }
         .hamburger-menu {
@@ -152,7 +152,7 @@
                             break;
                     }
                 @endphp
-                <a class="toggle-submenu">{{ $classification->classification }}</a>
+                <a class="toggle-submenu"><i class="{{ $icon }}"></i>{{ $classification->classification }}</a>
                 <div class="submenu">
                     @foreach($classification->articles as $article)
                         <a href="{{ url('/article/'. $article->type->type.'/'. $article->classification->classification .'/'. $article->url) }}">{{ $article->title }}</a>
@@ -161,6 +161,16 @@
             @endforeach
         </div>
     @endforeach
+    <a class="toggle-submenu">作成したもの</a>
+    <div class="submenu">
+        <a class="toggle-submenu"><i class="{{ $icon }}"></i>3D</a>
+        <div class="submenu">
+            <a href="{{ route('3D.operation') }}">3D操作</a>
+            <a href="{{ route('3D.mirror') }}">パノラマ、鏡面反射</a>
+            <a href="{{ route('3D.universe') }}">宇宙</a>
+            <a href="{{ route('3D.MMD') }}">MMD</a>
+        </div>
+    </div>
 </div>
 
 <div class="content" id="content">

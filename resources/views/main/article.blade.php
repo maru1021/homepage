@@ -225,9 +225,6 @@
                 .replace(/<br\s*\/?>/gi, '\n')
                 .replace(/&lt;/g, '&amp;lt;')
                 .replace(/&gt;/g, '&amp;gt;')
-                .replace(/&amp;/g, '&amp;amp;')
-                .replace(/&quot;/g, '&amp;quot;')
-                .replace(/&#039;/g, '&amp;#039;');
 
             explanationElement.innerHTML = `<textarea id="edit-explanation" class="form-control" rows="10">${explanationHTML}</textarea>`;
 
