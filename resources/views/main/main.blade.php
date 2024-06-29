@@ -25,7 +25,7 @@
 <div class="container my-5">
     <h1 class="page-title">最新ページ</h1>
     <div class="row">
-        {{ $articles }}
+        
         
     </div>
 </div>
