@@ -25,7 +25,6 @@
 <div class="container my-5">
     <h1 class="page-title">最新ページ</h1>
     <div class="row">
-        {{ $articles }}
         @foreach($articles as $index => $article)
             <div class="col-md-4 mb-4">
                 <a href="{{ url('article/' . $article->type->type . '/' . $article->classification->classification . '/' . $article->url) }}" class="card-link">
