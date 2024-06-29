@@ -166,9 +166,6 @@
         <a class="toggle-submenu"><i class="{{ $icon }}"></i>3D</a>
         <div class="submenu">
             
-            <a href="{{ route('3D.mirror') }}">パノラマ、鏡面反射</a>
-            <a href="{{ route('3D.universe') }}">宇宙</a>
-            <a href="{{ route('3D.MMD') }}">MMD</a>
         </div>
     </div>
 </div>

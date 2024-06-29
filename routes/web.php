@@ -1,14 +1,14 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Main\DashboardController;
+use App\Http\Controllers\Main\MainController;
 use App\Http\Controllers\Main\ArticleRegistarController;
 use App\Http\Controllers\Main\ArticleController;
 use App\Http\Controllers\Main\ArticleListController;
 use Illuminate\Support\Facades\Route;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
-Route::get('/', [DashboardController::class, 'get'])->name('dashbord.get');
+Route::get('/', [MainController::class, 'edit'])->name('dashbord.get');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
