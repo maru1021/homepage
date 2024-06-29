@@ -25,24 +25,8 @@
 <div class="container my-5">
     <h1 class="page-title">最新ページ</h1>
     <div class="row">
-        @foreach($articles as $index => $article)
-            <div class="col-md-4 mb-4">
-                <a href="{{ url('article/' . $article->type->type . '/' . $article->classification->classification . '/' . $article->url) }}" class="card-link">
-                    <div class="card">
-                        <div class="card-body">
-                            <p class="card-text"><strong>種別</strong> {{ $article->type->type }}</p>
-                            <p class="card-text"><strong>分類</strong> {{ $article->classification->classification }}</p>
-                            <p class="card-title"><strong>タイトル</strong> {{ $article->title }}</p>
-                            <p class="card-text">{{ Str::limit(strip_tags($article->explanation), 100, '...') }}</p>
-                            <p class="card-text"><small class="text-muted">{{ $article->created_at->format('Y-m-d H:i') }}</small></p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            @if(($index + 1) % 3 == 0 && !$loop->last)
-                </div><div class="row">
-            @endif
-        @endforeach
+        {{ $articles }}
+        
     </div>
 </div>
 @endsection
