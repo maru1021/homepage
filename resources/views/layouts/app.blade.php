@@ -150,6 +150,12 @@
                         case 'Git':
                             $icon = 'fab fa-git-alt';
                             break;
+                        case 'Linux':
+                            $icon = 'fab fa-linux';
+                            break;
+                        case 'インフラ':
+                            $icon = 'fas fa-server';
+                            break;
                     }
                 @endphp
                 <a class="toggle-submenu"><i class="{{ $icon }}"></i>{{ $classification->classification }}</a>

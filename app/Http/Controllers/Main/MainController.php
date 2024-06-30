@@ -19,7 +19,7 @@ class MainController extends Controller
     public function edit(Request $request): View
     {
         $articles = Article::orderBy('created_at', 'desc')->take(15)->get();
-        $title = 'プロフィール';
+        $title = '最新記事';
         return view('main.main', [
             'user' => $request->user(),
             'title' => $title,
