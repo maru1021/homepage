@@ -32,7 +32,7 @@
                         <div class="card-body">
                             <p class="card-text"><strong>種別</strong> {{ $article->type->type }}</p>
                             <p class="card-text"><strong>分類</strong> {{ $article->classification->classification }}</p>
-                            <p class="card-title"><strong>タイトル</strong> {{ $article->title }}</p>
+                            <p class="card-title"><strong>タイトル</strong> {{ Str::limit(strip_tags($article->title), 35, '...') }}</p>
                             <p class="card-text">{{ Str::limit(strip_tags($article->explanation), 100, '...') }}</p>
                             <p class="card-text"><small class="text-muted">{{ $article->created_at->format('Y-m-d H:i') }}</small></p>
                         </div>
