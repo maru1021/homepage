@@ -47,16 +47,16 @@
         width: 200px;
     }
     .custom-context-menu div {
-        padding: 12px 20px; /* 広めのパディング */
+        padding: 12px 20px;
         color: #333;
         text-decoration: none;
-        border-bottom: 1px solid #e9ecef; /* 優しいボーダー */
+        border-bottom: 1px solid #e9ecef;
     }
     .custom-context-menu div:last-child {
-        border-bottom: none; /* 最後の要素のボーダーを削除 */
+        border-bottom: none;
     }
     .custom-context-menu div:hover {
-        background-color: #e2e6ea; /* 優しいホバー色 */
+        background-color: #e2e6ea;
     }
     .update-button {
         position: relative;
@@ -168,9 +168,9 @@
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             contextMenu.style.display = 'block';
-            contextMenu.style.top = `${e.clientY}px`;
-            contextMenu.style.left = `${e.clientX}px`;
-            contextMenu.style.zIndex = '1000'; // z-indexを設定
+            contextMenu.style.top = `${e.clientY + window.scrollY}px`;
+            contextMenu.style.left = `${e.clientX + window.scrollX}px`;
+            contextMenu.style.zIndex = '1000';
         });
 
         document.addEventListener('click', function(e) {

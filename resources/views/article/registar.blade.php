@@ -29,16 +29,16 @@
             </div>
 
             <div>
-                <x-input-label for="url">URL</x-input-label>
-                <x-text-input id="url" name="url" type="text" class="mt-1 block w-full" value="{{ old('url') }}" required />
+                <label for="url">URL</label>
+                <input id="url" name="url" type="text" class="mt-1 block w-full form-control" value="{{ old('url') }}" required />
                 @error('url')
                     <div class="text-danger">{{ $message }}</div>
                 @enderror
             </div>
 
             <div>
-                <x-input-label for="title">タイトル</x-input-label>
-                <x-text-input id="title" name="title" type="text" class="mt-1 block w-full" value="{{old('title')}}" required/>
+                <label for="title">タイトル</label>
+                <input id="title" name="title" type="text" class="mt-1 block w-full form-control" value="{{old('title')}}" required/>
                 @error('title')
                     <div class="text-danger">{{ $message }}</div>
                 @enderror
@@ -63,40 +63,40 @@
             <div class="tab-content my-4" id="codeTabContent">
                 <div class="tab-pane fade show active" id="disp" role="tabpanel" aria-labelledby="disp-tab">
                     <div class="mb-3">
-                        <x-input-label for="disp">表示</x-input-label>
+                        <label for="disp">表示</label>
                         <textarea class="form-control" id="disp" name="disp" rows="10">{{ old('disp') }}</textarea>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="code" role="tabpanel" aria-labelledby="code-tab">
                     <div class="mb-3">
-                        <x-input-label for="language">言語 1</x-input-label>
-                        <x-text-input id="language" name="language" type="text" class="mt-1 block w-full" value="{{ old('language') }}"/>
+                        <label for="language">言語 1</label>
+                        <input id="language" name="language" type="text" class="mt-1 block w-full form-control" value="{{ old('language') }}"/>
                     </div>
                     <div class="mb-3">
-                        <x-input-label for="code">コード 1</x-input-label>
+                        <label for="code">コード 1</label>
                         <textarea class="form-control" id="code" name="code" rows="10">{{ old('code') }}</textarea>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="code2" role="tabpanel" aria-labelledby="code2-tab">
                     <div class="mb-3">
-                        <x-input-label for="language2">言語 2</x-input-label>
-                        <x-text-input id="language2" name="language2" type="text" class="mt-1 block w-full" value="{{ old('language2') }}"/>
+                        <label for="language2">言語 2</label>
+                        <input id="language2" name="language2" type="text" class="mt-1 block w-full form-control" value="{{ old('language2') }}"/>
                     </div>
                     <div class="mb-3">
-                        <x-input-label for="code2">コード 2</x-input-label>
+                        <label for="code2">コード 2</label>
                         <textarea class="form-control" id="code2" name="code2" rows="10">{{ old('code2') }}</textarea>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="code3" role="tabpanel" aria-labelledby="code3-tab">
                     <div class="mb-3">
-                        <x-input-label for="language3">言語 3</x-input-label>
-                        <x-text-input id="language3" name="language3" type="text" class="mt-1 block w-full" value="{{ old('language3') }}"/>
+                        <label for="language3">言語 3</label>
+                        <input id="language3" name="language3" type="text" class="mt-1 block w-full form-control" value="{{ old('language3') }}"/>
                     </div>
                     <div class="mb-3">
-                        <x-input-label for="code3">コード 3</x-input-label>
+                        <label for="code3">コード 3</label>
                         <textarea class="form-control" id="code3" name="code3" rows="10">{{ old('code3') }}</textarea>
                     </div>
                 </div>

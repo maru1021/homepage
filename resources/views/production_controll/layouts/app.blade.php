@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'マルオモスキートのお勉強部屋' }}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     <link href="https://use.fontawesome.com/releases/v6.3.0/css/all.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.2/css/all.css" integrity="sha384-/rXc/GQVaYpyDdyxK+ecHPVYJSN9bmVFBvjA/9eOB+pb3F2w2N6fc5qB9Ew5yIns" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
         .navbar {
@@ -95,6 +93,7 @@
         }
     </style>
     @yield('head')
+
 </head>
 <body>
 
@@ -116,70 +115,35 @@
         <a href="{{ route('login') }}">ログイン</a>
         @endauth
     </div>
-    @auth
-        @if (Auth::user()->authority === 'maru')
-            <a href="{{ route('article.registar.form') }}"><i class="fas fa-edit"></i>記事登録</a>
-            <a href="{{ route('article.list') }}"><i class="fas fa-list"></i>記事一覧</a>
-        @endif
-    @endauth
 
-    @foreach($types as $type)
-        <a class="toggle-submenu">{{ $type->type }}</a>
-        <div class="submenu">
-            @foreach($type->classifications as $classification)
-                @php
-                    $icon = 'fas fa-folder';
-
-                    switch($classification->classification) {
-                        case 'HTML':
-                            $icon = 'fab fa-html5';
-                            break;
-                        case 'Javascript':
-                            $icon = 'fab fa-js-square';
-                            break;
-                        case 'PHP':
-                            $icon = 'fab fa-php';
-                            break;
-                        case 'Python':
-                            $icon = 'fab fa-python';
-                            break;
-                        case 'CSS':
-                            $icon = 'fab fa-css3-alt';
-                            break;
-                        case 'Laravel':
-                            $icon = 'fab fa-laravel';
-                            break;
-                        case 'Git':
-                            $icon = 'fab fa-git-alt';
-                            break;
-                        case 'Linux':
-                            $icon = 'fab fa-linux';
-                            break;
-                        case 'インフラ':
-                            $icon = 'fas fa-server';
-                            break;
-                    }
-                @endphp
-                <a class="toggle-submenu"><i class="{{ $icon }}"></i>{{ $classification->classification }}</a>
-                <div class="submenu">
-                    @foreach($classification->articles as $article)
-                        <a href="{{ url('/article/'. $article->type->type.'/'. $article->classification->classification .'/'. $article->url) }}">{{ $article->title }}</a>
-                    @endforeach
-                </div>
-            @endforeach
-        </div>
-    @endforeach
-    <a class="toggle-submenu">作成したもの</a>
+    <a class="toggle-submenu">生産管理部</a>
     <div class="submenu">
-        <a class="toggle-submenu"><i class="{{ $icon }}"></i>3D</a>
+        <a href="">注残一覧</a>
+        <a class="toggle-submenu">材料関係</a>
         <div class="submenu">
-            <a href="{{ route('3D.operation') }}">3D操作</a>
-            <a href="{{ route('3D.mirror') }}">パノラマ、鏡面反射</a>
-            <a href="{{ route('3D.universe') }}">宇宙</a>
-            <a href="{{ route('3D.MMD') }}">MMD</a>
+            <a href="">材料メーカー</a>
+            <a href="">材料情報</a>
         </div>
-        <a href="{{ route('production_dashbord') }}">生産管理システム</a>
     </div>
+
+    <a class="toggle-submenu">製造部</a>
+    <div class="submenu">
+        <a href="">進捗</a>
+    </div>
+
+    <a class="toggle-submenu">品質管理部</a>
+    <div class="submenu">
+        <a href="">製品情報</a>
+        <a href="">工程情報</a>
+        <a href="">不良情報</a>
+    </div>
+
+    <a class="toggle-submenu">総務部</a>
+    <div class="submenu">
+        <a href="{{ route('employee.get') }}">従業員情報</a>
+    </div>
+
+    <a href="{{ route('dashbord.get') }}">マルオモスキートのお勉強部屋</a>
 </div>
 
 <div class="content" id="content">
@@ -187,10 +151,10 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="../base/modal.js"></script>
+<script src="../base/table.js"></script>
 @yield('Javascript')
 
 <script>
