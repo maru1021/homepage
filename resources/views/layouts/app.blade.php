@@ -178,7 +178,7 @@
             <a href="{{ route('3D.universe') }}">宇宙</a>
             <a href="{{ route('3D.MMD') }}">MMD</a>
         </div>
-        <a href="{{ route('production_dashbord') }}">生産管理システム</a>
+        <a href="{{ route('productioncontroll.dashbord') }}">生産管理システム</a>
     </div>
 </div>
 

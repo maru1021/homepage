@@ -29,7 +29,7 @@ Route::get('/3D/operation', function(){ return view('3D.operation'); })->name('3
 Route::get('/3D/mirror', function(){ return view('3D.mirror'); })->name('3D.mirror');
 Route::get('/3D/universe', function(){ return view('3D.universe'); })->name('3D.universe');
 Route::get('/3D/MMD', function(){ return view('3D.MMD'); })->name('3D.MMD');
-Route::get('/productioncontroll', [DashbordController::class, 'get'])->name('production_dashbord');
+Route::get('/productioncontroll', [DashbordController::class, 'get'])->name('productioncontroll.dashbord');
 Route::get('/employee', [EmployeeController::class, 'get'])->name('employee.get');
 Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');
 Route::post('employees', [EmployeeController::class, 'registar'])->name('employees.registar');
