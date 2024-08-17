@@ -192,7 +192,7 @@
     @endforeach
     <a class="toggle-submenu">作成したもの</a>
     <div class="submenu">
-        <a class="toggle-submenu"><i class="{{ $icon }}"></i>3D</a>
+        <a class="toggle-submenu"><i class="fas fa-cube"></i>3D</a>
         <div class="submenu">
             <a href="{{ route('3D.operation') }}">3D操作</a>
             <a href="{{ route('3D.mirror') }}">パノラマ、鏡面反射</a>
