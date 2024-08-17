@@ -143,11 +143,32 @@
                         case 'Python':
                             $icon = 'fab fa-python';
                             break;
+                        case 'Ruby':
+                            $icon = 'fas fa-gem';
+                            break;
                         case 'CSS':
                             $icon = 'fab fa-css3-alt';
                             break;
+                        case 'Bootstrap':
+                            $icon = 'fab fa-bootstrap';
+                            break;
+                        case 'React':
+                            $icon = 'fab fa-react';
+                            break;
+                        case 'Django(基本)':
+                            $icon = 'fab fa-python';
+                            break;
+                        case 'Django(ORM)':
+                            $icon = 'fab fa-python';
+                            break;
                         case 'Laravel':
                             $icon = 'fab fa-laravel';
+                            break;
+                        case 'Ruby on Rails':
+                            $icon = 'fas fa-gem';
+                            break;
+                        case 'Ruby on Rails(ORM)':
+                            $icon = 'fas fa-gem';
                             break;
                         case 'Git':
                             $icon = 'fab fa-git-alt';

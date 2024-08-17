@@ -91,6 +91,37 @@
                 display: block;
             }
         }
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+        }
+        .action-buttons {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+        }
+        .custom-context-menu {
+            display: none;
+            position: absolute;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            width: 200px;
+        }
+        .custom-context-menu div {
+            padding: 12px 20px;
+            color: #333;
+            text-decoration: none;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .custom-context-menu div:last-child {
+            border-bottom: none;
+        }
+        .custom-context-menu div:hover {
+            background-color: #e2e6ea;
+        }
     </style>
     @yield('head')
 
@@ -119,11 +150,7 @@
     <a class="toggle-submenu">生産管理部</a>
     <div class="submenu">
         <a href="">注残一覧</a>
-        <a class="toggle-submenu">材料関係</a>
-        <div class="submenu">
-            <a href="">材料メーカー</a>
-            <a href="">材料情報</a>
-        </div>
+        <a href="{{ route('material.get') }}">材料情報</a>
     </div>
 
     <a class="toggle-submenu">製造部</a>

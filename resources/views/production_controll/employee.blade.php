@@ -1,47 +1,12 @@
 @extends('production_controll.layouts.app')
 
-@section('head')
-<style>
-    .page-title {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 1.5rem;
-    }
-    .action-buttons {
-        position: absolute;
-        right: 20px;
-        top: 20px;
-    }
-    .custom-context-menu {
-        display: none;
-        position: absolute;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
-        width: 200px;
-    }
-    .custom-context-menu div {
-        padding: 12px 20px;
-        color: #333;
-        text-decoration: none;
-        border-bottom: 1px solid #e9ecef;
-    }
-    .custom-context-menu div:last-child {
-        border-bottom: none;
-    }
-    .custom-context-menu div:hover {
-        background-color: #e2e6ea;
-    }
-</style>
-@endsection
-
 @section('content')
 <h1 class="page-title">社員情報</h1>
 <div class="container my-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="action-buttons">
             <button type="button" id="department_button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#departmentModal">部署登録</button>
+            <button type="button" id="deleteDepartment_button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDepartmentModal">部署削除</button>
             <button type="button" id="employee_button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#employeeModal">社員登録</button>
         </div>
         <div class="d-flex justify-content-end" style="flex-grow: 1;">
@@ -89,6 +54,32 @@
                     <hr>
                     <div class="d-flex justify-content-end">
                         <button type="submit" class="btn btn-primary">登録</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 部署削除モーダル -->
+<div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteDepartmentModalLabel">部署削除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="deleteDepartmentForm">
+                    @csrf
+                    <div class="form-group">
+                        <label for="deleteDepartmentName">部署名</label>
+                        <select class="form-control" id="deleteDepartmentName" name="department_id">
+                        </select>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" id="deleteDepartmentButton" class="btn btn-danger">削除</button>
                     </div>
                 </form>
             </div>
@@ -167,6 +158,9 @@
         const employeeForm = document.getElementById('employeeForm');
         const employeeModal = new bootstrap.Modal(employeeModalElement);
         const employeeSaveButton = document.getElementById('employeeSaveButton');
+        const deleteDepartmentButton = document.getElementById('deleteDepartmentButton');
+        const deleteDepartmentModalElement = document.getElementById('deleteDepartmentModal');
+        const deleteDepartmentModal = new bootstrap.Modal(deleteDepartmentModalElement);
         const contextMenu = document.getElementById('contextMenu');
         const searchInput = document.getElementById('searchInput');
         const employeesTableBody = document.querySelector('#employeeTable tbody');
@@ -264,7 +258,6 @@
         //社員登録・更新
         employeeForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log(employeeNoList)
 
             const validList = ['employeeNumber', 'employeeName', 'employeeAddress', 'employeeBirthDate'];
             valid = validCheck(validList);
@@ -281,15 +274,14 @@
             let employeeNumber = formData.get('employee_number');
             let employeeId = employeeSaveButton.getAttribute('data-id');
             const employeeNumberPattern = /^[a-zA-Z0-9]{5}$/;
-            if (!employeeNumberPattern.test(employeeNumber)) {
-                alert('社員番号は英数字のみで5桁でなければなりません');
+            if (!employeeNumberPattern.test(employeeNumber) && valid!=false) {
+                toastr.error('社員番号は英数字のみで5桁でなければなりません');
                 valid = false;
             }
 
-            console.log(employeeNoList.includes(employeeNumber))
             const changedEmployeeNumber = employeeSaveButton.getAttribute('data-employee-no');
-            console.log(changedEmployeeNumber)
-            if ((employeeNoList.includes(employeeNumber) && employeeId === '') || (changedEmployeeNumber !== employeeNumber && employeeNoList.includes(employeeNumber))) {
+            if ((employeeNoList.includes(employeeNumber) && employeeId === '') ||
+                (changedEmployeeNumber !== employeeNumber && employeeNoList.includes(employeeNumber)) && valid != false) {
                 toastr.error('その社員番号は既に使用されています');
                 valid = false;
             }
@@ -335,18 +327,17 @@
                 }
             })
             .catch(error => {
-                console.log(error)
                 toastr.error('社員の登録に失敗しました');
                 console.error('Error:', error);
             });
         });
 
-        //社員モーダル表示時に部署読み込み
-        employeeModalElement.addEventListener('shown.bs.modal', () => {
+        //部署読み込み
+        function loadDepartment(elementId){
             fetch('{{ route("departments.index") }}')
             .then(response => response.json())
             .then(data => {
-                const departmentSelect = document.getElementById('employeeDepartment');
+                const departmentSelect = document.getElementById(elementId);
                 departmentSelect.innerHTML = '';
                 data.forEach(department => {
                     const option = document.createElement('option');
@@ -356,12 +347,22 @@
                 });
             })
             .catch(error => console.error('Error fetching departments:', error));
+        }
+
+        //部署削除時の部署読み込み
+        deleteDepartmentModalElement.addEventListener('shown.bs.modal', ()=>{
+            loadDepartment('deleteDepartmentName');
+        })
+
+        //社員モーダル表示時に部署読み込み
+        employeeModalElement.addEventListener('shown.bs.modal', () => {
+            loadDepartment('employeeDepartment');
         });
 
         //編集時のデータ読み込み
         function employeeGetData(id){
             contextMenu.style.display = 'none';
-            fetch(`{{ url('employees') }}/${id}`, {
+            fetch(`/employees/${id}`, {
                 method: 'GET',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -392,6 +393,31 @@
             });
         }
 
+        //部署削除
+        deleteDepartmentButton.addEventListener('click', function(){
+            event.preventDefault()
+
+            if(confirm('本当に削除しますか?')){
+                const deleteDepartmentId = document.getElementById('deleteDepartmentName').value;
+                fetch(`/departments/${deleteDepartmentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    toastr.success('部署が削除されました');
+                    loadTable('{{ route("employees.index") }}');
+                    deleteDepartmentModal.hide();
+                })
+                .catch(error => {
+                    toastr.error('部署の削除に失敗しました');
+                    console.error('Error:', error);
+                });
+            };
+        })
+
         //社員情報削除
         function employeeDelete(id){
             contextMenu.style.display = 'none';
@@ -405,6 +431,7 @@
             .then(data => {
                 toastr.success('社員が削除されました');
                 loadTable('{{ route("employees.index") }}');
+                deleteDepartmentModal.hide();
             })
             .catch(error => {
                 toastr.error('社員の削除に失敗しました');
@@ -422,7 +449,7 @@
                 contextMenu.style.left = `${e.clientX + window.scrollX}px`;
                 contextMenu.style.zIndex = '1000';
 
-                const trId = targetElement.id; // 右クリックした行のIDを取得
+                const trId = targetElement.id;
                 const editElement = document.getElementById('menu-edit');
                 const deleteElement = document.getElementById('menu-delete');
 

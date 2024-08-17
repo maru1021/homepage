@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Procuctioncontroll;
+namespace App\Http\Controllers\Productioncontroll;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Validation\ValidationException;
@@ -26,5 +26,13 @@ class DepartmentController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()]);
         }
+    }
+
+    public function delete($id)
+    {
+        $department = Department::findOrFail($id);
+        $department->delete();
+
+        return response()->json(['success' => '部署が削除されました']);
     }
 }

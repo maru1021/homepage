@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Procuctioncontroll;
+namespace App\Http\Controllers\Productioncontroll;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;

@@ -2,13 +2,16 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Main\MainController;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Main\ArticleRegistarController;
 use App\Http\Controllers\Main\ArticleController;
 use App\Http\Controllers\Main\ArticleListController;
-use App\Http\Controllers\Procuctioncontroll\DashbordController;
-use App\Http\Controllers\Procuctioncontroll\EmployeeController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Procuctioncontroll\DepartmentController;
+use App\Http\Controllers\Productioncontroll\DashbordController;
+use App\Http\Controllers\Productioncontroll\EmployeeController;
+use App\Http\Controllers\Productioncontroll\MaterialMakerController;
+use App\Http\Controllers\Productioncontroll\MaterialController;
+
+use App\Http\Controllers\Productioncontroll\DepartmentController;
 
 Route::get('/', [MainController::class, 'edit'])->name('dashbord.get');
 
@@ -38,6 +41,18 @@ Route::put('/employees/{id}', [EmployeeController::class, 'update'])->name('empl
 Route::delete('/employees/{id}', [EmployeeController::class, 'delete'])->name('employees.delete');
 Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
 Route::post('/departments', [DepartmentController::class, 'registar'])->name('departments.registar');
+Route::delete('/departments/{id}', [DepartmentController::class, 'delete'])->name('departments.delete');
+Route::get('/material', [MaterialController::class, 'get'])->name('material.get');
+Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
+Route::post('materials', [MaterialController::class, 'registar'])->name('materials.registar');
+Route::get('/materials/{id}', [MaterialController::class, 'editdata'])->name('materials.editdata');
+Route::put('/materials/{id}', [MaterialController::class, 'update'])->name('materials.update');
+Route::delete('/materials/{id}', [MaterialController::class, 'delete'])->name('materials.delete');
+Route::get('/materialmakers', [MaterialMakerController::class, 'index'])->name('material_makers.index');
+Route::post('materialmakers', [MaterialMakerController::class, 'registar'])->name('material_makers.registar');
+Route::get('/materialmakers/{id}', [MaterialMakerController::class, 'editdata'])->name('material_makers.editdata');
+Route::put('/materialmakers/{id}', [MaterialMakerController::class, 'update'])->name('material_makers.update');
+Route::delete('/materialmakers/{id}', [MaterialMakerController::class, 'delete'])->name('material_makers.delete');
 
 
 
