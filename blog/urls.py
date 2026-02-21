@@ -6,6 +6,7 @@ from .feeds import LatestArticlesFeed
 app_name = "blog"
 
 urlpatterns = [
+    path("api/articles/", views.api_articles, name="api_articles"),
     path("", views.article_list, name="article_list"),
     path("search/", views.article_search, name="article_search"),
     path("feed/", LatestArticlesFeed(), name="feed"),

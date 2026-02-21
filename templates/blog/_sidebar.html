@@ -18,6 +18,9 @@
     </div>
     <h3>ツール</h3>
     <div class="sidebar-item">
+        <a href="{% url 'stock_monitor:index' %}" class="sidebar-admin-link">株価モニター</a>
+    </div>
+    <div class="sidebar-item">
         <a href="{% url 'dkc_drive:index' %}" class="sidebar-admin-link">DKCドライブ</a>
     </div>
     {% if user.is_staff %}

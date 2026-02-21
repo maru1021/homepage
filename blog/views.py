@@ -4,6 +4,8 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.views.decorators.http import require_GET
 
 from .models import Classification, Article
 from .forms import ClassificationForm
@@ -169,3 +171,29 @@ def _classification_form_ajax(request, instance=None):
     if request.method == "POST":
         return JsonResponse({"success": False, "html": html})
     return JsonResponse({"html": html})
+
+
+# ============================================================
+# 外部連携用 API
+# ============================================================
+
+@require_GET
+def api_articles(request):
+    """公開記事のJSON一覧を返す（auto_post用）"""
+    articles = (
+        Article.objects
+        .filter(is_published=True)
+        .select_related("classification__parent__parent")
+        .order_by("-published_at")[:50]
+    )
+    data = []
+    for a in articles:
+        data.append({
+            "id": a.id,
+            "title": a.title,
+            "excerpt": a.excerpt or "",
+            "content_text": strip_tags(a.content)[:1000],
+            "url": a.get_absolute_url(),
+            "published_at": a.published_at.isoformat() if a.published_at else None,
+        })
+    return JsonResponse({"articles": data})

@@ -19,6 +19,12 @@ def robots_txt(request):
         "Disallow: /login/",
         "Disallow: /logout/",
         "",
+        "User-agent: SemrushBot",
+        "Disallow: /",
+        "",
+        "User-agent: TikTokSpider",
+        "Disallow: /",
+        "",
         f"Sitemap: https://{request.get_host()}/sitemap.xml",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")
@@ -37,6 +43,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
     path('admin/', admin.site.urls),
     path('drive/', include('dkc_drive.urls')),
+    path('stocks/', include('stock_monitor.urls')),
     path('', include('blog.urls')),
 ]
 

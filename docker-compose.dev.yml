@@ -33,5 +33,24 @@ services:
         condition: service_healthy
     command: python manage.py runserver 0.0.0.0:8000
 
+  stock_fetcher:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - DEBUG=true
+      - DATABASE_NAME=blog
+      - DATABASE_USER=blog
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python manage.py fetch_stock_prices
+    restart: unless-stopped
+
 volumes:
   postgres_data:

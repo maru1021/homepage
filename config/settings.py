@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',
     'blog',
     'dkc_drive',
+    'stock_monitor',
 ]
 
 MIDDLEWARE = [
