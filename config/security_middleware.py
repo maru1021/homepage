@@ -3,6 +3,7 @@
 daihatsu_system の middleware.py / security_middleware.py から個人ブログ用に移行
 """
 
+import os
 import re
 import html
 import logging
@@ -18,6 +19,10 @@ performance_logger = logging.getLogger('performance')
 
 # 共通: 静的ファイル等のログ除外パス
 EXCLUDED_PATHS = ('/static/', '/media/', '/favicon.ico')
+
+# アクセスログ除外IPアドレス（自分自身のアクセスを除外）
+_exclude_ips = os.environ.get('ACCESS_LOG_EXCLUDE_IPS', '')
+EXCLUDED_IPS = {ip.strip() for ip in _exclude_ips.split(',') if ip.strip()}
 
 
 def get_client_ip(request):
@@ -58,12 +63,14 @@ class AccessLoggingMiddleware:
 
         response = self.get_response(request)
 
-        access_logger.info(
-            '%s,%s,%s,%s,%s,%s',
-            get_client_ip(request), _get_username(request), request.method,
-            request.path, response.status_code,
-            request.META.get('HTTP_USER_AGENT', '-'),
-        )
+        client_ip = get_client_ip(request)
+        if client_ip not in EXCLUDED_IPS:
+            access_logger.info(
+                '%s,%s,%s,%s,%s,%s',
+                client_ip, _get_username(request), request.method,
+                request.path, response.status_code,
+                request.META.get('HTTP_USER_AGENT', '-'),
+            )
 
         return response
 
