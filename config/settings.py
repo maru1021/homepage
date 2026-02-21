@@ -56,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # X-Frame-Options はNginx側で設定するためXFrameOptionsMiddlewareは除外
     'django_htmx.middleware.HtmxMiddleware',
     'config.security_middleware.SecurityLoggingMiddleware',
     'config.security_middleware.AccessLoggingMiddleware',
@@ -105,12 +105,16 @@ CHANNEL_LAYERS = {
 
 # Database
 
+_db_password = os.environ.get('DATABASE_PASSWORD', 'blog' if DEBUG else '')
+if not DEBUG and not _db_password:
+    raise ValueError('本番環境ではDATABASE_PASSWORDの環境変数設定が必須です')
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DATABASE_NAME', 'blog'),
         'USER': os.environ.get('DATABASE_USER', 'blog'),
-        'PASSWORD': os.environ.get('DATABASE_PASSWORD', 'blog'),
+        'PASSWORD': _db_password,
         'HOST': os.environ.get('DATABASE_HOST', 'db'),
         'PORT': os.environ.get('DATABASE_PORT', '5432'),
         'CONN_MAX_AGE': 600,
@@ -178,19 +182,21 @@ CSRF_USE_SESSIONS = False  # クッキーベース
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 
-# セキュリティ設定（DEBUG問わず適用）
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
+# セキュリティ設定
+# X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy はNginx側で設定するため
+# Django側では無効化して重複を防ぐ
+SECURE_CONTENT_TYPE_NOSNIFF = False
+SECURE_REFERRER_POLICY = None
 
 # 本番環境用セキュリティ設定
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
-    SECURE_HSTS_SECONDS = 31536000  # 1年
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Slack通知設定
+SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '')
 
 # ログ設定
 LOGGING = {
@@ -276,3 +282,48 @@ LOGGING = {
         },
     },
 }
+
+# SLACK_BOT_TOKEN が設定されている場合、Slackハンドラを追加
+if SLACK_BOT_TOKEN:
+    LOGGING['handlers'].update({
+        'slack_security': {
+            'level': 'WARNING',
+            'class': 'config.slack_log_handler.SlackLogHandler',
+            'channel': '#homepage-security',
+            'token': SLACK_BOT_TOKEN,
+            'formatter': 'verbose',
+        },
+        'slack_error': {
+            'level': 'ERROR',
+            'class': 'config.slack_log_handler.SlackLogHandler',
+            'channel': '#homepage-error',
+            'token': SLACK_BOT_TOKEN,
+            'formatter': 'verbose',
+        },
+        'slack_performance': {
+            'level': 'WARNING',
+            'class': 'config.slack_log_handler.SlackLogHandler',
+            'channel': '#homepage-performance',
+            'token': SLACK_BOT_TOKEN,
+            'formatter': 'csv',
+        },
+        'slack_access': {
+            'level': 'INFO',
+            'class': 'config.slack_log_handler.SlackLogHandler',
+            'channel': '#homepage-access',
+            'token': SLACK_BOT_TOKEN,
+            'formatter': 'csv',
+        },
+        'slack_general': {
+            'level': 'WARNING',
+            'class': 'config.slack_log_handler.SlackLogHandler',
+            'channel': '#homepage-general',
+            'token': SLACK_BOT_TOKEN,
+            'formatter': 'verbose',
+        },
+    })
+    LOGGING['loggers']['security']['handlers'].append('slack_security')
+    LOGGING['loggers']['django.request']['handlers'].append('slack_error')
+    LOGGING['loggers']['performance']['handlers'].append('slack_performance')
+    LOGGING['loggers']['access']['handlers'].append('slack_access')
+    LOGGING['loggers']['django']['handlers'].append('slack_general')

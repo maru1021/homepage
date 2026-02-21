@@ -107,33 +107,40 @@ class SecurityLoggingMiddleware:
     XSS、SQLインジェクション、ディレクトリトラバーサル等の攻撃を検知しブロック
     """
 
-    EXEMPT_PATHS = [
+    # admin は Nginx IP制限で保護済みのため、検知のみ（ブロックしない）
+    LOG_ONLY_PATHS = [
         '/admin/',
     ]
 
     def __init__(self, get_response):
         self.get_response = get_response
         self.suspicious_patterns = [
-            (r'<script.*?>.*?</script>', 'XSS Attack'),
-            (r'<iframe.*?>.*?</iframe>', 'XSS iframe Attack'),
-            (r'javascript:', 'JavaScript Injection'),
+            (r'<\s*script', 'XSS Attack'),
+            (r'<\s*iframe', 'XSS iframe Attack'),
+            (r'<\s*object', 'XSS object Attack'),
+            (r'<\s*embed', 'XSS embed Attack'),
+            (r'<\s*svg\b.*?\bon', 'XSS SVG Attack'),
+            (r'javascript\s*:', 'JavaScript Injection'),
+            (r'vbscript\s*:', 'VBScript Injection'),
             (r'\bon\w+\s*=', 'XSS Event Handler'),
-            (r'&lt;.*?&gt;', 'HTML Entity XSS'),
-            (r'&#\d+;', 'Numeric Entity XSS'),
+            (r'&#x?[\da-fA-F]+;', 'HTML Entity XSS'),
             (r'%3[cC].*?%3[eE]', 'URL Encoded XSS'),
+            (r'%25(?:3[cC]|3[eE])', 'Double Encoded XSS'),
             (r'data\s*:\s*text/html', 'Data URI XSS'),
             (r'data\s*:\s*[^,]*base64', 'Data URI Base64 XSS'),
-            (r'(union|select|drop|insert|delete|update)\s+', 'SQL Injection'),
+            (r'\b(?:union\s+select|select\s+.*\bfrom\b|drop\s+table|insert\s+into|delete\s+from|update\s+.*\bset\b)\b', 'SQL Injection'),
+            (r'(?:--|;)\s*(?:drop|alter|create|truncate)\b', 'SQL Injection'),
+            (r'/etc/(?:passwd|shadow|hosts)', 'File Access Attack'),
             (r'(\.\./){2,}', 'Directory Traversal'),
-            (r'(cmd|exec|system|eval)\s*\(', 'Code Injection'),
+            (r'\.\.[\\/]', 'Directory Traversal'),
+            (r'(cmd|exec|system|eval|passthru|popen)\s*\(', 'Code Injection'),
             (r'<\?php', 'PHP Code Injection'),
+            (r'\$\{.*?\}', 'Template Injection'),
         ]
 
     def __call__(self, request):
         try:
-            for exempt_path in self.EXEMPT_PATHS:
-                if request.path.startswith(exempt_path):
-                    return self.get_response(request)
+            log_only = any(request.path.startswith(p) for p in self.LOG_ONLY_PATHS)
 
             request_data = self._get_request_data(request)
 
@@ -144,12 +151,14 @@ class SecurityLoggingMiddleware:
                     client_ip = get_client_ip(request)
                     username = request.user.username if hasattr(request, 'user') and request.user.is_authenticated else 'Anonymous'
                     security_logger.warning(
-                        '%s,%s,%s,%s,%s,%s',
+                        '%s,%s,%s,%s,%s,%s,%s',
                         attack_type, client_ip, username,
                         request.method, request.path, matched_string,
+                        request_data,
                     )
-                    content = render_to_string('403.html', request=request)
-                    return HttpResponseForbidden(content)
+                    if not log_only:
+                        content = render_to_string('403.html', request=request)
+                        return HttpResponseForbidden(content)
 
             return self.get_response(request)
 
@@ -177,7 +186,13 @@ class SecurityLoggingMiddleware:
 
     def _normalize_data(self, data):
         try:
-            decoded = urllib.parse.unquote(data, errors='ignore')
+            # 二重エンコード対策: 変化がなくなるまで繰り返しデコード
+            decoded = data
+            for _ in range(3):
+                prev = decoded
+                decoded = urllib.parse.unquote(decoded, errors='ignore')
+                if decoded == prev:
+                    break
             decoded = html.unescape(decoded)
             decoded = decoded.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
             return decoded + ' ' + data
