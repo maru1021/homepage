@@ -1,4 +1,9 @@
 <nav class="sidebar-nav">
+    <div class="sidebar-search">
+        <input type="text" id="sidebarSearchInput" placeholder="記事を検索..." autocomplete="off"
+               data-search-url="{% url 'blog:article_search' %}"
+               data-home-url="{% url 'blog:article_list' %}">
+    </div>
     <h3>カテゴリ</h3>
     <div class="sidebar-item">
         <div class="sidebar-label sidebar-folder open" data-slug="blog-root">

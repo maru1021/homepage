@@ -8,6 +8,9 @@ from django.template.loader import render_to_string
 from .models import Classification, Article
 from .forms import ClassificationForm
 
+ARTICLES_PER_PAGE = 12
+RELATED_ARTICLES_COUNT = 5
+SEARCH_RESULTS_LIMIT = 20
 
 _PUBLISHED_ARTICLES = (
     Article.objects
@@ -22,47 +25,17 @@ def _render(request, full_template, partial_template, context):
     return render(request, template, context)
 
 
-def article_list(request):
-    """トップページ: 最新記事（ページネーション対応）"""
-    paginator = Paginator(_PUBLISHED_ARTICLES.all(), 12)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-    return _render(request, "blog/article_list.html", "blog/_article_list_content.html", {
-        "articles": page_obj,
-        "page_obj": page_obj,
-    })
+def _paginate(queryset, request):
+    """ページネーション共通処理"""
+    paginator = Paginator(queryset, ARTICLES_PER_PAGE)
+    return paginator.get_page(request.GET.get("page"))
 
 
-def category_detail(request, path):
-    """カテゴリページ: 分類ごとの記事一覧"""
-    parts = path.strip("/").split("/")
-    slug = parts[-1]
-    classification = get_object_or_404(Classification, slug=slug)
-
-    # パスが正しいかチェック
-    expected_path = f"/category/{classification.get_slug_path()}/"
-    if request.path != expected_path:
-        return redirect(expected_path, permanent=True)
-
-    # この分類と子孫分類の全記事を取得
-    classification_ids = [classification.pk]
-    _collect_descendant_ids(classification, classification_ids)
-    articles = _PUBLISHED_ARTICLES.filter(classification_id__in=classification_ids)
-
-    paginator = Paginator(articles, 12)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-
-    ancestors = classification.get_ancestors()
-    child_classifications = classification.children.all()
-
-    return _render(request, "blog/category_detail.html", "blog/_category_detail_content.html", {
-        "classification": classification,
-        "articles": page_obj,
-        "page_obj": page_obj,
-        "ancestors": ancestors,
-        "child_classifications": child_classifications,
-    })
+def _redirect_if_wrong_path(request, canonical_path):
+    """正規URLと異なるパスの場合、リダイレクトレスポンスを返す"""
+    if request.path != canonical_path:
+        return redirect(canonical_path, permanent=True)
+    return None
 
 
 def _collect_descendant_ids(classification, id_list):
@@ -72,13 +45,49 @@ def _collect_descendant_ids(classification, id_list):
         _collect_descendant_ids(child, id_list)
 
 
+def article_list(request):
+    """トップページ: 最新記事（ページネーション対応）"""
+    page_obj = _paginate(_PUBLISHED_ARTICLES.all(), request)
+    return _render(request, "blog/article_list.html", "blog/_article_list_content.html", {
+        "articles": page_obj,
+        "page_obj": page_obj,
+    })
+
+
+def category_detail(request, path):
+    """カテゴリページ: 分類ごとの記事一覧"""
+    slug = path.strip("/").split("/")[-1]
+    classification = get_object_or_404(Classification, slug=slug)
+
+    redirect_response = _redirect_if_wrong_path(
+        request, f"/category/{classification.get_slug_path()}/"
+    )
+    if redirect_response:
+        return redirect_response
+
+    # この分類と子孫分類の全記事を取得
+    classification_ids = [classification.pk]
+    _collect_descendant_ids(classification, classification_ids)
+    articles = _PUBLISHED_ARTICLES.filter(classification_id__in=classification_ids)
+
+    page_obj = _paginate(articles, request)
+
+    return _render(request, "blog/category_detail.html", "blog/_category_detail_content.html", {
+        "classification": classification,
+        "articles": page_obj,
+        "page_obj": page_obj,
+        "ancestors": classification.get_ancestors(),
+        "child_classifications": classification.children.all(),
+    })
+
+
 def article_search(request):
     """記事検索（AJAX / 通常アクセス両対応）"""
     q = request.GET.get("q", "").strip()
     if q:
         articles = _PUBLISHED_ARTICLES.filter(
             Q(title__icontains=q) | Q(excerpt__icontains=q) | Q(content__icontains=q)
-        )[:20]
+        )[:SEARCH_RESULTS_LIMIT]
     else:
         articles = Article.objects.none()
     return _render(request, "blog/search.html", "blog/_search_results.html", {
@@ -89,27 +98,22 @@ def article_search(request):
 
 def article_detail(request, path):
     """記事詳細ページ（URLは /article/分類1/分類2/.../記事slug/）"""
-    parts = path.strip("/").split("/")
-    slug = parts[-1]
-    article = get_object_or_404(
-        _PUBLISHED_ARTICLES, slug=slug,
-    )
-    # パスが正しいかチェックし、不一致なら正規URLにリダイレクト
-    canonical = article.get_absolute_url()
-    if request.path != canonical:
-        return redirect(canonical, permanent=True)
-    ancestors = []
-    if article.classification:
-        ancestors = article.classification.get_ancestors() + [article.classification]
+    slug = path.strip("/").split("/")[-1]
+    article = get_object_or_404(_PUBLISHED_ARTICLES, slug=slug)
 
-    # 関連記事: 同じ分類の他の記事（最大5件）
+    redirect_response = _redirect_if_wrong_path(request, article.get_absolute_url())
+    if redirect_response:
+        return redirect_response
+
+    ancestors = []
     related_articles = []
     if article.classification:
+        ancestors = article.classification.get_ancestors() + [article.classification]
         related_articles = list(
             _PUBLISHED_ARTICLES
             .filter(classification=article.classification)
             .exclude(pk=article.pk)
-            .order_by("-published_at")[:5]
+            .order_by("-published_at")[:RELATED_ARTICLES_COUNT]
         )
 
     return _render(request, "blog/article_detail.html", "blog/_article_detail_content.html", {

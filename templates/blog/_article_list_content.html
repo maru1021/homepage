@@ -7,20 +7,4 @@
     {% endfor %}
 </div>
 
-{% if page_obj.paginator.num_pages > 1 %}
-<nav class="pagination" aria-label="ページナビゲーション">
-    {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo; 前へ</a>
-    {% endif %}
-    {% for num in page_obj.paginator.page_range %}
-    {% if num == page_obj.number %}
-    <span class="page-link current">{{ num }}</span>
-    {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
-    <a href="?page={{ num }}" class="page-link">{{ num }}</a>
-    {% endif %}
-    {% endfor %}
-    {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}" class="page-link">次へ &raquo;</a>
-    {% endif %}
-</nav>
-{% endif %}
+{% include "blog/_pagination.html" %}

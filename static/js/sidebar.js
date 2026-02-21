@@ -32,15 +32,23 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 検索: 入力変化時にAJAXで検索
-    var searchInput = document.getElementById("searchInput");
-    if (searchInput) {
-        var searchUrl = searchInput.dataset.searchUrl;
-        var homeUrl = searchInput.dataset.homeUrl;
-        var searchTimer = null;
-        searchInput.addEventListener("input", function () {
+    // 検索: ヘッダーとサイドバーの検索欄を連動
+    var searchInputs = document.querySelectorAll("#searchInput, #sidebarSearchInput");
+    var searchTimer = null;
+
+    searchInputs.forEach(function (input) {
+        var searchUrl = input.dataset.searchUrl;
+        var homeUrl = input.dataset.homeUrl;
+
+        input.addEventListener("input", function () {
             clearTimeout(searchTimer);
-            var q = searchInput.value.trim();
+            var q = input.value.trim();
+
+            // もう一方の検索欄にも値を同期
+            searchInputs.forEach(function (other) {
+                if (other !== input) other.value = input.value;
+            });
+
             searchTimer = setTimeout(function () {
                 if (q.length === 0) {
                     htmx.ajax("GET", homeUrl, { target: "#main-content", pushUrl: homeUrl });
@@ -49,7 +57,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }, 300);
         });
-    }
+    });
 
     // モバイル: サイドバートグル
     var toggleBtn = document.getElementById("sidebarToggle");

@@ -1,21 +1,4 @@
-<nav class="breadcrumb" aria-label="パンくずリスト">
-    <ol itemscope itemtype="https://schema.org/BreadcrumbList">
-        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            <a href="{% url 'blog:article_list' %}" class="htmx-link" itemprop="item"><span itemprop="name">トップ</span></a>
-            <meta itemprop="position" content="1">
-        </li>
-        {% for ancestor in ancestors %}
-        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            &gt; <a href="/category/{{ ancestor.get_slug_path }}/" class="htmx-link" itemprop="item"><span itemprop="name">{{ ancestor.name }}</span></a>
-            <meta itemprop="position" content="{{ forloop.counter|add:1 }}">
-        </li>
-        {% endfor %}
-        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            &gt; <span itemprop="name">{{ article.title }}</span>
-            <meta itemprop="position" content="{{ ancestors|length|add:2 }}">
-        </li>
-    </ol>
-</nav>
+{% include "blog/_breadcrumb.html" with breadcrumb_current=article.title %}
 
 {% load blog_tags %}
 <article class="article-detail">
