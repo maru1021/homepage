@@ -1,4 +1,5 @@
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -22,14 +23,57 @@ def _render(request, full_template, partial_template, context):
 
 
 def article_list(request):
-    """トップページ: 最新記事"""
+    """トップページ: 最新記事（ページネーション対応）"""
+    paginator = Paginator(_PUBLISHED_ARTICLES.all(), 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
     return _render(request, "blog/article_list.html", "blog/_article_list_content.html", {
-        "articles": _PUBLISHED_ARTICLES.all()[:10],
+        "articles": page_obj,
+        "page_obj": page_obj,
     })
 
 
+def category_detail(request, path):
+    """カテゴリページ: 分類ごとの記事一覧"""
+    parts = path.strip("/").split("/")
+    slug = parts[-1]
+    classification = get_object_or_404(Classification, slug=slug)
+
+    # パスが正しいかチェック
+    expected_path = f"/category/{classification.get_slug_path()}/"
+    if request.path != expected_path:
+        return redirect(expected_path, permanent=True)
+
+    # この分類と子孫分類の全記事を取得
+    classification_ids = [classification.pk]
+    _collect_descendant_ids(classification, classification_ids)
+    articles = _PUBLISHED_ARTICLES.filter(classification_id__in=classification_ids)
+
+    paginator = Paginator(articles, 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    ancestors = classification.get_ancestors()
+    child_classifications = classification.children.all()
+
+    return _render(request, "blog/category_detail.html", "blog/_category_detail_content.html", {
+        "classification": classification,
+        "articles": page_obj,
+        "page_obj": page_obj,
+        "ancestors": ancestors,
+        "child_classifications": child_classifications,
+    })
+
+
+def _collect_descendant_ids(classification, id_list):
+    """再帰的に子孫分類のIDを収集"""
+    for child in classification.children.all():
+        id_list.append(child.pk)
+        _collect_descendant_ids(child, id_list)
+
+
 def article_search(request):
-    """記事検索（AJAX）"""
+    """記事検索（AJAX / 通常アクセス両対応）"""
     q = request.GET.get("q", "").strip()
     if q:
         articles = _PUBLISHED_ARTICLES.filter(
@@ -37,7 +81,7 @@ def article_search(request):
         )[:20]
     else:
         articles = Article.objects.none()
-    return render(request, "blog/_search_results.html", {
+    return _render(request, "blog/search.html", "blog/_search_results.html", {
         "articles": articles,
         "query": q,
     })
@@ -57,9 +101,21 @@ def article_detail(request, path):
     ancestors = []
     if article.classification:
         ancestors = article.classification.get_ancestors() + [article.classification]
+
+    # 関連記事: 同じ分類の他の記事（最大5件）
+    related_articles = []
+    if article.classification:
+        related_articles = list(
+            _PUBLISHED_ARTICLES
+            .filter(classification=article.classification)
+            .exclude(pk=article.pk)
+            .order_by("-published_at")[:5]
+        )
+
     return _render(request, "blog/article_detail.html", "blog/_article_detail_content.html", {
         "article": article,
         "ancestors": ancestors,
+        "related_articles": related_articles,
     })
 
 

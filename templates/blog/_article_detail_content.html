@@ -1,20 +1,54 @@
-<nav class="breadcrumb">
-    <a href="{% url 'blog:article_list' %}" class="htmx-link">トップ</a>
-    {% for ancestor in ancestors %}
-    &gt; <span class="breadcrumb-text">{{ ancestor.name }}</span>
-    {% endfor %}
-    &gt; {{ article.title }}
+<nav class="breadcrumb" aria-label="パンくずリスト">
+    <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <a href="{% url 'blog:article_list' %}" class="htmx-link" itemprop="item"><span itemprop="name">トップ</span></a>
+            <meta itemprop="position" content="1">
+        </li>
+        {% for ancestor in ancestors %}
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            &gt; <a href="/category/{{ ancestor.get_slug_path }}/" class="htmx-link" itemprop="item"><span itemprop="name">{{ ancestor.name }}</span></a>
+            <meta itemprop="position" content="{{ forloop.counter|add:1 }}">
+        </li>
+        {% endfor %}
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            &gt; <span itemprop="name">{{ article.title }}</span>
+            <meta itemprop="position" content="{{ ancestors|length|add:2 }}">
+        </li>
+    </ol>
 </nav>
 
+{% load blog_tags %}
 <article class="article-detail">
     <header>
         {% if article.classification %}
         <span class="category">{{ article.classification.name }}</span>
         {% endif %}
         <h1>{{ article.title }}</h1>
-        <time>{{ article.published_at|date:"Y年n月j日" }}</time>
+        <div class="article-meta">
+            <div class="article-dates">
+                <time datetime="{{ article.published_at|date:'Y-m-d' }}">{{ article.published_at|date:"Y年n月j日" }} 公開</time>
+                {% if article.updated_at and article.updated_at != article.published_at %}
+                <time datetime="{{ article.updated_at|date:'Y-m-d' }}" class="updated-date">{{ article.updated_at|date:"Y年n月j日" }} 更新</time>
+                {% endif %}
+            </div>
+            <span class="reading-time">{{ article.content|reading_time }}分で読めます</span>
+        </div>
     </header>
     <div class="article-content">
         {{ article.content|safe }}
     </div>
 </article>
+
+{% if related_articles %}
+<section class="related-articles">
+    <h2>関連記事</h2>
+    <div class="related-articles-list">
+        {% for related in related_articles %}
+        <a href="{{ related.get_absolute_url }}" class="related-article-card htmx-link">
+            <span class="related-article-title">{{ related.title }}</span>
+            <time datetime="{{ related.published_at|date:'Y-m-d' }}">{{ related.published_at|date:"Y年n月j日" }}</time>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}

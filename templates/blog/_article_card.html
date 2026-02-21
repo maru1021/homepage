@@ -1,6 +1,6 @@
 <article class="article-card">
     {% if article.thumbnail %}
-    <img src="{{ article.thumbnail.url }}" alt="{{ article.title }}">
+    <img src="{{ article.thumbnail.url }}" alt="{{ article.title }}" loading="lazy" width="600" height="200">
     {% endif %}
     <div class="article-card-body">
         {% if article.classification %}
@@ -8,6 +8,6 @@
         {% endif %}
         <h2><a href="{{ article.get_absolute_url }}" class="htmx-link">{{ article.title }}</a></h2>
         <p>{{ article.excerpt }}</p>
-        <time>{{ article.published_at|date:"Y年n月j日" }}</time>
+        <time datetime="{{ article.published_at|date:'Y-m-d' }}">{{ article.published_at|date:"Y年n月j日" }}</time>
     </div>
 </article>

@@ -20,13 +20,20 @@ else
     fi
 fi
 
-# デフォルトユーザーを作成（存在しない場合のみ）
-python manage.py shell -c "
+# デフォルトユーザーを作成（開発環境のみ）
+if [ "$DEBUG" = "true" ] || [ "$DEBUG" = "True" ] || [ "$DEBUG" = "1" ]; then
+    python manage.py shell -c "
 from django.contrib.auth.models import User
 u, created = User.objects.get_or_create(username='user', defaults={'first_name': '太郎', 'last_name': '山田'})
-u.set_password('password')
-u.save()
-print('Default user created.' if created else 'Default user password reset.')
+if created:
+    u.set_password('password')
+    u.save()
+    print('Default user created.')
+else:
+    print('Default user already exists, skipping.')
 " 2>/dev/null || true
+else
+    echo "Production mode: skipping default user creation."
+fi
 
 exec "$@"

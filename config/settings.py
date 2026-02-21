@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',
     'django_htmx',
+    'django.contrib.sitemaps',
     'blog',
     'dkc_drive',
 ]
@@ -283,8 +284,8 @@ LOGGING = {
     },
 }
 
-# SLACK_BOT_TOKEN が設定されている場合、Slackハンドラを追加
-if SLACK_BOT_TOKEN:
+# 本番環境かつ SLACK_BOT_TOKEN が設定されている場合、Slackハンドラを追加
+if not DEBUG and SLACK_BOT_TOKEN:
     LOGGING['handlers'].update({
         'slack_security': {
             'level': 'WARNING',

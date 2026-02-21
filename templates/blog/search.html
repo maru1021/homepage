@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block robots %}<meta name="robots" content="noindex, follow">{% endblock %}
+{% block title %}{% if query %}"{{ query }}" の検索結果{% else %}検索{% endif %} - {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<h1>{% if query %}"{{ query }}" の検索結果{% else %}検索{% endif %}</h1>
+{% include "blog/_search_results.html" %}
+{% endblock %}
