@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load blog_tags %}
+{% load blog_tags static %}
 
 {% block title %}{{ article.title }} - {{ SITE_NAME }}{% endblock %}
 {% block meta_description %}{{ article.excerpt|default:article.title }}{% endblock %}
@@ -9,6 +9,10 @@
 {% block og_title %}{{ article.title }}{% endblock %}
 {% block og_description %}{{ article.excerpt|default:article.title }}{% endblock %}
 {% block og_image %}{% if article.thumbnail %}<meta property="og:image" content="https://{{ request.get_host }}{{ article.thumbnail.url }}">{% endif %}{% endblock %}
+
+{% block twitter_title %}{{ article.title }}{% endblock %}
+{% block twitter_description %}{{ article.excerpt|default:article.title }}{% endblock %}
+{% block twitter_image %}{% if article.thumbnail %}<meta name="twitter:image" content="https://{{ request.get_host }}{{ article.thumbnail.url }}">{% else %}<meta name="twitter:image" content="https://{{ request.get_host }}{% static 'image/og-default.png' %}">{% endif %}{% endblock %}
 
 {% block extra_meta %}
 <meta property="article:published_time" content="{{ article.published_at|date:'c' }}">
