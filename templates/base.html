@@ -21,14 +21,14 @@
     <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
     {% block robots %}{% endblock %}
     <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}{{ SITE_NAME }} - Python・JavaScript・PHP・Ruby・Linux・Docker・ネットワーク・セキュリティなど、Web開発に必要な技術を幅広く解説する技術ブログです。{% endblock %}">
+    <meta name="description" content="{% block meta_description %}{{ SITE_NAME }} - プログラミング・サーバー構築・ネットワーク・セキュリティ・AI活用など、IT技術を初心者にもわかりやすく解説するブログです。{% endblock %}">
     {% block canonical %}<link rel="canonical" href="https://{{ request.get_host }}{{ request.path }}">{% endblock %}
     <!-- RSS フィード -->
     <link rel="alternate" type="application/rss+xml" title="{{ SITE_NAME }}" href="{% url 'blog:feed' %}">
     <!-- OGP -->
     <meta property="og:type" content="{% block og_type %}website{% endblock %}">
     <meta property="og:title" content="{% block og_title %}{{ SITE_NAME }}{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}{{ SITE_NAME }} - Web開発に必要な技術を幅広く解説する技術ブログ{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ SITE_NAME }} - IT技術を初心者にもわかりやすく解説するブログ{% endblock %}">
     <meta property="og:url" content="https://{{ request.get_host }}{{ request.path }}">
     <meta property="og:site_name" content="{{ SITE_NAME }}">
     <meta property="og:locale" content="ja_JP">

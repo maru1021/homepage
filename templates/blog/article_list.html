@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}{% if page_obj.number > 1 %}{{ page_obj.number }}ページ目 - {% endif %}{{ SITE_NAME }} - Web開発・プログラミング技術ブログ{% endblock %}
-{% block meta_description %}{{ SITE_NAME }} - Python・JavaScript・PHP・Ruby・Linux・Docker・ネットワーク・セキュリティなど、Web開発に必要な技術を幅広く解説する技術ブログです。{% endblock %}
+{% block meta_description %}{{ SITE_NAME }} - プログラミング・サーバー構築・ネットワーク・セキュリティ・AI活用など、IT技術を初心者にもわかりやすく解説するブログです。{% endblock %}
 {% block canonical %}<link rel="canonical" href="https://{{ request.get_host }}{% if page_obj.number > 1 %}?page={{ page_obj.number }}{% else %}/{% endif %}">{% endblock %}
 
 {% block pagination_links %}
