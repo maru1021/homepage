@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
     // コードタブの初期化
     setupCodeTabs(document);
 
@@ -6,25 +6,25 @@ document.addEventListener("DOMContentLoaded", function () {
     setupHtmxLinks(document);
 
     // htmxでコンテンツ差し替え後、新しいコンテンツ内のリンクにも付与
-    document.addEventListener("htmx:afterSettle", function (e) {
+    document.addEventListener("htmx:afterSettle", (e) => {
         setupHtmxLinks(e.detail.target);
         setupCodeTabs(e.detail.target);
     });
 
     // サイドバー: イベント委譲で分類フォルダの開閉
-    var sidebarNav = document.querySelector(".sidebar-nav");
+    const sidebarNav = document.querySelector(".sidebar-nav");
     if (sidebarNav) {
-        sidebarNav.addEventListener("click", function (e) {
-            var folder = e.target.closest(".sidebar-folder");
+        sidebarNav.addEventListener("click", (e) => {
+            const folder = e.target.closest(".sidebar-folder");
             if (!folder) return;
             e.preventDefault();
             e.stopPropagation();
-            var item = folder.closest(".sidebar-item");
-            var children = item.querySelector(":scope > .sidebar-children");
+            const item = folder.closest(".sidebar-item");
+            const children = item.querySelector(":scope > .sidebar-children");
             if (!children) return;
-            var isOpen = children.style.display !== "none";
+            const isOpen = children.style.display !== "none";
             children.style.display = isOpen ? "none" : "block";
-            var toggle = folder.querySelector(".toggle");
+            const toggle = folder.querySelector(".toggle");
             if (toggle) {
                 toggle.textContent = isOpen ? "▶" : "▼";
             }
@@ -33,23 +33,23 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // 検索: ヘッダーとサイドバーの検索欄を連動
-    var searchInputs = document.querySelectorAll("#searchInput, #sidebarSearchInput");
-    var searchTimer = null;
+    const searchInputs = document.querySelectorAll("#searchInput, #sidebarSearchInput");
+    let searchTimer = null;
 
-    searchInputs.forEach(function (input) {
-        var searchUrl = input.dataset.searchUrl;
-        var homeUrl = input.dataset.homeUrl;
+    searchInputs.forEach((input) => {
+        const searchUrl = input.dataset.searchUrl;
+        const homeUrl = input.dataset.homeUrl;
 
-        input.addEventListener("input", function () {
+        input.addEventListener("input", () => {
             clearTimeout(searchTimer);
-            var q = input.value.trim();
+            const q = input.value.trim();
 
             // もう一方の検索欄にも値を同期
-            searchInputs.forEach(function (other) {
+            searchInputs.forEach((other) => {
                 if (other !== input) other.value = input.value;
             });
 
-            searchTimer = setTimeout(function () {
+            searchTimer = setTimeout(() => {
                 if (q.length === 0) {
                     htmx.ajax("GET", homeUrl, { target: "#main-content", pushUrl: homeUrl });
                 } else {
@@ -60,17 +60,17 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // モバイル: サイドバートグル
-    var toggleBtn = document.getElementById("sidebarToggle");
-    var sidebar = document.getElementById("sidebar");
-    var overlay = document.getElementById("sidebarOverlay");
+    const toggleBtn = document.getElementById("sidebarToggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebarOverlay");
 
     if (toggleBtn && sidebar && overlay) {
-        toggleBtn.addEventListener("click", function () {
+        toggleBtn.addEventListener("click", () => {
             sidebar.classList.toggle("open");
             overlay.classList.toggle("open");
         });
 
-        overlay.addEventListener("click", function () {
+        overlay.addEventListener("click", () => {
             sidebar.classList.remove("open");
             overlay.classList.remove("open");
         });
@@ -78,18 +78,18 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function setupCodeTabs(root) {
-    root.querySelectorAll(".code-tabs").forEach(function (tabs) {
+    root.querySelectorAll(".code-tabs").forEach((tabs) => {
         if (tabs.dataset.tabsInit) return;
         tabs.dataset.tabsInit = "1";
-        var buttons = tabs.querySelectorAll(".tab-btn");
-        var panels = tabs.querySelectorAll(".tab-panel");
-        buttons.forEach(function (btn) {
-            btn.addEventListener("click", function () {
-                var target = btn.dataset.tab;
-                buttons.forEach(function (b) { b.classList.remove("active"); });
-                panels.forEach(function (p) { p.classList.remove("active"); });
+        const buttons = tabs.querySelectorAll(".tab-btn");
+        const panels = tabs.querySelectorAll(".tab-panel");
+        buttons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const target = btn.dataset.tab;
+                buttons.forEach((b) => b.classList.remove("active"));
+                panels.forEach((p) => p.classList.remove("active"));
                 btn.classList.add("active");
-                var panel = tabs.querySelector('.tab-panel[data-tab="' + target + '"]');
+                const panel = tabs.querySelector(`.tab-panel[data-tab="${target}"]`);
                 if (panel) panel.classList.add("active");
             });
         });
@@ -97,7 +97,7 @@ function setupCodeTabs(root) {
 }
 
 function setupHtmxLinks(root) {
-    root.querySelectorAll(".htmx-link:not([hx-get])").forEach(function (link) {
+    root.querySelectorAll(".htmx-link:not([hx-get])").forEach((link) => {
         link.setAttribute("hx-get", link.getAttribute("href"));
         link.setAttribute("hx-target", "#main-content");
         link.setAttribute("hx-push-url", "true");
