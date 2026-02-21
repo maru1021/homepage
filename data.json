@@ -1,0 +1,476 @@
+[
+{
+  "model": "auth.permission",
+  "pk": 1,
+  "fields": {
+    "name": "Can add log entry",
+    "content_type": 1,
+    "codename": "add_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 2,
+  "fields": {
+    "name": "Can change log entry",
+    "content_type": 1,
+    "codename": "change_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 3,
+  "fields": {
+    "name": "Can delete log entry",
+    "content_type": 1,
+    "codename": "delete_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 4,
+  "fields": {
+    "name": "Can view log entry",
+    "content_type": 1,
+    "codename": "view_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 5,
+  "fields": {
+    "name": "Can add permission",
+    "content_type": 2,
+    "codename": "add_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 6,
+  "fields": {
+    "name": "Can change permission",
+    "content_type": 2,
+    "codename": "change_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 7,
+  "fields": {
+    "name": "Can delete permission",
+    "content_type": 2,
+    "codename": "delete_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 8,
+  "fields": {
+    "name": "Can view permission",
+    "content_type": 2,
+    "codename": "view_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 9,
+  "fields": {
+    "name": "Can add group",
+    "content_type": 3,
+    "codename": "add_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 10,
+  "fields": {
+    "name": "Can change group",
+    "content_type": 3,
+    "codename": "change_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 11,
+  "fields": {
+    "name": "Can delete group",
+    "content_type": 3,
+    "codename": "delete_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 12,
+  "fields": {
+    "name": "Can view group",
+    "content_type": 3,
+    "codename": "view_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 13,
+  "fields": {
+    "name": "Can add user",
+    "content_type": 4,
+    "codename": "add_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 14,
+  "fields": {
+    "name": "Can change user",
+    "content_type": 4,
+    "codename": "change_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 15,
+  "fields": {
+    "name": "Can delete user",
+    "content_type": 4,
+    "codename": "delete_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 16,
+  "fields": {
+    "name": "Can view user",
+    "content_type": 4,
+    "codename": "view_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 17,
+  "fields": {
+    "name": "Can add content type",
+    "content_type": 5,
+    "codename": "add_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 18,
+  "fields": {
+    "name": "Can change content type",
+    "content_type": 5,
+    "codename": "change_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 19,
+  "fields": {
+    "name": "Can delete content type",
+    "content_type": 5,
+    "codename": "delete_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 20,
+  "fields": {
+    "name": "Can view content type",
+    "content_type": 5,
+    "codename": "view_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 21,
+  "fields": {
+    "name": "Can add session",
+    "content_type": 6,
+    "codename": "add_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 22,
+  "fields": {
+    "name": "Can change session",
+    "content_type": 6,
+    "codename": "change_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 23,
+  "fields": {
+    "name": "Can delete session",
+    "content_type": 6,
+    "codename": "delete_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 24,
+  "fields": {
+    "name": "Can view session",
+    "content_type": 6,
+    "codename": "view_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 25,
+  "fields": {
+    "name": "Can add 記事",
+    "content_type": 7,
+    "codename": "add_article"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 26,
+  "fields": {
+    "name": "Can change 記事",
+    "content_type": 7,
+    "codename": "change_article"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 27,
+  "fields": {
+    "name": "Can delete 記事",
+    "content_type": 7,
+    "codename": "delete_article"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 28,
+  "fields": {
+    "name": "Can view 記事",
+    "content_type": 7,
+    "codename": "view_article"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 29,
+  "fields": {
+    "name": "Can add 分類",
+    "content_type": 8,
+    "codename": "add_classification"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 30,
+  "fields": {
+    "name": "Can change 分類",
+    "content_type": 8,
+    "codename": "change_classification"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 31,
+  "fields": {
+    "name": "Can delete 分類",
+    "content_type": 8,
+    "codename": "delete_classification"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 32,
+  "fields": {
+    "name": "Can view 分類",
+    "content_type": 8,
+    "codename": "view_classification"
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$nmMDe65aRAMf5BVjkkD5XI$2b/q4Fx+REsl/ncsmIzfxsKvTZO+KB46EshJPQuZqfQ=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@example.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-02-17T15:30:47.267Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 1,
+  "fields": {
+    "app_label": "admin",
+    "model": "logentry"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 2,
+  "fields": {
+    "app_label": "auth",
+    "model": "permission"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 3,
+  "fields": {
+    "app_label": "auth",
+    "model": "group"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 4,
+  "fields": {
+    "app_label": "auth",
+    "model": "user"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 5,
+  "fields": {
+    "app_label": "contenttypes",
+    "model": "contenttype"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 6,
+  "fields": {
+    "app_label": "sessions",
+    "model": "session"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 7,
+  "fields": {
+    "app_label": "blog",
+    "model": "article"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 8,
+  "fields": {
+    "app_label": "blog",
+    "model": "classification"
+  }
+},
+{
+  "model": "blog.classification",
+  "pk": 7,
+  "fields": {
+    "name": "Claude",
+    "slug": "claude",
+    "parent": null,
+    "order": 1
+  }
+},
+{
+  "model": "blog.classification",
+  "pk": 8,
+  "fields": {
+    "name": "セキュリティ",
+    "slug": "security",
+    "parent": null,
+    "order": 2
+  }
+},
+{
+  "model": "blog.classification",
+  "pk": 9,
+  "fields": {
+    "name": "ネットワーク",
+    "slug": "network",
+    "parent": null,
+    "order": 3
+  }
+},
+{
+  "model": "blog.classification",
+  "pk": 10,
+  "fields": {
+    "name": "データベース",
+    "slug": "database",
+    "parent": null,
+    "order": 4
+  }
+},
+{
+  "model": "blog.classification",
+  "pk": 11,
+  "fields": {
+    "name": "プログラミング",
+    "slug": "programming",
+    "parent": null,
+    "order": 5
+  }
+},
+{
+  "model": "blog.classification",
+  "pk": 12,
+  "fields": {
+    "name": "SSH",
+    "slug": "ssh-security",
+    "parent": 8,
+    "order": 1
+  }
+},
+{
+  "model": "blog.classification",
+  "pk": 13,
+  "fields": {
+    "name": "SSH",
+    "slug": "ssh-network",
+    "parent": 9,
+    "order": 1
+  }
+},
+{
+  "model": "blog.article",
+  "pk": 4,
+  "fields": {
+    "title": "VPSにSSH接続できない？「Connection refused」から接続成功までの全手順",
+    "short_title": "SSH接続ガイド",
+    "slug": "ssh-setup-guide",
+    "content": "<!-- ヒーロー -->\n  <div class=\"hero\">\n    <div class=\"meta\">\n      <span class=\"tag\">Linux</span>\n      <span class=\"tag\">SSH</span>\n      <span class=\"tag\">VPS</span>\n    </div>\n    <h1>VPSにSSH接続できない？<br>「Connection refused」から接続成功までの全手順</h1>\n    <p class=\"lead\">VPSを契約して、いざSSH接続しようとしたら「Connection refused」。初めてのVPSだと焦りますよね。<br>\n    この記事では、同じエラーに実際にハマった筆者が、原因の切り分けから公開鍵認証で接続するまでの手順をステップごとに解説します。</p>\n  </div>\n\n  <!-- 対象読者 -->\n  <div class=\"target-box\">\n    <h2>こんな人向けの記事です</h2>\n    <ul>\n      <li>VPSを契約したが、SSHで接続できない</li>\n      <li>「Connection refused」や「Permission denied」が出て困っている</li>\n      <li>公開鍵認証の設定方法を知りたい</li>\n    </ul>\n  </div>\n\n  <!-- フロー図 -->\n  <div class=\"flow\">\n    <div class=\"flow-step error\">\n      Connection<br>refused\n    </div>\n    <div class=\"flow-arrow\">&rarr;</div>\n    <div class=\"flow-step\">\n      状態確認<br>&amp; インストール\n    </div>\n    <div class=\"flow-arrow\">&rarr;</div>\n    <div class=\"flow-step\">\n      unmask<br>&amp; 起動\n    </div>\n    <div class=\"flow-arrow\">&rarr;</div>\n    <div class=\"flow-step\">\n      公開鍵<br>登録\n    </div>\n    <div class=\"flow-arrow\">&rarr;</div>\n    <div class=\"flow-step success\">\n      接続<br>成功\n    </div>\n  </div>\n\n  <!-- 目次 -->\n  <nav class=\"toc\">\n    <h2>目次</h2>\n    <ol>\n      <li><a href=\"#step1\">接続を試みる</a></li>\n      <li><a href=\"#step2\">サーバー側でSSHの状態を確認する</a></li>\n      <li><a href=\"#step3\">openssh-server をインストールする</a></li>\n      <li><a href=\"#step4\">SSHサービスを起動する</a></li>\n      <li><a href=\"#step5\">マスクを解除して起動する</a></li>\n      <li><a href=\"#step6\">公開鍵認証を設定する</a></li>\n      <li><a href=\"#step7\">接続テスト</a></li>\n    </ol>\n  </nav>\n\n  <!-- 環境 -->\n  <h2 class=\"section-title\">環境</h2>\n  <table>\n    <tr><th>項目</th><th>詳細</th></tr>\n    <tr><td>クライアント</td><td>macOS（Apple Silicon）</td></tr>\n    <tr><td>サーバー</td><td>Ubuntu 20.04（VPS）</td></tr>\n  </table>\n\n  <!-- Step 1 -->\n  <h2 class=\"section-title\" id=\"step1\"><span class=\"step-label\">Step 1</span>接続を試みる</h2>\n  <div class=\"code-block\">\n    <span class=\"where\">ローカル（自分のPC）</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>ssh ユーザー名@サーバーのIPアドレス</code></pre>\n  </div>\n  <div class=\"output\">ssh: connect to host xxx.xxx.xxx.xxx port 22: Connection refused</div>\n  <p>ポート22（SSHのデフォルトポート）で接続を拒否されました。サーバー側でSSHサーバーが起動していない可能性が高いです。</p>\n\n  <!-- Step 2 -->\n  <h2 class=\"section-title\" id=\"step2\"><span class=\"step-label\">Step 2</span>サーバー側でSSHの状態を確認する</h2>\n  <p>SSHが使えないので、VPSの<strong>Webコンソール</strong>（管理画面から起動できるブラウザ上の端末）からサーバーにログインして確認します。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo systemctl status sshd</code></pre>\n  </div>\n  <div class=\"output\">Unit sshd.service not found.</div>\n  <p>サービスが見つかりません。openssh-server がインストールされていないか、サービス名が異なる可能性があります。</p>\n\n  <!-- Step 3 -->\n  <h2 class=\"section-title\" id=\"step3\"><span class=\"step-label\">Step 3</span>openssh-server をインストールする</h2>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo apt update &amp;&amp; sudo apt install -y openssh-server</code></pre>\n  </div>\n  <p>今回は「already the newest version」と表示され、パッケージ自体はインストール済みでした。未インストールの場合はここで自動的にインストールされます。</p>\n\n  <!-- Step 4 -->\n  <h2 class=\"section-title\" id=\"step4\"><span class=\"step-label\">Step 4</span>SSHサービスを起動する</h2>\n  <div class=\"info-box\">\n    <div class=\"info-title\">Ubuntu と CentOS でサービス名が異なります</div>\n    <strong>Ubuntu / Debian系</strong> → <code>ssh</code>　|　<strong>CentOS / RHEL系</strong> → <code>sshd</code>\n  </div>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo systemctl start ssh</code></pre>\n  </div>\n  <div class=\"output\">Failed to start ssh.service: Unit ssh.service is masked.</div>\n  <p>今度は <strong>masked（マスク）</strong> という見慣れないエラーが出ました。</p>\n\n  <div class=\"info-box\">\n    <div class=\"info-title\">「masked」って何？</div>\n    マスクとは、<code>systemctl disable</code> よりもさらに強力な無効化設定です。マスクされたサービスは <code>start</code> コマンドでも起動できません。<br>\n    VPSの初期イメージによっては、セキュリティのためにSSHがマスク状態で提供されていることがあります。\n  </div>\n\n  <!-- Step 5 -->\n  <h2 class=\"section-title\" id=\"step5\"><span class=\"step-label\">Step 5</span>マスクを解除して起動する</h2>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code><span class=\"cm\"># マスク解除</span>\nsudo systemctl unmask ssh\n\n<span class=\"cm\"># 起動</span>\nsudo systemctl start ssh\n\n<span class=\"cm\"># 自動起動を有効化（再起動しても自動で立ち上がる）</span>\nsudo systemctl enable ssh</code></pre>\n  </div>\n  <p>これでSSHサーバーが起動しました。ただし、この状態で再度接続を試みると……</p>\n  <div class=\"output\">Permission denied (publickey).</div>\n  <p>今度は別のエラーです。パスワード認証が無効になっていて、<strong>公開鍵認証</strong>が必要ということです。</p>\n\n  <!-- Step 6 -->\n  <h2 class=\"section-title\" id=\"step6\"><span class=\"step-label\">Step 6</span>公開鍵認証を設定する</h2>\n\n  <h3>6-1. クライアント側で公開鍵を確認する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">ローカル（自分のPC）</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>cat ~/.ssh/id_ed25519.pub</code></pre>\n  </div>\n  <p><code>ssh-ed25519 AAAA...</code> のような文字列が表示されればOKです。</p>\n  <p>何も表示されない（鍵がない）場合は、以下で作成します。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">ローカル（自分のPC）</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>ssh-keygen -t ed25519</code></pre>\n  </div>\n\n  <h3>6-2. サーバー側で公開鍵を登録する</h3>\n  <p>VPSのWebコンソールから以下を実行します。<code>ここに公開鍵を貼り付け</code> の部分を、先ほど確認した鍵の内容に置き換えてください。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh\necho 'ここに公開鍵を貼り付け' &gt;&gt; ~/.ssh/authorized_keys\nchmod 600 ~/.ssh/authorized_keys</code></pre>\n  </div>\n\n  <div class=\"warn-box\">\n    <div class=\"warn-title\">パーミッション設定を間違えると鍵が無視されます</div>\n    SSHはセキュリティ上の理由から、パーミッションが正しくないファイルを無視します。<br>\n    <code>.ssh</code> → <code>700</code>（所有者のみ読み書き実行）<br>\n    <code>authorized_keys</code> → <code>600</code>（所有者のみ読み書き）<br>\n    これらは必ず設定してください。\n  </div>\n\n  <!-- Step 7 -->\n  <h2 class=\"section-title\" id=\"step7\"><span class=\"step-label\">Step 7</span>接続テスト</h2>\n  <div class=\"code-block\">\n    <span class=\"where\">ローカル（自分のPC）</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>ssh ユーザー名@サーバーのIPアドレス</code></pre>\n  </div>\n  <div class=\"output success\">ユーザー名@ホスト名:~$</div>\n  <p>サーバーのプロンプトが表示されれば接続成功です。</p>\n\n  <!-- トラブルシューティング -->\n  <h2 class=\"section-title\">エラー早見表</h2>\n  <div class=\"table-wrap\">\n    <table>\n      <thead>\n        <tr>\n          <th>エラーメッセージ</th>\n          <th>原因</th>\n          <th>対処コマンド</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td><code>Connection refused</code></td>\n          <td>SSHサーバーが起動していない</td>\n          <td><code>systemctl start ssh</code></td>\n        </tr>\n        <tr>\n          <td><code>Unit sshd.service not found</code></td>\n          <td>サービス名が違う（Ubuntu は ssh）</td>\n          <td><code>systemctl start ssh</code></td>\n        </tr>\n        <tr>\n          <td><code>ssh.service is masked</code></td>\n          <td>サービスがマスクされている</td>\n          <td><code>systemctl unmask ssh</code></td>\n        </tr>\n        <tr>\n          <td><code>Permission denied (publickey)</code></td>\n          <td>公開鍵が未登録 / パーミッション不正</td>\n          <td>authorized_keys に鍵を追加</td>\n        </tr>\n        <tr>\n          <td><code>Connection timed out</code></td>\n          <td>ファイアウォールでポート22がブロック</td>\n          <td><code>ufw allow 22</code></td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n\n  <!-- まとめ -->\n  <h2 class=\"section-title\">まとめ</h2>\n  <p>SSH接続のトラブルは「どこで止まっているか」を一つずつ切り分ければ必ず解決できます。接続できないときは、以下の順にチェックしてみてください。</p>\n  <div class=\"checklist\">\n    <ul>\n      <li>openssh-server が<strong>インストール</strong>されているか</li>\n      <li>サービスが<strong>マスクされていないか</strong></li>\n      <li>サービスが<strong>起動しているか</strong></li>\n      <li>ファイアウォールでポート22が<strong>開いているか</strong></li>\n      <li><strong>公開鍵</strong>が正しいパーミッションで登録されているか</li>\n    </ul>\n  </div>\n\n  <div class=\"footer\">\n    <p>この記事が役に立ったら、ぜひシェアしてください。</p>\n  </div>",
+    "excerpt": "VPSを契約してSSH接続しようとしたら「Connection refused」。原因の切り分けから公開鍵認証で接続するまでの手順をステップごとに解説します。",
+    "thumbnail": "",
+    "classification": 13,
+    "is_published": true,
+    "published_at": "2026-02-17T16:01:47.554Z",
+    "created_at": "2026-02-17T16:01:47.555Z",
+    "updated_at": "2026-02-17T16:01:47.555Z"
+  }
+},
+{
+  "model": "blog.article",
+  "pk": 5,
+  "fields": {
+    "title": "VPSを借りたら最初にやるSSHセキュリティ対策6選",
+    "short_title": "SSHセキュリティ対策",
+    "slug": "ssh-security",
+    "content": "<!-- ヒーロー -->\n  <div class=\"hero\">\n    <div class=\"meta\">\n      <span class=\"tag\">Linux</span>\n      <span class=\"tag\">SSH</span>\n      <span class=\"tag\">セキュリティ</span>\n    </div>\n    <h1>VPSを借りたら最初にやる<br>SSHセキュリティ対策6選</h1>\n    <p class=\"lead\">VPSを契約してSSH接続できるようになったら、次にやるべきはセキュリティ対策です。デフォルト設定のまま放置すると、ブルートフォース攻撃で突破されるリスクがあります。<br>\n    この記事では、実際にVPSに適用した6つのセキュリティ対策を、コマンド付きで解説します。</p>\n  </div>\n\n  <!-- 対象読者 -->\n  <div class=\"target-box\">\n    <h2>こんな人向けの記事です</h2>\n    <ul>\n      <li>VPSを契約してSSH接続できるようになった</li>\n      <li>セキュリティ対策として何をすればいいかわからない</li>\n      <li>具体的なコマンドをコピペで実行したい</li>\n    </ul>\n  </div>\n\n  <!-- 目次 -->\n  <nav class=\"toc\">\n    <h2>目次</h2>\n    <ol>\n      <li><a href=\"#why\">なぜSSHのセキュリティ対策が必要なのか</a></li>\n      <li><a href=\"#overview\">対策一覧</a></li>\n      <li><a href=\"#step1\">対策1: パスワード認証を無効化する</a></li>\n      <li><a href=\"#step2\">対策2: rootログインを禁止する</a></li>\n      <li><a href=\"#step3\">対策3: SSHポート番号を変更する</a></li>\n      <li><a href=\"#step4\">対策4: 認証試行回数とログイン猶予時間を制限する</a></li>\n      <li><a href=\"#step5\">対策5: X11Forwardingを無効化する</a></li>\n      <li><a href=\"#step6\">対策6: Fail2Banで不正アクセスを自動ブロックする</a></li>\n      <li><a href=\"#step7\">対策7: UFW（ファイアウォール）で不要なポートを閉じる</a></li>\n      <li><a href=\"#apply\">設定を反映する</a></li>\n      <li><a href=\"#verify\">設定を検証する</a></li>\n      <li><a href=\"#final\">最終的な設定一覧</a></li>\n    </ol>\n  </nav>\n\n  <!-- なぜ必要か -->\n  <h2 class=\"section-title\" id=\"why\">なぜSSHのセキュリティ対策が必要なのか</h2>\n  <p>VPSはインターネットに公開されたサーバーです。SSHのポートは攻撃者にとって最初の標的になります。</p>\n  <p>パスワード認証が有効な状態では、世界中のボットが自動的にユーザー名とパスワードの組み合わせを総当たりで試みます。これを<strong>ブルートフォース攻撃</strong>と呼びます。簡単なパスワードなら、数時間で突破されることもあります。</p>\n  <p>サーバーを乗っ取られると、スパムメールの送信元にされたり、他のサーバーへの攻撃の踏み台にされるなど、深刻な被害につながります。</p>\n\n  <!-- 対策一覧 -->\n  <h2 class=\"section-title\" id=\"overview\">対策一覧</h2>\n  <p>この記事で実施する対策の全体像です。</p>\n  <div class=\"table-wrap\">\n    <table>\n      <thead>\n        <tr>\n          <th>対策</th>\n          <th>効果</th>\n          <th>重要度</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td>パスワード認証の無効化</td>\n          <td>ブルートフォース攻撃を完全に防止</td>\n          <td>必須</td>\n        </tr>\n        <tr>\n          <td>rootログインの禁止</td>\n          <td>最も狙われるアカウントを保護</td>\n          <td>必須</td>\n        </tr>\n        <tr>\n          <td>SSHポート番号の変更</td>\n          <td>自動スキャンの大半を回避</td>\n          <td>推奨</td>\n        </tr>\n        <tr>\n          <td>認証試行回数の制限</td>\n          <td>連続攻撃の効率を低下させる</td>\n          <td>推奨</td>\n        </tr>\n        <tr>\n          <td>X11Forwarding の無効化</td>\n          <td>不要な機能による攻撃面を削減</td>\n          <td>推奨</td>\n        </tr>\n        <tr>\n          <td>Fail2Ban の導入</td>\n          <td>不正アクセス元を自動ブロック</td>\n          <td>推奨</td>\n        </tr>\n        <tr>\n          <td>UFW（ファイアウォール）</td>\n          <td>不要なポートを閉じる</td>\n          <td>推奨</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n\n  <div class=\"warn-box\">\n    <div class=\"warn-title\">作業前の注意</div>\n    設定を変更する前に、必ず<strong>公開鍵認証でSSH接続できること</strong>を確認してください。パスワード認証を無効化した後に公開鍵が使えないと、サーバーにログインできなくなります。\n  </div>\n\n  <!-- 対策1: パスワード認証 -->\n  <h2 class=\"section-title\" id=\"step1\"><span class=\"step-label\">対策 1</span>パスワード認証を無効化する</h2>\n  <p>最も重要な対策です。これだけでブルートフォース攻撃を完全に防げます。</p>\n  <p>公開鍵認証では、秘密鍵を持っているPCからしか接続できません。秘密鍵は通常256ビット以上の暗号で、総当たりで突破するのは現実的に不可能です。</p>\n\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config</code></pre>\n  </div>\n\n  <h3>変更を確認する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>grep '^PasswordAuthentication' /etc/ssh/sshd_config</code></pre>\n  </div>\n  <div class=\"output success\">PasswordAuthentication no</div>\n\n  <!-- 対策2: rootログイン -->\n  <h2 class=\"section-title\" id=\"step2\"><span class=\"step-label\">対策 2</span>rootログインを禁止する</h2>\n  <p><code>root</code> は全てのLinuxサーバーに存在するユーザーです。攻撃者はまず「root」でログインを試みるため、直接ログインを禁止しておくのが安全です。</p>\n  <p>root権限が必要な操作は、一般ユーザーでログインしてから <code>sudo</code> を使えば問題ありません。</p>\n\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo sed -i 's/^#\\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config</code></pre>\n  </div>\n\n  <h3>変更を確認する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>grep '^PermitRootLogin' /etc/ssh/sshd_config</code></pre>\n  </div>\n  <div class=\"output success\">PermitRootLogin no</div>\n\n  <!-- 対策3: ポート変更 -->\n  <h2 class=\"section-title\" id=\"step3\"><span class=\"step-label\">対策 3</span>SSHポート番号を変更する</h2>\n  <p>SSHのデフォルトポートは22番です。攻撃者の自動スキャンツールはまずポート22を狙うため、別のポートに変更するだけで大量の自動攻撃を回避できます。</p>\n\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code><span class=\"cm\"># 例: ポート番号を 2222 に変更</span>\nsudo sed -i 's/^#\\?Port .*/Port 2222/' /etc/ssh/sshd_config</code></pre>\n  </div>\n\n  <div class=\"info-box\">\n    <div class=\"info-title\">ポート番号の選び方</div>\n    1024〜65535 の範囲で、他のサービスと被らない番号を選んでください。よく使われるのは 2222、10022、22222 などです。\n  </div>\n\n  <div class=\"caution-box\">\n    <div class=\"caution-title\">ファイアウォールの設定を忘れずに</div>\n    ポートを変更したら、新しいポートをファイアウォール（UFW や VPS管理画面のファイアウォール）で必ず開放してください。これを忘れると、SSHサービスを再起動した瞬間にサーバーへ接続できなくなります。\n  </div>\n\n  <p>変更後は接続時に <code>-p</code> オプションでポートを指定します。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">ローカル（自分のPC）</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>ssh -p 2222 ユーザー名@サーバーのIPアドレス</code></pre>\n  </div>\n\n  <!-- 対策4: MaxAuthTries / LoginGraceTime -->\n  <h2 class=\"section-title\" id=\"step4\"><span class=\"step-label\">対策 4</span>認証試行回数とログイン猶予時間を制限する</h2>\n\n  <h3>MaxAuthTries（認証試行回数）</h3>\n  <p>1回の接続で何回パスワードや鍵の認証を試行できるかを制限します。デフォルトは6回ですが、3回に減らすことで攻撃の効率を下げられます。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code><span class=\"cm\"># MaxAuthTries が既にあれば書き換え、なければ追記</span>\ngrep -q '^MaxAuthTries' /etc/ssh/sshd_config \\\n  &amp;&amp; sudo sed -i 's/^MaxAuthTries .*/MaxAuthTries 3/' /etc/ssh/sshd_config \\\n  || echo 'MaxAuthTries 3' | sudo tee -a /etc/ssh/sshd_config</code></pre>\n  </div>\n\n  <h3>LoginGraceTime（ログイン猶予時間）</h3>\n  <p>ログイン画面で何秒間操作がなかったら接続を切るかの設定です。デフォルトは120秒ですが、30秒に短縮することで、接続を占有され続けるのを防ぎます。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>grep -q '^LoginGraceTime' /etc/ssh/sshd_config \\\n  &amp;&amp; sudo sed -i 's/^LoginGraceTime .*/LoginGraceTime 30/' /etc/ssh/sshd_config \\\n  || echo 'LoginGraceTime 30' | sudo tee -a /etc/ssh/sshd_config</code></pre>\n  </div>\n\n  <!-- 対策5: X11Forwarding -->\n  <h2 class=\"section-title\" id=\"step5\"><span class=\"step-label\">対策 5</span>X11Forwarding を無効化する</h2>\n  <p>X11Forwarding は、SSH経由でサーバーのGUIアプリケーションをローカルに表示する機能です。VPSでGUIを使うことはほぼないので、無効化して攻撃面を減らします。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo sed -i 's/^X11Forwarding yes/X11Forwarding no/' /etc/ssh/sshd_config</code></pre>\n  </div>\n\n  <!-- 対策6: Fail2Ban -->\n  <h2 class=\"section-title\" id=\"step6\"><span class=\"step-label\">対策 6</span>Fail2Ban で不正アクセスを自動ブロックする</h2>\n  <p>Fail2Ban は、一定回数ログインに失敗したIPアドレスを自動的にブロック（BAN）するツールです。パスワード認証を無効にしていても、ログに大量の失敗記録が残るのを防げます。</p>\n\n  <h3>インストール</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo apt install -y fail2ban\nsudo systemctl enable fail2ban\nsudo systemctl start fail2ban</code></pre>\n  </div>\n\n  <h3>SSH用の設定ファイルを作成する</h3>\n  <p>デフォルト設定を上書きするために <code>/etc/fail2ban/jail.local</code> を作成します。SSHのポートを変更した場合は、<code>port</code> の値を合わせてください。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo tee /etc/fail2ban/jail.local &lt;&lt; 'EOF'\n[sshd]\nenabled  = true\nport     = 2222\nfilter   = sshd\nlogpath  = /var/log/auth.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\nEOF\n\nsudo systemctl restart fail2ban</code></pre>\n  </div>\n\n  <div class=\"info-box\">\n    <div class=\"info-title\">設定値の意味</div>\n    <code>maxretry = 3</code> … 3回認証に失敗したらBAN<br>\n    <code>bantime = 3600</code> … BAN期間は3600秒（1時間）<br>\n    <code>findtime = 600</code> … 600秒（10分）以内に maxretry 回失敗したらBAN\n  </div>\n\n  <h3>Fail2Ban の状態を確認する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo fail2ban-client status sshd</code></pre>\n  </div>\n  <div class=\"output\">Status for the jail: sshd\n|- Filter\n|  |- Currently failed: 0\n|  |- Total failed:     0\n|  `- File list:        /var/log/auth.log\n`- Actions\n   |- Currently banned: 0\n   |- Total banned:     0\n   `- Banned IP list:</div>\n\n  <!-- 対策7: UFW -->\n  <h2 class=\"section-title\" id=\"step7\"><span class=\"step-label\">対策 7</span>UFW（ファイアウォール）で不要なポートを閉じる</h2>\n  <p>UFW（Uncomplicated Firewall）は Ubuntu 標準のファイアウォールです。必要なポートだけを開放し、それ以外は全てブロックすることで、攻撃対象を最小限に絞れます。</p>\n\n  <h3>インストールと基本設定</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code><span class=\"cm\"># インストール（入っていない場合）</span>\nsudo apt install -y ufw\n\n<span class=\"cm\"># デフォルトポリシー: 受信は拒否、送信は許可</span>\nsudo ufw default deny incoming\nsudo ufw default allow outgoing</code></pre>\n  </div>\n\n  <h3>必要なポートを開放する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code><span class=\"cm\"># SSH（ポート番号を変更した場合はその番号を指定）</span>\nsudo ufw allow 2222/tcp comment 'SSH'\n\n<span class=\"cm\"># Webサーバーを使う場合</span>\nsudo ufw allow 80/tcp comment 'HTTP'\nsudo ufw allow 443/tcp comment 'HTTPS'</code></pre>\n  </div>\n\n  <div class=\"warn-box\">\n    <div class=\"warn-title\">SSHのポートを開放してからUFWを有効化してください</div>\n    SSHのポートを開放する前にUFWを有効化すると、サーバーに接続できなくなります。必ずSSHポートの <code>allow</code> ルールを追加してから有効化してください。\n  </div>\n\n  <h3>UFWを有効化する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo ufw enable</code></pre>\n  </div>\n  <p>「Command may disrupt existing ssh connections.」と聞かれたら <code>y</code> を入力してください。</p>\n\n  <h3>設定を確認する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo ufw status verbose</code></pre>\n  </div>\n\n  <!-- 設定を反映 -->\n  <h2 class=\"section-title\" id=\"apply\">設定を反映する</h2>\n  <p>対策1〜5 は <code>/etc/ssh/sshd_config</code> の変更なので、SSHサービスを再起動して反映します。</p>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>sudo systemctl restart ssh</code></pre>\n  </div>\n\n  <div class=\"caution-box\">\n    <div class=\"caution-title\">今のSSHセッションは切断しないでください</div>\n    万が一設定にミスがあった場合、今のセッションを切断するとログインできなくなります。次のステップで検証が完了するまで、このセッションは開いたままにしておいてください。\n  </div>\n\n  <!-- 検証 -->\n  <h2 class=\"section-title\" id=\"verify\">設定を検証する</h2>\n  <p><strong>別のターミナル</strong>を開いて、以下を確認します。</p>\n\n  <h3>公開鍵認証で接続できるか</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">ローカル（別のターミナル）</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>ssh -p 2222 ユーザー名@サーバーのIPアドレス</code></pre>\n  </div>\n  <div class=\"output success\">ユーザー名@ホスト名:~$</div>\n  <p>正常にログインできればOKです。</p>\n\n  <h3>パスワード認証が拒否されるか</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">ローカル（別のターミナル）</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>ssh -p 2222 -o PreferredAuthentications=password -o PubkeyAuthentication=no ユーザー名@サーバーのIPアドレス</code></pre>\n  </div>\n  <div class=\"output danger\">Permission denied (publickey).</div>\n  <p>パスワード入力を求められず「Permission denied」が出れば、パスワード認証は正しく無効化されています。</p>\n\n  <h3>全設定を一括確認する</h3>\n  <div class=\"code-block\">\n    <span class=\"where\">サーバー</span>\n    <button class=\"copy-btn\" onclick=\"copyCode(this)\">コピー</button>\n    <pre><code>grep -E '^(Port |PermitRootLogin|PasswordAuthentication|PubkeyAuthentication|X11Forwarding|MaxAuthTries|LoginGraceTime)' /etc/ssh/sshd_config</code></pre>\n  </div>\n  <div class=\"output success\">Port 2222\nPermitRootLogin no\nPubkeyAuthentication yes\nPasswordAuthentication no\nX11Forwarding no\nMaxAuthTries 3\nLoginGraceTime 30</div>\n  <p>上記のように表示されれば、全ての設定が正しく反映されています。</p>\n\n  <!-- 最終設定一覧 -->\n  <h2 class=\"section-title\" id=\"final\">最終的な設定一覧</h2>\n  <div class=\"table-wrap\">\n    <table>\n      <thead>\n        <tr>\n          <th>設定項目</th>\n          <th>値</th>\n          <th>説明</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td><code>Port</code></td>\n          <td><code>2222</code></td>\n          <td>デフォルトの22から変更し、自動スキャンを回避</td>\n        </tr>\n        <tr>\n          <td><code>PermitRootLogin</code></td>\n          <td><code>no</code></td>\n          <td>rootでの直接ログインを禁止</td>\n        </tr>\n        <tr>\n          <td><code>PubkeyAuthentication</code></td>\n          <td><code>yes</code></td>\n          <td>公開鍵認証を有効化</td>\n        </tr>\n        <tr>\n          <td><code>PasswordAuthentication</code></td>\n          <td><code>no</code></td>\n          <td>パスワード認証を無効化</td>\n        </tr>\n        <tr>\n          <td><code>X11Forwarding</code></td>\n          <td><code>no</code></td>\n          <td>不要なGUI転送機能を無効化</td>\n        </tr>\n        <tr>\n          <td><code>MaxAuthTries</code></td>\n          <td><code>3</code></td>\n          <td>認証試行回数を3回に制限</td>\n        </tr>\n        <tr>\n          <td><code>LoginGraceTime</code></td>\n          <td><code>30</code></td>\n          <td>ログイン猶予時間を30秒に短縮</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n\n  <!-- まとめ -->\n  <h2 class=\"section-title\">まとめ</h2>\n  <p>VPSを借りたら、少なくとも<strong>パスワード認証の無効化</strong>と<strong>rootログインの禁止</strong>は必ず行ってください。この2つだけでSSHへの攻撃リスクは大幅に下がります。</p>\n  <p>さらにポート変更、認証試行制限、Fail2Ban、UFWを組み合わせることで、より堅牢なサーバーになります。</p>\n  <div class=\"summary-box\">\n    <ol>\n      <li>パスワード認証を無効化して、公開鍵認証のみにする</li>\n      <li>rootログインを禁止する</li>\n      <li>SSHポートをデフォルトの22から変更する</li>\n      <li>認証試行回数とログイン猶予時間を制限する</li>\n      <li>X11Forwardingを無効化する</li>\n      <li>Fail2Banで不正アクセス元を自動ブロックする</li>\n      <li>UFWで必要なポートだけを開放する</li>\n    </ol>\n  </div>\n  <p>全て設定したら、必ず<strong>別のターミナルから接続テスト</strong>をしてから、元のセッションを閉じてください。</p>\n\n  <div class=\"footer\">\n    <p>この記事が役に立ったら、ぜひシェアしてください。</p>\n  </div>",
+    "excerpt": "VPSを契約してSSH接続できるようになったら、次にやるべきはセキュリティ対策です。デフォルト設定のまま放置すると、ブルートフォース攻撃で突破されるリスクがあります。",
+    "thumbnail": "",
+    "classification": 12,
+    "is_published": true,
+    "published_at": "2026-02-17T16:01:47.556Z",
+    "created_at": "2026-02-17T16:01:47.556Z",
+    "updated_at": "2026-02-17T16:27:52.723Z"
+  }
+}
+]

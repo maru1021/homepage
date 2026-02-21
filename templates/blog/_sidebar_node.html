@@ -1,0 +1,26 @@
+{% load blog_tags %}
+{% for node in nodes %}
+<div class="sidebar-item">
+    {% has_children node as has_child %}
+    {% if has_child %}
+    <div class="sidebar-label sidebar-folder" data-slug="{{ node.slug }}">
+        <span class="toggle">▶</span>
+        <span class="folder-name">{{ node.name }}</span>
+    </div>
+    <div class="sidebar-children" style="display:none;">
+        {% with nodes=node.children.all %}
+        {% include "blog/_sidebar_node.html" %}
+        {% endwith %}
+        {% for article in node.articles.all %}
+        <div class="sidebar-item sidebar-article">
+            <a href="{{ article.get_absolute_url }}" class="htmx-link">{{ article.short_title|default:article.title }}</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="sidebar-label sidebar-folder" data-slug="{{ node.slug }}">
+        <span class="folder-name">{{ node.name }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}

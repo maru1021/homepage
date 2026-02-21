@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アクセス拒否</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #333;
+        }
+        .error-container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 500px;
+        }
+        .error-code {
+            font-size: 6rem;
+            font-weight: 700;
+            color: #dc3545;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .error-message {
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 0.6rem 1.5rem;
+            background: #0d6efd;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .back-link:hover {
+            background: #0b5ed7;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-code">403</div>
+        <h1 class="error-title">アクセスが拒否されました</h1>
+        <p class="error-message">
+            不正なリクエストが検出されたため、アクセスがブロックされました。<br>
+            心当たりがない場合は、時間をおいて再度お試しください。
+        </p>
+        <a href="/" class="back-link">トップページへ戻る</a>
+    </div>
+</body>
+</html>

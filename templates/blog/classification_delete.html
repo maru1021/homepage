@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}分類削除 - {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <h1>分類削除</h1>
+    <p>「<strong>{{ classification.name }}</strong>」を削除してよろしいですか？</p>
+    {% if classification.children.all %}
+    <p class="form-error">この分類には子分類があります。削除すると子分類も全て削除されます。</p>
+    {% endif %}
+    <form method="post" class="manage-form">
+        {% csrf_token %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">削除する</button>
+            <a href="{% url 'blog:classification_manage' %}" class="btn btn-secondary">キャンセル</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

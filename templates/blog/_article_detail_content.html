@@ -1,0 +1,20 @@
+<nav class="breadcrumb">
+    <a href="{% url 'blog:article_list' %}" class="htmx-link">トップ</a>
+    {% for ancestor in ancestors %}
+    &gt; <span class="breadcrumb-text">{{ ancestor.name }}</span>
+    {% endfor %}
+    &gt; {{ article.title }}
+</nav>
+
+<article class="article-detail">
+    <header>
+        {% if article.classification %}
+        <span class="category">{{ article.classification.name }}</span>
+        {% endif %}
+        <h1>{{ article.title }}</h1>
+        <time>{{ article.published_at|date:"Y年n月j日" }}</time>
+    </header>
+    <div class="article-content">
+        {{ article.content|safe }}
+    </div>
+</article>

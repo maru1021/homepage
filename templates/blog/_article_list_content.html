@@ -1,0 +1,8 @@
+<h1>最新記事</h1>
+<div class="article-list">
+    {% for article in articles %}
+    {% include "blog/_article_card.html" %}
+    {% empty %}
+    <p>まだ記事がありません。</p>
+    {% endfor %}
+</div>

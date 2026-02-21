@@ -1,0 +1,10 @@
+{% if query %}
+<h1>「{{ query }}」の検索結果</h1>
+<div class="article-list">
+    {% for article in articles %}
+    {% include "blog/_article_card.html" %}
+    {% empty %}
+    <p>該当する記事が見つかりませんでした。</p>
+    {% endfor %}
+</div>
+{% endif %}

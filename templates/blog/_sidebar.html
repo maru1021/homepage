@@ -1,0 +1,27 @@
+<nav class="sidebar-nav">
+    <h3>カテゴリ</h3>
+    <div class="sidebar-item">
+        <div class="sidebar-label sidebar-folder open" data-slug="blog-root">
+            <span class="toggle">▼</span>
+            <span class="folder-name">ブログ</span>
+        </div>
+        <div class="sidebar-children" style="display:block;">
+            {% with nodes=sidebar_roots %}
+            {% include "blog/_sidebar_node.html" %}
+            {% endwith %}
+        </div>
+    </div>
+    <h3>ツール</h3>
+    <div class="sidebar-item">
+        <a href="{% url 'dkc_drive:index' %}" class="sidebar-admin-link">DKCドライブ</a>
+    </div>
+    {% if user.is_staff %}
+    <h3>管理</h3>
+    <div class="sidebar-item">
+        <a href="{% url 'blog:classification_manage' %}" class="sidebar-admin-link">分類管理</a>
+    </div>
+    <div class="sidebar-item">
+        <a href="{% url 'admin:index' %}" class="sidebar-admin-link">Django Admin</a>
+    </div>
+    {% endif %}
+</nav>

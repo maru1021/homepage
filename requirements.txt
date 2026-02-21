@@ -1,0 +1,14 @@
+Django==5.2.6
+django-htmx==1.27.0
+Pillow==11.3.0
+gunicorn==23.0.0
+whitenoise==6.9.0
+psycopg2-binary==2.9.10
+daphne==4.1.2
+channels==4.2.0
+openpyxl==3.1.5
+python-pptx==1.0.2
+extract-msg==0.52.0
+torch==2.7.1
+torchvision==0.22.1
+cadquery-ocp==7.9.3.1

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} - {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+{% include "blog/_article_detail_content.html" %}
+{% endblock %}

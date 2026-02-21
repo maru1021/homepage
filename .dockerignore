@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+.git
+.claude
+*.sqlite3
+media/
+staticfiles/

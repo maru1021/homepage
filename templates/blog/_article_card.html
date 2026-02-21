@@ -1,0 +1,13 @@
+<article class="article-card">
+    {% if article.thumbnail %}
+    <img src="{{ article.thumbnail.url }}" alt="{{ article.title }}">
+    {% endif %}
+    <div class="article-card-body">
+        {% if article.classification %}
+        <span class="category">{{ article.classification.name }}</span>
+        {% endif %}
+        <h2><a href="{{ article.get_absolute_url }}" class="htmx-link">{{ article.title }}</a></h2>
+        <p>{{ article.excerpt }}</p>
+        <time>{{ article.published_at|date:"Y年n月j日" }}</time>
+    </div>
+</article>

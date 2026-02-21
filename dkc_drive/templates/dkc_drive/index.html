@@ -1,0 +1,1095 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>DKCドライブ</title>
+    <link href="{% static 'vendor/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link href="{% static 'dkc_drive/css/dkc_drive.css' %}" rel="stylesheet">
+    <script src="{% static 'vendor/chartjs/chart.min.js' %}"></script>
+    <script src="{% static 'vendor/chartjs/chartjs-plugin-zoom.min.js' %}"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- サイドバー（ファイル一覧） -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1><i class="bi bi-cloud-fill"></i> DKCドライブ</h1>
+            </div>
+
+            <div class="sidebar-actions">
+                <!-- 新規追加 -->
+                <div class="sidebar-action-group">
+                    <small class="sidebar-action-label">新規追加</small>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill" id="btn-new">
+                            <i class="bi bi-file-earmark-plus"></i> ファイル
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm flex-fill" id="btn-new-folder">
+                            <i class="bi bi-folder-plus"></i> フォルダ
+                        </button>
+                    </div>
+                </div>
+                <!-- アップロード -->
+                <div class="sidebar-action-group">
+                    <small class="sidebar-action-label">アップロード</small>
+                    <div class="d-flex gap-2">
+                        <label class="btn btn-outline-secondary btn-sm flex-fill" for="file-upload">
+                            <i class="bi bi-file-earmark-arrow-up"></i> ファイル
+                        </label>
+                        <label class="btn btn-outline-secondary btn-sm flex-fill" for="folder-upload">
+                            <i class="bi bi-folder-symlink"></i> フォルダ
+                        </label>
+                    </div>
+                </div>
+                <input type="file" id="file-upload" multiple hidden>
+                <input type="file" id="folder-upload" webkitdirectory directory multiple hidden>
+
+                <!-- ファイル検索 -->
+                <div class="sidebar-search">
+                    <div class="sidebar-search-wrapper">
+                        <i class="bi bi-search sidebar-search-icon"></i>
+                        <input type="text" id="file-search-input" class="sidebar-search-input" placeholder="ファイル名で検索...">
+                        <button class="sidebar-search-clear" id="file-search-clear" style="display: none;">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- パンくずリスト -->
+            <div class="breadcrumb-nav" id="breadcrumb">
+                <span class="breadcrumb-item active" data-path="">
+                    <i class="bi bi-folder2"></i> ルート
+                </span>
+            </div>
+
+            <div class="file-list" id="file-list">
+                <!-- ファイル・フォルダ一覧がここに表示される -->
+            </div>
+        </aside>
+
+        <!-- メインエリア -->
+        <main class="main-area">
+            <!-- ツールバー -->
+            <div class="toolbar" id="toolbar">
+                <div class="toolbar-group">
+                    <span class="file-name" id="current-file-name">ファイルを選択してください</span>
+                    <span class="connection-status disconnected" id="connection-status">
+                        <i class="bi bi-wifi-off"></i> 未接続
+                    </span>
+                    <span class="save-indicator" id="save-indicator"></span>
+                </div>
+
+                <div class="toolbar-group toolbar-style">
+                    <div class="toolbar-divider"></div>
+
+                    <!-- 背景色 -->
+                    <div class="color-picker-wrapper">
+                        <button class="toolbar-btn" id="btn-bg-color" title="背景色">
+                            <i class="bi bi-paint-bucket"></i>
+                        </button>
+                        <input type="color" id="bg-color-picker" value="#ffffff">
+                    </div>
+
+                    <!-- 文字色 -->
+                    <div class="color-picker-wrapper">
+                        <button class="toolbar-btn" id="btn-text-color" title="文字色">
+                            <i class="bi bi-fonts"></i>
+                        </button>
+                        <input type="color" id="text-color-picker" value="#000000">
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- 罫線 -->
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle" id="btn-border" title="罫線" data-bs-toggle="dropdown">
+                            <i class="bi bi-border-all"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-border="all"><i class="bi bi-border-all"></i> 格子</a></li>
+                            <li><a class="dropdown-item" href="#" data-border="outer"><i class="bi bi-border-outer"></i> 外枠</a></li>
+                            <li><a class="dropdown-item" href="#" data-border="top"><i class="bi bi-border-top"></i> 上</a></li>
+                            <li><a class="dropdown-item" href="#" data-border="bottom"><i class="bi bi-border-bottom"></i> 下</a></li>
+                            <li><a class="dropdown-item" href="#" data-border="left"><i class="bi bi-border-left"></i> 左</a></li>
+                            <li><a class="dropdown-item" href="#" data-border="right"><i class="bi bi-border-right"></i> 右</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" data-border="none"><i class="bi bi-x"></i> 罫線なし</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- フォントサイズ -->
+                    <button class="toolbar-btn" id="btn-font-size-down" title="フォントサイズを小さく">
+                        <i class="bi bi-dash"></i>
+                    </button>
+                    <select class="form-select form-select-sm font-size-select" id="font-size-select" title="フォントサイズ">
+                        <!-- JSで動的に生成 -->
+                    </select>
+                    <button class="toolbar-btn" id="btn-font-size-up" title="フォントサイズを大きく">
+                        <i class="bi bi-plus"></i>
+                    </button>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- 太字 -->
+                    <button class="toolbar-btn" id="btn-bold" title="太字">
+                        <i class="bi bi-type-bold"></i>
+                    </button>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- 配置 -->
+                    <button class="toolbar-btn" id="btn-align-left" title="左揃え">
+                        <i class="bi bi-text-left"></i>
+                    </button>
+                    <button class="toolbar-btn" id="btn-align-center" title="中央揃え">
+                        <i class="bi bi-text-center"></i>
+                    </button>
+                    <button class="toolbar-btn" id="btn-align-right" title="右揃え">
+                        <i class="bi bi-text-right"></i>
+                    </button>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- フィルター -->
+                    <button class="toolbar-btn" id="btn-filter" title="フィルター">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- セル結合 -->
+                    <button class="toolbar-btn" id="btn-merge-cells" title="セルを結合">
+                        <i class="bi bi-union"></i>
+                    </button>
+                    <button class="toolbar-btn" id="btn-unmerge-cells" title="セル結合を解除">
+                        <i class="bi bi-intersect"></i>
+                    </button>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- 画像挿入 -->
+                    <button class="toolbar-btn" id="btn-insert-image" title="画像を挿入">
+                        <i class="bi bi-image"></i>
+                    </button>
+
+                    <!-- 図形挿入 -->
+                    <div class="dropdown d-inline-block">
+                        <button class="toolbar-btn dropdown-toggle" id="btn-insert-shape"
+                                title="図形を挿入" data-bs-toggle="dropdown">
+                            <i class="bi bi-pentagon"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-shape-type="rectangle">
+                                <i class="bi bi-square"></i> 四角形</a></li>
+                            <li><a class="dropdown-item" href="#" data-shape-type="rounded_rectangle">
+                                <i class="bi bi-app"></i> 角丸四角形</a></li>
+                            <li><a class="dropdown-item" href="#" data-shape-type="ellipse">
+                                <i class="bi bi-circle"></i> 円/楕円</a></li>
+                            <li><a class="dropdown-item" href="#" data-shape-type="triangle">
+                                <i class="bi bi-triangle"></i> 三角形</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" data-shape-type="line">
+                                <i class="bi bi-dash-lg"></i> 線</a></li>
+                            <li><a class="dropdown-item" href="#" data-shape-type="arrow">
+                                <i class="bi bi-arrow-right"></i> 矢印</a></li>
+                        </ul>
+                    </div>
+
+                </div>
+
+                <!-- グラフ作成（CSV/Excel共通で表示） -->
+                <div class="toolbar-group toolbar-chart">
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle" id="btn-chart" title="グラフ作成" data-bs-toggle="dropdown">
+                            <i class="bi bi-bar-chart-fill"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-chart-type="bar"><i class="bi bi-bar-chart"></i> 棒グラフ</a></li>
+                            <li><a class="dropdown-item" href="#" data-chart-type="line"><i class="bi bi-graph-up"></i> 折れ線グラフ</a></li>
+                            <li><a class="dropdown-item" href="#" data-chart-type="pie"><i class="bi bi-pie-chart"></i> 円グラフ</a></li>
+                            <li><a class="dropdown-item" href="#" data-chart-type="doughnut"><i class="bi bi-circle"></i> ドーナツグラフ</a></li>
+                            <li><a class="dropdown-item" href="#" data-chart-type="radar"><i class="bi bi-hexagon"></i> レーダーチャート</a></li>
+                            <li><a class="dropdown-item" href="#" data-chart-type="polarArea"><i class="bi bi-bullseye"></i> 極座標グラフ</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="toolbar-group">
+                    <button class="btn btn-outline-secondary btn-sm" id="btn-download" disabled>
+                        <i class="bi bi-download"></i> ダウンロード
+                    </button>
+                </div>
+            </div>
+
+            <!-- 数式バー -->
+            <div class="formula-bar" id="formula-bar">
+                <div class="formula-bar-wrapper">
+                    <input type="text" class="formula-bar-input" id="formula-input" placeholder="数式または値を入力">
+                    <!-- 数式オートコンプリート -->
+                    <div class="formula-autocomplete" id="formula-autocomplete" style="display: none;">
+                        <div class="formula-autocomplete-list" id="formula-autocomplete-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 検索・置換パネル -->
+            <div class="search-replace-panel" id="search-replace-panel" style="display: none;">
+                <div class="search-replace-header">
+                    <div class="search-replace-tabs">
+                        <button class="search-tab active" data-tab="search">検索</button>
+                        <button class="search-tab" data-tab="replace">置換</button>
+                    </div>
+                    <button class="search-replace-close" id="search-replace-close">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="search-replace-body">
+                    <div class="search-row">
+                        <input type="text" class="search-input" id="search-input" placeholder="検索文字列">
+                        <div class="search-nav-buttons">
+                            <button class="search-nav-btn" id="search-prev" title="前を検索">
+                                <i class="bi bi-chevron-up"></i>
+                            </button>
+                            <button class="search-nav-btn" id="search-next" title="次を検索">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                        <span class="search-count" id="search-count"></span>
+                    </div>
+                    <div class="replace-row" id="replace-row" style="display: none;">
+                        <input type="text" class="search-input" id="replace-input" placeholder="置換文字列">
+                        <button class="replace-btn" id="replace-one" title="置換">置換</button>
+                        <button class="replace-btn" id="replace-all" title="すべて置換">すべて</button>
+                    </div>
+                    <div class="search-options">
+                        <label class="search-option">
+                            <input type="checkbox" id="search-case-sensitive">
+                            <span>大文字/小文字を区別</span>
+                        </label>
+                        <label class="search-option">
+                            <input type="checkbox" id="search-whole-cell">
+                            <span>セル全体を検索</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- コンテンツ表示エリア -->
+            <div class="content-container" id="content-container">
+                <!-- プレースホルダー -->
+                <div class="content-placeholder" id="placeholder">
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <p>左のファイル一覧からファイルを選択するか、<br>新規ファイルを作成してください</p>
+                    <p class="formats">対応形式: Excel, CSV, PowerPoint, 画像, 3Dモデル(STL/OBJ/GLTF/STP), PDF など</p>
+                </div>
+
+                <!-- スプレッドシート表示 -->
+                <div class="spreadsheet-container" id="spreadsheet-container" style="display: none;">
+                    <div class="spreadsheet-wrapper" id="spreadsheet-wrapper">
+                        <table class="spreadsheet" id="spreadsheet">
+                            <!-- スプレッドシートがここに描画される -->
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 画像プレビュー -->
+                <div class="image-preview-container" id="image-preview-container" style="display: none;">
+                    <div class="image-preview-wrapper">
+                        <img id="image-preview" src="" alt="プレビュー">
+                    </div>
+                    <div class="image-controls">
+                        <button class="btn btn-sm btn-outline-secondary" id="btn-zoom-in" title="拡大">
+                            <i class="bi bi-zoom-in"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="btn-zoom-out" title="縮小">
+                            <i class="bi bi-zoom-out"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="btn-zoom-reset" title="リセット">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3Dモデルビューア -->
+                <div class="model-viewer-container" id="model-viewer-container" style="display: none;">
+                    <!-- 3Dツールバー -->
+                    <div class="three-toolbar" id="three-toolbar" style="display: none;">
+                        <!-- ビュー切替 -->
+                        <div class="three-toolbar-group">
+                            <span class="three-toolbar-label">ビュー</span>
+                            <button class="three-toolbar-btn" id="btn-3d-view-front" title="正面">F</button>
+                            <button class="three-toolbar-btn" id="btn-3d-view-back" title="背面">Bk</button>
+                            <button class="three-toolbar-btn" id="btn-3d-view-top" title="上面">T</button>
+                            <button class="three-toolbar-btn" id="btn-3d-view-bottom" title="下面">Bt</button>
+                            <button class="three-toolbar-btn" id="btn-3d-view-left" title="左面">L</button>
+                            <button class="three-toolbar-btn" id="btn-3d-view-right" title="右面">R</button>
+                        </div>
+
+                        <div class="three-toolbar-divider"></div>
+
+                        <!-- 表示ツール -->
+                        <div class="three-toolbar-group">
+                            <button class="three-toolbar-btn" id="btn-3d-wireframe" title="ワイヤーフレーム切替">
+                                <i class="bi bi-grid-3x3"></i>
+                            </button>
+                            <button class="three-toolbar-btn" id="btn-3d-fit" title="フィット表示">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        </div>
+
+                        <div class="three-toolbar-divider"></div>
+
+                        <!-- 計測ツール -->
+                        <div class="three-toolbar-group">
+                            <span class="three-toolbar-label">計測</span>
+                            <button class="three-toolbar-btn" id="btn-3d-measure" title="距離計測（2点間）">
+                                <i class="bi bi-rulers"></i>
+                            </button>
+                            <button class="three-toolbar-btn" id="btn-3d-measure-angle" title="角度計測（3点）">
+                                <i class="bi bi-subtract"></i>
+                            </button>
+                            <button class="three-toolbar-btn" id="btn-3d-measure-area" title="面積計測（面クリック）">
+                                <i class="bi bi-bounding-box"></i>
+                            </button>
+                            <button class="three-toolbar-btn" id="btn-3d-measure-clear" title="計測クリア">
+                                <i class="bi bi-eraser"></i>
+                            </button>
+                        </div>
+
+                        <div class="three-toolbar-divider"></div>
+
+                        <!-- 注釈ツール -->
+                        <div class="three-toolbar-group">
+                            <span class="three-toolbar-label">注釈</span>
+                            <button class="three-toolbar-btn" id="btn-3d-annotate" title="注釈を追加">
+                                <i class="bi bi-chat-square-text"></i>
+                            </button>
+                            <button class="three-toolbar-btn" id="btn-3d-annotate-clear" title="注釈クリア">
+                                <i class="bi bi-eraser"></i>
+                            </button>
+                        </div>
+
+                        <div class="three-toolbar-divider"></div>
+
+                        <!-- 断面ツール -->
+                        <div class="three-toolbar-group">
+                            <span class="three-toolbar-label">断面</span>
+                            <button class="three-toolbar-btn" id="btn-3d-clip-x" title="X軸で断面">X</button>
+                            <button class="three-toolbar-btn" id="btn-3d-clip-y" title="Y軸で断面">Y</button>
+                            <button class="three-toolbar-btn" id="btn-3d-clip-z" title="Z軸で断面">Z</button>
+                            <button class="three-toolbar-btn" id="btn-3d-clip-reset" title="断面リセット">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        </div>
+
+                        <!-- 断面スライダー -->
+                        <div class="three-toolbar-slider" id="clip-slider-container" style="display: none;">
+                            <span class="three-toolbar-label" id="clip-axis-label">X軸</span>
+                            <input type="range" class="three-slider" id="clip-slider" min="-100" max="100" value="0" step="1">
+                            <span class="three-slider-value" id="clip-value">0%</span>
+                        </div>
+
+                        <div class="three-toolbar-divider"></div>
+
+                        <!-- その他ツール -->
+                        <div class="three-toolbar-group">
+                            <button class="three-toolbar-btn" id="btn-3d-screenshot" title="スクリーンショット保存">
+                                <i class="bi bi-camera"></i>
+                            </button>
+                            <button class="three-toolbar-btn" id="btn-3d-info" title="モデル情報">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 計測ステータス -->
+                    <div class="three-measure-status" id="measure-status" style="display: none;"></div>
+
+                    <!-- モデル情報パネル -->
+                    <div class="three-model-info" id="model-info-panel" style="display: none;"></div>
+
+                    <div id="three-viewer"></div>
+                </div>
+
+                <!-- PDFビューア -->
+                <div class="pdf-viewer-container" id="pdf-viewer-container" style="display: none;">
+                    <iframe id="pdf-viewer" src="" frameborder="0"></iframe>
+                </div>
+
+                <!-- PowerPointビューア -->
+                <div class="ppt-viewer-container" id="ppt-container" style="display: none;">
+                    <div class="ppt-layout">
+                        <div class="ppt-thumbnails">
+                            <!-- サムネイルがここに描画される -->
+                        </div>
+                        <div class="ppt-main">
+                            <div class="ppt-slides">
+                                <!-- スライドがここに描画される -->
+                            </div>
+                            <div class="ppt-controls">
+                                <button class="btn btn-sm btn-outline-secondary" id="btn-prev-slide">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <span class="ppt-slide-info">1 / 1</span>
+                                <button class="btn btn-sm btn-outline-secondary" id="btn-next-slide">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- テキストビューア -->
+                <div class="text-viewer-container" id="text-viewer-container" style="display: none;">
+                    <pre class="text-viewer-content" id="text-viewer-content"></pre>
+                </div>
+
+                <!-- HTMLビューア -->
+                <div class="html-viewer-container" id="html-viewer-container" style="display: none;">
+                    <iframe id="html-viewer" src="" frameborder="0"></iframe>
+                </div>
+
+                <!-- MSGメールビューア -->
+                <div class="msg-viewer-container" id="msg-viewer-container" style="display: none;">
+                    <div class="msg-viewer-content" id="msg-viewer-content"></div>
+                </div>
+
+                <!-- 未対応ファイル -->
+                <div class="unsupported-container" id="unsupported-container" style="display: none;">
+                    <div class="unsupported-content">
+                        <i class="bi bi-file-earmark"></i>
+                        <p>このファイル形式はプレビューに対応していません</p>
+                        <button class="btn btn-primary" id="btn-download-unsupported">
+                            <i class="bi bi-download"></i> ダウンロード
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- シートタブ（下部） -->
+            <div class="sheet-tabs-bottom" id="sheet-tabs">
+                <!-- シートタブがここに表示される -->
+            </div>
+        </main>
+    </div>
+
+    <!-- 削除確認モーダル -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">ファイルの削除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong id="delete-filename"></strong> を削除しますか？</p>
+                    <p class="text-muted small">この操作は元に戻せません。</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-danger" id="btn-confirm-delete">削除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新規ファイル作成モーダル -->
+    <div class="modal fade" id="newFileModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">新規ファイル作成</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="new-filename" class="form-label">ファイル名</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="new-filename" placeholder="新規ファイル">
+                            <select class="form-select" id="new-file-ext" style="max-width: 110px;">
+                                <option value=".xlsx">.xlsx</option>
+                                <option value=".csv">.csv</option>
+                                <option value=".txt">.txt</option>
+                                <option value=".html">.html</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-new">作成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新規フォルダ作成モーダル -->
+    <div class="modal fade" id="newFolderModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">新規フォルダ作成</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="new-foldername" class="form-label">フォルダ名</label>
+                        <input type="text" class="form-control" id="new-foldername" placeholder="新規フォルダ">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-new-folder">作成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 名前変更モーダル -->
+    <div class="modal fade" id="renameModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">名前の変更</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rename-input" class="form-label">新しい名前</label>
+                        <input type="text" class="form-control" id="rename-input">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-rename">変更</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像挿入モーダル -->
+    <div class="modal fade" id="insertImageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-image"></i> 画像を挿入</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- タブ切り替え -->
+                    <ul class="nav nav-tabs mb-3" id="imageSourceTabs">
+                        <li class="nav-item">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-upload">
+                                <i class="bi bi-upload"></i> ファイルをアップロード
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-drive">
+                                <i class="bi bi-cloud"></i> DKCドライブから選択
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- アップロードタブ -->
+                        <div class="tab-pane fade show active" id="tab-upload">
+                            <div class="upload-drop-zone" id="image-drop-zone">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                                <p>ここに画像をドラッグ＆ドロップ<br>またはクリックしてファイルを選択</p>
+                                <input type="file" id="image-file-input" accept="image/*" hidden>
+                            </div>
+                            <div class="upload-preview" id="upload-preview" style="display: none;">
+                                <img id="upload-preview-img" src="" alt="プレビュー">
+                                <button class="btn btn-sm btn-outline-danger" id="btn-clear-preview">
+                                    <i class="bi bi-x"></i> クリア
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- DKCドライブタブ -->
+                        <div class="tab-pane fade" id="tab-drive">
+                            <div class="drive-image-breadcrumb" id="drive-image-breadcrumb">
+                                <span class="breadcrumb-item active" data-path="">
+                                    <i class="bi bi-folder2"></i> ルート
+                                </span>
+                            </div>
+                            <div class="drive-image-list" id="drive-image-list">
+                                <!-- 画像ファイル一覧がここに表示される -->
+                            </div>
+                            <div class="drive-image-preview" id="drive-image-preview" style="display: none;">
+                                <img id="drive-preview-img" src="" alt="プレビュー">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-insert-image" disabled>
+                        <i class="bi bi-check-lg"></i> 挿入
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ローディング -->
+    <div class="loading-overlay" id="loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- フォルダコンテキストメニュー -->
+    <div class="folder-context-menu" id="folder-context-menu">
+        <div class="folder-context-menu-item" data-action="open">
+            <i class="bi bi-folder2-open"></i> 開く
+        </div>
+        <div class="folder-context-menu-divider"></div>
+        <div class="folder-context-menu-item" data-action="analyze">
+            <i class="bi bi-bar-chart-fill"></i> グラフ解析
+        </div>
+        <div class="folder-context-menu-item" data-action="image-analysis">
+            <i class="bi bi-eye"></i> 画像判定
+        </div>
+        <div class="folder-context-menu-divider"></div>
+        <div class="folder-context-menu-item" data-action="move">
+            <i class="bi bi-folder-symlink"></i> 移動
+        </div>
+        <div class="folder-context-menu-item" data-action="rename">
+            <i class="bi bi-pencil"></i> 名前を変更
+        </div>
+        <div class="folder-context-menu-item delete" data-action="delete">
+            <i class="bi bi-trash"></i> 削除
+        </div>
+    </div>
+
+    <!-- ファイルコンテキストメニュー -->
+    <div class="folder-context-menu" id="file-context-menu">
+        <div class="folder-context-menu-item" data-action="open">
+            <i class="bi bi-file-earmark"></i> 開く
+        </div>
+        <div class="folder-context-menu-divider"></div>
+        <div class="folder-context-menu-item" data-action="move">
+            <i class="bi bi-folder-symlink"></i> 移動
+        </div>
+        <div class="folder-context-menu-item" data-action="rename">
+            <i class="bi bi-pencil"></i> 名前を変更
+        </div>
+        <div class="folder-context-menu-item delete" data-action="delete">
+            <i class="bi bi-trash"></i> 削除
+        </div>
+    </div>
+
+    <!-- 複数選択コンテキストメニュー -->
+    <div class="folder-context-menu" id="multi-context-menu">
+        <div class="folder-context-menu-item" data-action="move">
+            <i class="bi bi-folder-symlink"></i> まとめて移動
+        </div>
+        <div class="folder-context-menu-item delete" data-action="delete">
+            <i class="bi bi-trash"></i> まとめて削除
+        </div>
+    </div>
+
+    <!-- 空白エリアコンテキストメニュー -->
+    <div class="folder-context-menu" id="blank-context-menu">
+        <div class="folder-context-menu-item" data-action="upload">
+            <i class="bi bi-file-earmark-arrow-up"></i> アップロード
+        </div>
+        <div class="folder-context-menu-item" data-action="upload-folder">
+            <i class="bi bi-folder-symlink"></i> フォルダアップロード
+        </div>
+        <div class="folder-context-menu-divider"></div>
+        <div class="folder-context-menu-item" data-action="new-file">
+            <i class="bi bi-file-earmark-plus"></i> 新規ファイル
+        </div>
+        <div class="folder-context-menu-item" data-action="new-folder">
+            <i class="bi bi-folder-plus"></i> 新規フォルダ
+        </div>
+    </div>
+
+    <!-- HTML編集コンテキストメニュー -->
+    <div class="folder-context-menu" id="html-editor-context-menu">
+        <div class="folder-context-menu-item" data-action="toggle-edit">
+            <i class="bi bi-pencil-square" id="html-edit-mode-icon"></i> <span id="html-edit-mode-label">編集モード</span>
+        </div>
+        <!-- 挿入系（オブジェクト未選択時のみ） -->
+        <div class="folder-context-menu-divider html-insert-only" style="display:none;"></div>
+        <div class="folder-context-menu-item html-insert-only" data-action="insert-text" style="display:none;">
+            <i class="bi bi-fonts"></i> テキストを挿入
+        </div>
+        <div class="folder-context-menu-item html-insert-only" data-action="insert-image" style="display:none;">
+            <i class="bi bi-image"></i> 画像を挿入
+        </div>
+        <div class="folder-context-menu-item html-insert-only" data-action="insert-input" style="display:none;">
+            <i class="bi bi-input-cursor-text"></i> 入力欄を挿入
+        </div>
+        <div class="folder-context-menu-item html-insert-only" data-action="insert-select" style="display:none;">
+            <i class="bi bi-menu-button-wide"></i> プルダウンを挿入
+        </div>
+        <div class="folder-context-menu-divider html-insert-only" style="display:none;"></div>
+        <div class="folder-context-menu-item html-insert-only has-submenu" data-action="insert-shape" style="display:none;">
+            <i class="bi bi-pentagon"></i> 図形を挿入 <i class="bi bi-chevron-right" style="margin-left:auto;font-size:0.7rem;"></i>
+            <div class="folder-context-menu html-shape-submenu">
+                <div class="folder-context-menu-item" data-action="insert-shape-rectangle">
+                    <i class="bi bi-square"></i> 四角形
+                </div>
+                <div class="folder-context-menu-item" data-action="insert-shape-rounded_rectangle">
+                    <i class="bi bi-app"></i> 角丸四角形
+                </div>
+                <div class="folder-context-menu-item" data-action="insert-shape-ellipse">
+                    <i class="bi bi-circle"></i> 円/楕円
+                </div>
+                <div class="folder-context-menu-item" data-action="insert-shape-triangle">
+                    <i class="bi bi-triangle"></i> 三角形
+                </div>
+                <div class="folder-context-menu-divider"></div>
+                <div class="folder-context-menu-item" data-action="insert-shape-line">
+                    <i class="bi bi-dash-lg"></i> 線
+                </div>
+                <div class="folder-context-menu-item" data-action="insert-shape-arrow">
+                    <i class="bi bi-arrow-right"></i> 矢印
+                </div>
+            </div>
+        </div>
+        <!-- 重ね順（要素選択時） -->
+        <div class="folder-context-menu-divider html-elem-prop" style="display:none;"></div>
+        <div class="folder-context-menu-item html-elem-prop has-submenu" style="display:none;">
+            <i class="bi bi-layers"></i> 重ね順 <i class="bi bi-chevron-right" style="margin-left:auto;font-size:0.7rem;"></i>
+            <div class="folder-context-menu html-shape-submenu">
+                <div class="folder-context-menu-item" data-action="order-front">
+                    <i class="bi bi-front"></i> 最前面へ
+                </div>
+                <div class="folder-context-menu-item" data-action="order-forward">
+                    <i class="bi bi-chevron-up"></i> 前面へ
+                </div>
+                <div class="folder-context-menu-item" data-action="order-backward">
+                    <i class="bi bi-chevron-down"></i> 背面へ
+                </div>
+                <div class="folder-context-menu-item" data-action="order-back">
+                    <i class="bi bi-back"></i> 最背面へ
+                </div>
+            </div>
+        </div>
+        <!-- テキストプロパティ（テキスト選択時のみ表示） -->
+        <div class="folder-context-menu-divider html-text-prop" style="display:none;"></div>
+        <label class="folder-context-menu-item html-text-prop" style="display:none;">
+            <span class="html-ctx-label"><i class="bi bi-type"></i> 文字サイズ</span>
+            <select id="html-text-fontsize" class="html-ctx-select">
+                <option value="10">10px</option>
+                <option value="12">12px</option>
+                <option value="14" selected>14px</option>
+                <option value="16">16px</option>
+                <option value="18">18px</option>
+                <option value="20">20px</option>
+                <option value="24">24px</option>
+                <option value="28">28px</option>
+                <option value="32">32px</option>
+                <option value="36">36px</option>
+                <option value="48">48px</option>
+            </select>
+        </label>
+        <label class="folder-context-menu-item html-text-prop" style="display:none;">
+            <span class="html-ctx-label"><i class="bi bi-palette"></i> 文字色</span>
+            <input type="color" id="html-text-color" value="#333333" class="html-ctx-color">
+        </label>
+        <label class="folder-context-menu-item html-text-prop" style="display:none;">
+            <span class="html-ctx-label"><i class="bi bi-paint-bucket"></i> 背景色</span>
+            <input type="color" id="html-text-bgcolor" value="#ffffff" class="html-ctx-color">
+        </label>
+        <!-- 図形プロパティ（図形選択時のみ表示） -->
+        <div class="folder-context-menu-divider html-shape-prop" style="display:none;"></div>
+        <label class="folder-context-menu-item html-shape-prop" style="display:none;">
+            <span class="html-ctx-label"><i class="bi bi-palette"></i> 塗りつぶし</span>
+            <input type="color" id="html-shape-fill" value="#4285f4" class="html-ctx-color">
+        </label>
+        <label class="folder-context-menu-item html-shape-prop" style="display:none;">
+            <input type="checkbox" id="html-shape-nofill" class="html-ctx-check"> 塗りつぶしなし
+        </label>
+        <label class="folder-context-menu-item html-shape-prop" style="display:none;">
+            <span class="html-ctx-label"><i class="bi bi-border-style"></i> 枠線の色</span>
+            <input type="color" id="html-shape-stroke" value="#333333" class="html-ctx-color">
+        </label>
+        <label class="folder-context-menu-item html-shape-prop" style="display:none;">
+            <input type="checkbox" id="html-shape-nostroke" class="html-ctx-check"> 枠線なし
+        </label>
+        <!-- 削除（要素選択時） -->
+        <div class="folder-context-menu-divider html-elem-prop" style="display:none;"></div>
+        <div class="folder-context-menu-item html-elem-prop delete" data-action="delete-element" style="display:none;">
+            <i class="bi bi-trash"></i> 削除
+        </div>
+        <div class="folder-context-menu-divider html-edit-only" style="display:none;"></div>
+        <div class="folder-context-menu-item html-edit-only" data-action="save" style="display:none;">
+            <i class="bi bi-floppy"></i> 保存
+        </div>
+    </div>
+
+    <!-- 移動先選択モーダル -->
+    <div class="modal fade" id="moveModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-folder-symlink"></i> 移動先を選択</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">移動するアイテム</label>
+                        <div class="move-item-name" id="move-item-name">-</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">移動先フォルダ</label>
+                        <div class="move-folder-breadcrumb" id="move-breadcrumb">
+                            <span class="breadcrumb-item active" data-path="">
+                                <i class="bi bi-folder2"></i> ルート
+                            </span>
+                        </div>
+                        <div class="move-folder-list" id="move-folder-list">
+                            <!-- フォルダ一覧がここに表示される -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-move">
+                        <i class="bi bi-folder-symlink"></i> ここに移動
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- グラフ解析モーダル -->
+    <div class="modal fade" id="folderAnalysisModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-bar-chart-fill"></i> グラフ解析</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="folder-analysis-settings">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-folder2"></i> 対象フォルダ
+                            </label>
+                            <div class="folder-analysis-target" id="analysis-folder-name">-</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-files"></i> 対象ファイル
+                            </label>
+                            <div class="folder-analysis-files" id="analysis-files-list">
+                                <small class="text-muted">ファイルを読み込み中...</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">列の選択</label>
+                            <small class="text-muted d-block mb-2">グラフに使用する列を選択してください</small>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="analysis-start-row" class="form-label">開始行</label>
+                                <input type="number" class="form-control form-control-sm" id="analysis-start-row" min="1" value="1" placeholder="1">
+                            </div>
+                            <div class="col-6">
+                                <label for="analysis-end-row" class="form-label">終了行</label>
+                                <input type="number" class="form-control form-control-sm" id="analysis-end-row" min="1" value="" placeholder="最終行">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">列1（X軸ラベル）</label>
+                            <div class="row g-1">
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-alpha" id="analysis-col-1-alpha" data-col="1">
+                                        <option value="">-- A,B,C... --</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-name" id="analysis-col-1-name" data-col="1">
+                                        <option value="">-- 列名 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <small class="text-muted">空欄で行番号を使用</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">列2（データ1）<span class="text-danger">*</span></label>
+                            <div class="row g-1">
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-alpha" id="analysis-col-2-alpha" data-col="2">
+                                        <option value="">-- A,B,C... --</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-name" id="analysis-col-2-name" data-col="2">
+                                        <option value="">-- 列名 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">列3（データ2）</label>
+                            <div class="row g-1">
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-alpha" id="analysis-col-3-alpha" data-col="3">
+                                        <option value="">-- A,B,C... --</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-name" id="analysis-col-3-name" data-col="3">
+                                        <option value="">-- 列名 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">列4（データ3）</label>
+                            <div class="row g-1">
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-alpha" id="analysis-col-4-alpha" data-col="4">
+                                        <option value="">-- A,B,C... --</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-name" id="analysis-col-4-name" data-col="4">
+                                        <option value="">-- 列名 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">列5（データ4）</label>
+                            <div class="row g-1">
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-alpha" id="analysis-col-5-alpha" data-col="5">
+                                        <option value="">-- A,B,C... --</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm analysis-col-name" id="analysis-col-5-name" data-col="5">
+                                        <option value="">-- 列名 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <label for="analysis-chart-type" class="form-label fw-bold">グラフタイプ</label>
+                            <select class="form-select form-select-sm" id="analysis-chart-type">
+                                <option value="line">折れ線グラフ</option>
+                                <option value="bar">棒グラフ</option>
+                                <option value="pie">円グラフ</option>
+                                <option value="doughnut">ドーナツグラフ</option>
+                                <option value="radar">レーダーチャート</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary w-100" id="btn-generate-analysis-chart">
+                            <i class="bi bi-bar-chart-fill"></i> グラフを表示
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像判定モーダル -->
+    <div class="modal fade" id="imageAnalysisModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-eye"></i> 画像判定</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 処理中表示 -->
+                    <div id="imageAnalysisLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="text-muted">画像を判定中...</div>
+                        <small class="text-muted" id="imageAnalysisFolderName"></small>
+                    </div>
+                    <!-- 結果表示 -->
+                    <div id="imageAnalysisResult" style="display:none;">
+                        <div class="row mb-3" id="imageAnalysisSummary"></div>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light" style="position: sticky; top: 0;">
+                                    <tr>
+                                        <th>ファイル名</th>
+                                        <th>判定</th>
+                                        <th>信頼度</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="imageAnalysisTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- エラー表示 -->
+                    <div id="imageAnalysisError" style="display:none;" class="text-center text-danger py-3">
+                        <i class="bi bi-exclamation-triangle d-block mb-2" style="font-size: 2rem;"></i>
+                        <span id="imageAnalysisErrorMsg"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnOpenResultFolder" style="display:none;">
+                        <i class="bi bi-folder2-open"></i> 結果フォルダを開く
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添付ファイルプレビューモーダル -->
+    <div class="modal fade" id="attachmentPreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="attachmentPreviewTitle">添付ファイル</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0" id="attachmentPreviewBody" style="min-height:200px;"></div>
+                <div class="modal-footer">
+                    <a id="attachmentDownloadBtn" class="btn btn-primary" download><i class="bi bi-download"></i> ダウンロード</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'vendor/bootstrap.bundle.min.js' %}"></script>
+    {{ initial_file_list|json_script:"dkc-initial-file-list" }}
+    <script>
+        // 初期表示するフォルダ・ファイル（URL経由で指定）
+        window.DKC_DRIVE_INITIAL = {
+            folder: '{{ initial_folder|escapejs }}',
+            file: '{{ initial_file|escapejs }}',
+            userSeal: '{{ user_seal|escapejs }}',
+            userName: '{{ user_name|escapejs }}',
+            fileList: JSON.parse(document.getElementById('dkc-initial-file-list')?.textContent || 'null')
+        };
+    </script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "{% static 'vendor/three/three.module.js' %}",
+                "three/addons/": "{% static 'vendor/three/addons/' %}"
+            }
+        }
+    </script>
+    <script type="module" src="{% static 'dkc_drive/js/dkc_drive.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}分類管理 - {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="manage-header">
+    <h1>分類管理</h1>
+    <button type="button" class="btn btn-primary" id="btn-create">+ 新規登録</button>
+</div>
+
+<div class="table-wrapper">
+    <table class="manage-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>名前</th>
+                <th>スラッグ</th>
+                <th>親分類</th>
+                <th>表示順</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cls in classifications %}
+            <tr>
+                <td>{{ cls.id }}</td>
+                <td>
+                    {% if cls.parent %}<span class="indent">└ </span>{% endif %}
+                    {{ cls.name }}
+                </td>
+                <td><code>{{ cls.slug }}</code></td>
+                <td>{{ cls.parent.name|default:"-" }}</td>
+                <td>{{ cls.order }}</td>
+                <td class="actions">
+                    <button type="button" class="btn btn-sm btn-outline-dark btn-edit" data-pk="{{ cls.pk }}" data-url="{% url 'blog:classification_edit' cls.pk %}">編集</button>
+                    <a href="{% url 'blog:classification_delete' cls.pk %}" class="btn btn-sm btn-outline-danger">削除</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="empty-row">分類がまだありません。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- モーダル -->
+<div class="modal fade" id="classificationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">分類登録</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+            </div>
+            <form id="classificationForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body" id="modalBody">
+                    {% include "blog/_classification_form_body.html" %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary" id="modalSubmit">登録</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const modal = new bootstrap.Modal(document.getElementById('classificationModal'));
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const modalSubmit = document.getElementById('modalSubmit');
+    const form = document.getElementById('classificationForm');
+    let currentAction = '';
+
+    function openModal(url, title, submitText) {
+        currentAction = url;
+        modalTitle.textContent = title;
+        modalSubmit.textContent = submitText;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                modalBody.innerHTML = data.html;
+                modal.show();
+            });
+    }
+
+    document.getElementById('btn-create').addEventListener('click', function() {
+        openModal('{% url "blog:classification_create" %}', '分類登録', '登録');
+    });
+
+    document.querySelectorAll('.btn-edit').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            openModal(this.dataset.url, '分類編集', '更新');
+        });
+    });
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(form);
+        fetch(currentAction, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                modal.hide();
+                location.reload();
+            } else {
+                modalBody.innerHTML = data.html;
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}
