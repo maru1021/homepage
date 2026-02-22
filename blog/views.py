@@ -179,21 +179,14 @@ def _classification_form_ajax(request, instance=None):
 
 @require_GET
 def api_articles(request):
-    """公開記事のJSON一覧を返す（auto_post用）"""
-    articles = (
-        Article.objects
-        .filter(is_published=True)
-        .select_related("classification__parent__parent")
-        .order_by("-published_at")[:50]
-    )
-    data = []
-    for a in articles:
-        data.append({
-            "id": a.id,
-            "title": a.title,
-            "excerpt": a.excerpt or "",
-            "content_text": strip_tags(a.content)[:1000],
-            "url": a.get_absolute_url(),
-            "published_at": a.published_at.isoformat() if a.published_at else None,
-        })
-    return JsonResponse({"articles": data})
+    """公開記事からランダム1件を返す（auto_post用）"""
+    article = Article.objects.filter(is_published=True).order_by("?").first()
+    if not article:
+        return JsonResponse({"article": None})
+
+    return JsonResponse({"article": {
+        "title": article.title,
+        "excerpt": article.excerpt or "",
+        "content_text": strip_tags(article.content)[:1000],
+        "url": article.get_absolute_url(),
+    }})
