@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Classification, Article, UserProfile
+from .models import Classification, Article, GlossaryTerm, UserProfile
 
 
 @admin.register(Classification)
@@ -17,6 +17,12 @@ class ArticleAdmin(admin.ModelAdmin):
     list_filter = ["classification", "is_published"]
     search_fields = ["title", "content"]
     prepopulated_fields = {"slug": ("title",)}
+
+
+@admin.register(GlossaryTerm)
+class GlossaryTermAdmin(admin.ModelAdmin):
+    list_display = ["term", "reading", "description"]
+    search_fields = ["term", "reading"]
 
 
 @admin.register(UserProfile)

@@ -79,6 +79,20 @@ class Article(models.Model):
         super().save(*args, **kwargs)
 
 
+class GlossaryTerm(models.Model):
+    term = models.CharField("用語", max_length=100, unique=True)
+    reading = models.CharField("読み", max_length=100, blank=True)
+    description = models.TextField("説明")
+
+    class Meta:
+        ordering = ["term"]
+        verbose_name = "用語"
+        verbose_name_plural = "用語"
+
+    def __str__(self):
+        return self.term
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     seal = models.TextField("印鑑", blank=True, default='')
