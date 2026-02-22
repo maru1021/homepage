@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}株価リアルタイムモニター{% endblock %}
-{% block meta_description %}主要日本株のリアルタイム値動きモニター{% endblock %}
+{% block meta_description %}日本株・米国株・為替・仮想通貨のリアルタイム値動きモニター{% endblock %}
 
 {% block content %}
 <div class="stock-monitor">
@@ -15,31 +15,14 @@
         </div>
     </div>
 
+    <div class="category-tabs" id="categoryTabs"></div>
+
     <div class="stock-info">
-        <p id="stockInfoText">主要日本株 <span id="totalTracked">-</span> 銘柄を監視中</p>
+        <p id="stockInfoText"><span id="totalTracked">-</span> 銘柄を監視中</p>
     </div>
 
     <div class="market-top-row">
-        <div class="market-overview" id="marketOverview">
-            <div class="overview-section">
-                <h3 class="overview-section-title">主要指数</h3>
-                <div id="overviewIndices" class="overview-items">
-                    <div class="overview-loading">取得中...</div>
-                </div>
-            </div>
-            <div class="overview-section">
-                <h3 class="overview-section-title">為替</h3>
-                <div id="overviewForex" class="overview-items">
-                    <div class="overview-loading">取得中...</div>
-                </div>
-            </div>
-            <div class="overview-section">
-                <h3 class="overview-section-title">先物</h3>
-                <div id="overviewFutures" class="overview-items">
-                    <div class="overview-loading">取得中...</div>
-                </div>
-            </div>
-        </div>
+        <div class="market-overview" id="marketOverview"></div>
 
         <div class="stock-ranking">
             <div id="stockTable" class="stock-table-wrapper">
@@ -117,7 +100,37 @@
 .fetch-status { color: #888; }
 .stock-info { color: #888; font-size: 0.85rem; margin-bottom: 1rem; }
 
-/* 2カラムレイアウト: 左=マーケット概況, 右=値動きランキング */
+/* カテゴリタブ */
+.category-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid #333;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    width: fit-content;
+}
+.category-tab {
+    background: #1a1a2e;
+    color: #888;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-right: 1px solid #333;
+    white-space: nowrap;
+}
+.category-tab:last-child { border-right: none; }
+.category-tab.active { background: #4a9eff; color: #fff; }
+.category-tab:hover:not(.active) { background: #2a2a3e; }
+.category-tab .tab-count {
+    font-size: 0.7rem;
+    color: #666;
+    margin-left: 0.3rem;
+}
+.category-tab.active .tab-count { color: rgba(255,255,255,0.7); }
+
+/* 2カラムレイアウト */
 .market-top-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -226,7 +239,7 @@
 .ticker-selector-row { display: flex; align-items: center; gap: 0.3rem; }
 .ticker-selector-row select {
     background: #1a1a2e; color: #eee; border: 1px solid #333;
-    padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.9rem; min-width: 180px;
+    padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.9rem;
 }
 .ticker-color-dot {
     width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0;
@@ -239,7 +252,6 @@
 
 .chart-grid { display: flex; flex-direction: column; gap: 1.5rem; }
 
-/* 1銘柄のブロック */
 .chart-block {
     background: #12121e; border-radius: 8px; padding: 0.75rem;
 }
@@ -262,7 +274,6 @@
 }
 .chart-volume-wrap canvas { width: 100% !important; height: 100% !important; }
 
-/* 長期チャート期間選択 */
 .daily-period-btns {
     display: flex; gap: 0; justify-content: center; margin-bottom: 0.25rem;
     border: 1px solid #333; border-radius: 4px; overflow: hidden; width: fit-content; margin-left: auto; margin-right: auto;
@@ -279,6 +290,7 @@
 
 @media (max-width: 768px) {
     .stock-header { flex-direction: column; align-items: flex-start; }
+    .category-tabs { flex-wrap: wrap; }
     .market-top-row { grid-template-columns: 1fr; }
     .stock-table { font-size: 0.8rem; }
     .stock-table th, .stock-table td { padding: 0.35rem 0.4rem; }
@@ -290,6 +302,45 @@
 {% endblock %}
 
 {% block extra_js %}
+<link rel="stylesheet" href="{% static 'vendor/select2/select2.min.css' %}">
+<style>
+/* Select2 ダークテーマ */
+.select2-container--default .select2-selection--single {
+    background: #1a1a2e; color: #eee; border: 1px solid #333;
+    border-radius: 4px; height: 34px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #eee; line-height: 34px; padding-left: 8px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 32px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #888 transparent transparent transparent;
+}
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #666;
+}
+.select2-dropdown {
+    background: #1a1a2e; border: 1px solid #333;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    background: #12121e; color: #eee; border: 1px solid #444;
+    padding: 6px 8px; border-radius: 3px;
+}
+.select2-container--default .select2-results__option {
+    color: #ccc; padding: 6px 8px;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background: #4a9eff; color: #fff;
+}
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background: #2a2a3e; color: #eee;
+}
+.select2-container { min-width: 220px; }
+</style>
+<script src="{% static 'vendor/jquery.min.js' %}"></script>
+<script src="{% static 'vendor/select2/select2.min.js' %}"></script>
 <script src="{% static 'vendor/chartjs/chart.min.js' %}"></script>
 <script>
 (function() {
@@ -299,6 +350,7 @@
     const API_DAILY_CHART = "{% url 'stock_monitor:api_daily_chart_data' %}";
     const API_STOCKS = "{% url 'stock_monitor:api_stock_list' %}";
     const API_MARKET_OVERVIEW = "{% url 'stock_monitor:api_market_overview' %}";
+    const API_CATEGORIES = "{% url 'stock_monitor:api_categories' %}";
     const CHART_COLORS = ['#4a9eff','#ff6b6b','#51cf66','#ffd43b','#cc5de8'];
 
     let countdown = REFRESH_SEC;
@@ -309,8 +361,15 @@
     let chartType = 'line';
     let chartInstances = {};
     let lastIntradayData = null;
-    let lastDailyData = {};   // ticker -> { months, data }
-    let dailyPeriod = 6;      // デフォルト6ヶ月
+    let lastDailyData = {};
+    let dailyPeriods = {};
+    const DEFAULT_DAILY_PERIOD = 6;
+    let currentCategory = 'jp_stock';
+    let categoryList = [];
+
+    function getDailyPeriod(ticker) {
+        return dailyPeriods[ticker] !== undefined ? dailyPeriods[ticker] : DEFAULT_DAILY_PERIOD;
+    }
 
     // ========== ユーティリティ ==========
     function isMarketOpen() {
@@ -333,6 +392,15 @@
     }
 
     function formatPrice(p) {
+        if (p == null) return '--';
+        if (currentCategory === 'forex') {
+            return p.toFixed(4);
+        }
+        if (currentCategory === 'crypto') {
+            if (p >= 1000) return p.toLocaleString('ja-JP', {maximumFractionDigits: 0});
+            if (p >= 1) return p.toLocaleString('ja-JP', {maximumFractionDigits: 2});
+            return p.toFixed(6);
+        }
         if (p >= 10000) return p.toLocaleString('ja-JP', {maximumFractionDigits: 1});
         return p.toLocaleString('ja-JP', {maximumFractionDigits: 2});
     }
@@ -357,14 +425,68 @@
         return v.toLocaleString();
     }
 
+    function getCategoryLabel() {
+        const cat = categoryList.find(c => c.key === currentCategory);
+        return cat ? cat.label : '';
+    }
+
+    // ========== カテゴリタブ ==========
+    function renderCategoryTabs(categories) {
+        const container = document.getElementById('categoryTabs');
+        container.innerHTML = '';
+        categories.forEach(function(cat) {
+            const btn = document.createElement('button');
+            btn.className = 'category-tab' + (cat.key === currentCategory ? ' active' : '');
+            btn.innerHTML = cat.label + '<span class="tab-count">(' + cat.count + ')</span>';
+            btn.dataset.category = cat.key;
+            btn.addEventListener('click', function() {
+                if (currentCategory === cat.key) return;
+                currentCategory = cat.key;
+                container.querySelectorAll('.category-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                onCategoryChange();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    function onCategoryChange() {
+        showAll = false;
+        allStocksData = null;
+        prevPrices = {};
+        document.getElementById('toggleAllStocks').textContent = 'もっと表示 ▼';
+
+        fetchPrices();
+        fetchMarketOverview();
+        fetchStockListForCategory();
+    }
+
+    function fetchStockListForCategory() {
+        fetch(API_STOCKS + '?category=' + currentCategory)
+            .then(r => r.json())
+            .then(function(data) {
+                stockList = data.stocks;
+                // 既存の Select2 の選択肢を更新
+                document.querySelectorAll('.ticker-select').forEach(function(sel) {
+                    const currentVal = $(sel).val();
+                    $(sel).html(createSelectOptions());
+                    // 現在のカテゴリに含まれない銘柄が選択されていたらクリア
+                    const validTickers = stockList.map(s => s.ticker);
+                    if (currentVal && validTickers.indexOf(currentVal) === -1) {
+                        $(sel).val('').trigger('change');
+                    } else {
+                        $(sel).val(currentVal).trigger('change.select2');
+                    }
+                });
+            })
+            .catch(console.error);
+    }
+
     // ========== テーブル ==========
     function updateInfoText(data) {
         const el = document.getElementById('stockInfoText');
-        if (isMarketOpen()) {
-            el.innerHTML = '主要日本株 <span id="totalTracked">' + data.total_tracked + '</span> 銘柄を監視中 / 値動きの大きい上位10銘柄を表示（5分間隔で更新）';
-        } else {
-            el.innerHTML = '主要日本株 <span id="totalTracked">' + data.total_tracked + '</span> 銘柄を監視中 / 直近取引日の値動き上位10銘柄を表示';
-        }
+        const label = getCategoryLabel();
+        el.innerHTML = label + ' <span id="totalTracked">' + data.total_tracked + '</span> 銘柄を監視中';
     }
 
     function renderStockRows(stocks, startIdx) {
@@ -392,9 +514,7 @@
             return;
         }
         updateInfoText(data);
-        // 上位10銘柄を表示
         tbody.innerHTML = renderStockRows(stocks.slice(0, 10), 0);
-        // showAll 状態なら残りも表示
         if (showAll && allStocksData) {
             appendRemainingStocks();
         }
@@ -416,13 +536,12 @@
             if (allStocksData) {
                 appendRemainingStocks();
             } else {
-                fetch(API_PRICES + '?all=1').then(r => r.json()).then(function(data) {
+                fetch(API_PRICES + '?category=' + currentCategory + '&all=1').then(r => r.json()).then(function(data) {
                     allStocksData = data;
                     appendRemainingStocks();
                 }).catch(console.error);
             }
         } else {
-            // 10件に戻す
             const tbody = document.getElementById('stockBody');
             const rows = tbody.querySelectorAll('tr');
             for (let i = 10; i < rows.length; i++) rows[i].remove();
@@ -432,12 +551,12 @@
     function fetchPrices() {
         const el = document.getElementById('fetchStatus');
         el.textContent = '取得中...';
-        fetch(API_PRICES).then(r => r.json()).then(function(data) {
+        fetch(API_PRICES + '?category=' + currentCategory).then(r => r.json()).then(function(data) {
             renderStocks(data);
             el.textContent = '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
             countdown = REFRESH_SEC;
             if (showAll) {
-                fetch(API_PRICES + '?all=1').then(r => r.json()).then(function(d) {
+                fetch(API_PRICES + '?category=' + currentCategory + '&all=1').then(r => r.json()).then(function(d) {
                     allStocksData = d;
                 }).catch(console.error);
             }
@@ -446,15 +565,30 @@
 
     // ========== マーケット概況 ==========
     function fetchMarketOverview() {
-        fetch(API_MARKET_OVERVIEW).then(r => r.json()).then(function(data) {
-            renderOverviewSection('overviewIndices', data.indices);
-            renderOverviewSection('overviewForex', data.forex);
-            renderOverviewSection('overviewFutures', data.futures);
+        fetch(API_MARKET_OVERVIEW + '?category=' + currentCategory).then(r => r.json()).then(function(data) {
+            renderDynamicOverview(data);
         }).catch(console.error);
     }
 
-    function renderOverviewSection(elementId, items) {
-        const container = document.getElementById(elementId);
+    function renderDynamicOverview(data) {
+        const container = document.getElementById('marketOverview');
+        container.innerHTML = '';
+        Object.keys(data).forEach(function(sectionName) {
+            const section = document.createElement('div');
+            section.className = 'overview-section';
+            const title = document.createElement('h3');
+            title.className = 'overview-section-title';
+            title.textContent = sectionName;
+            section.appendChild(title);
+            const itemsDiv = document.createElement('div');
+            itemsDiv.className = 'overview-items';
+            renderOverviewItems(itemsDiv, data[sectionName]);
+            section.appendChild(itemsDiv);
+            container.appendChild(section);
+        });
+    }
+
+    function renderOverviewItems(container, items) {
         if (!items || items.length === 0) {
             container.innerHTML = '<div class="overview-loading">データなし</div>';
             return;
@@ -500,11 +634,11 @@
     // ========== セレクタ ==========
     function getSelectedTickers() {
         return Array.from(document.querySelectorAll('.ticker-select'))
-            .map(s => s.value).filter(Boolean);
+            .map(s => $(s).val()).filter(Boolean);
     }
 
     function createSelectOptions() {
-        let h = '<option value="">-- 銘柄を選択 --</option>';
+        let h = '<option value="">-- 銘柄を検索 --</option>';
         stockList.forEach(s => { h += '<option value="'+s.ticker+'">'+s.name+' ('+s.ticker.replace('.T','')+')</option>'; });
         return h;
     }
@@ -521,13 +655,31 @@
         const sel = document.createElement('select');
         sel.className = 'ticker-select';
         sel.innerHTML = createSelectOptions();
-        sel.addEventListener('change', onTickerChange);
         const btn = document.createElement('button');
         btn.className = 'btn-remove-ticker';
         btn.textContent = '×';
-        btn.addEventListener('click', function() { row.remove(); updateColorDots(); onTickerChange(); });
+        btn.addEventListener('click', function() {
+            const removedTicker = $(sel).val();
+            $(sel).select2('destroy');
+            row.remove();
+            updateColorDots();
+            if (removedTicker) removeChartBlock(removedTicker);
+            if (getSelectedTickers().length === 0) {
+                document.getElementById('chartStatus').textContent = '銘柄を選択してください';
+            }
+        });
         row.appendChild(dot); row.appendChild(sel); row.appendChild(btn);
         container.appendChild(row);
+        $(sel).select2({
+            placeholder: '銘柄を検索...',
+            allowClear: false,
+            width: '220px',
+        }).on('change', function() {
+            const oldTicker = $(this).data('prevValue') || '';
+            const newTicker = $(this).val();
+            $(this).data('prevValue', newTicker);
+            handleTickerChange(oldTicker, newTicker);
+        });
     }
 
     function updateColorDots() {
@@ -594,7 +746,7 @@
         return 0;
     }
 
-    function priceChartOptions(tooltipSuffix) {
+    function priceChartOptions() {
         return {
             responsive: true,
             maintainAspectRatio: false,
@@ -644,7 +796,115 @@
         };
     }
 
-    // ========== チャート描画 ==========
+    // ========== 個別チャートブロック ==========
+    function addChartBlock(ticker) {
+        const grid = document.getElementById('chartGrid');
+        const selectorIdx = getTickerSelectorIndex(ticker);
+        const color = CHART_COLORS[selectorIdx % CHART_COLORS.length];
+        const intraday = lastIntradayData && lastIntradayData.charts[ticker];
+        const daily = lastDailyData[ticker];
+        const period = getDailyPeriod(ticker);
+
+        const block = document.createElement('div');
+        block.className = 'chart-block';
+        block.dataset.ticker = ticker;
+
+        const title = document.createElement('div');
+        title.className = 'chart-block-title';
+        const stockInfo = stockList.find(s => s.ticker === ticker);
+        const name = stockInfo ? stockInfo.name : (intraday ? intraday.name : (daily ? daily.name : ticker));
+        title.textContent = name + ' (' + ticker.replace('.T','') + ')';
+        block.appendChild(title);
+
+        const row = document.createElement('div');
+        row.className = 'chart-row';
+
+        const leftCol = document.createElement('div');
+        leftCol.className = 'chart-col';
+        const leftLabel = document.createElement('div');
+        leftLabel.className = 'chart-col-label';
+        leftLabel.textContent = '日中（分足）';
+        leftCol.appendChild(leftLabel);
+
+        const leftPriceWrap = document.createElement('div');
+        leftPriceWrap.className = 'chart-price-wrap';
+        const leftPriceCanvas = document.createElement('canvas');
+        leftPriceWrap.appendChild(leftPriceCanvas);
+        leftCol.appendChild(leftPriceWrap);
+
+        const leftVolWrap = document.createElement('div');
+        leftVolWrap.className = 'chart-volume-wrap';
+        const leftVolCanvas = document.createElement('canvas');
+        leftVolWrap.appendChild(leftVolCanvas);
+        leftCol.appendChild(leftVolWrap);
+
+        row.appendChild(leftCol);
+
+        const rightCol = document.createElement('div');
+        rightCol.className = 'chart-col';
+
+        const periodBtns = document.createElement('div');
+        periodBtns.className = 'daily-period-btns';
+        [{ label: '3M', months: 3 }, { label: '6M', months: 6 }, { label: '1Y', months: 12 },
+         { label: '3Y', months: 36 }, { label: 'MAX', months: 0 }].forEach(function(p) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-period' + (p.months === period ? ' active' : '');
+            btn.textContent = p.label;
+            btn.addEventListener('click', function() {
+                dailyPeriods[ticker] = p.months;
+                periodBtns.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                fetchDailyDataForTicker(ticker);
+            });
+            periodBtns.appendChild(btn);
+        });
+        rightCol.appendChild(periodBtns);
+
+        const rightPriceWrap = document.createElement('div');
+        rightPriceWrap.className = 'chart-price-wrap';
+        const rightPriceCanvas = document.createElement('canvas');
+        rightPriceWrap.appendChild(rightPriceCanvas);
+        rightCol.appendChild(rightPriceWrap);
+
+        const rightVolWrap = document.createElement('div');
+        rightVolWrap.className = 'chart-volume-wrap';
+        const rightVolCanvas = document.createElement('canvas');
+        rightVolWrap.appendChild(rightVolCanvas);
+        rightCol.appendChild(rightVolWrap);
+
+        row.appendChild(rightCol);
+        block.appendChild(row);
+        grid.appendChild(block);
+
+        if (intraday) {
+            renderIntradayPrice(leftPriceCanvas, ticker, intraday, color);
+            renderVolumeChart(leftVolCanvas, ticker + '_iv', intraday.timestamps, intraday.volume, color);
+        } else {
+            leftPriceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">日中データなし</div>';
+            leftVolWrap.innerHTML = '';
+        }
+
+        if (daily) {
+            renderDailyPrice(rightPriceCanvas, ticker, daily, color);
+            renderVolumeChart(rightVolCanvas, ticker + '_dv', daily.dates, daily.volume, color);
+        } else {
+            rightPriceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">長期データ取得中...</div>';
+            rightVolWrap.innerHTML = '';
+        }
+    }
+
+    function removeChartBlock(ticker) {
+        ['_ip', '_iv', '_dp', '_dv'].forEach(function(suffix) {
+            const key = ticker + suffix;
+            if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
+        });
+        const block = document.querySelector('.chart-block[data-ticker="' + ticker + '"]');
+        if (block) block.remove();
+        if (lastIntradayData && lastIntradayData.charts) delete lastIntradayData.charts[ticker];
+        delete lastDailyData[ticker];
+        delete dailyPeriods[ticker];
+    }
+
     function renderAllCharts() {
         const tickers = getSelectedTickers();
         const grid = document.getElementById('chartGrid');
@@ -656,110 +916,12 @@
             return;
         }
 
-        tickers.forEach(function(ticker) {
-            const selectorIdx = getTickerSelectorIndex(ticker);
-            const color = CHART_COLORS[selectorIdx % CHART_COLORS.length];
-            const intraday = lastIntradayData && lastIntradayData.charts[ticker];
-            const daily = lastDailyData[ticker];
-
-            // ブロック
-            const block = document.createElement('div');
-            block.className = 'chart-block';
-            block.dataset.ticker = ticker;
-
-            const title = document.createElement('div');
-            title.className = 'chart-block-title';
-            const stockInfo = stockList.find(s => s.ticker === ticker);
-            const name = stockInfo ? stockInfo.name : (intraday ? intraday.name : (daily ? daily.name : ticker));
-            title.textContent = name + ' (' + ticker.replace('.T','') + ')';
-            block.appendChild(title);
-
-            const row = document.createElement('div');
-            row.className = 'chart-row';
-
-            // --- 左: 日中チャート ---
-            const leftCol = document.createElement('div');
-            leftCol.className = 'chart-col';
-            const leftLabel = document.createElement('div');
-            leftLabel.className = 'chart-col-label';
-            leftLabel.textContent = '日中（分足）';
-            leftCol.appendChild(leftLabel);
-
-            const leftPriceWrap = document.createElement('div');
-            leftPriceWrap.className = 'chart-price-wrap';
-            const leftPriceCanvas = document.createElement('canvas');
-            leftPriceWrap.appendChild(leftPriceCanvas);
-            leftCol.appendChild(leftPriceWrap);
-
-            const leftVolWrap = document.createElement('div');
-            leftVolWrap.className = 'chart-volume-wrap';
-            const leftVolCanvas = document.createElement('canvas');
-            leftVolWrap.appendChild(leftVolCanvas);
-            leftCol.appendChild(leftVolWrap);
-
-            row.appendChild(leftCol);
-
-            // --- 右: 長期チャート ---
-            const rightCol = document.createElement('div');
-            rightCol.className = 'chart-col';
-
-            // 期間ボタン
-            const periodBtns = document.createElement('div');
-            periodBtns.className = 'daily-period-btns';
-            [{ label: '3M', months: 3 }, { label: '6M', months: 6 }, { label: '1Y', months: 12 },
-             { label: '3Y', months: 36 }, { label: 'MAX', months: 0 }].forEach(function(p) {
-                const btn = document.createElement('button');
-                btn.className = 'btn-period' + (p.months === dailyPeriod ? ' active' : '');
-                btn.textContent = p.label;
-                btn.addEventListener('click', function() {
-                    dailyPeriod = p.months;
-                    periodBtns.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    fetchDailyDataForAll();
-                });
-                periodBtns.appendChild(btn);
-            });
-            rightCol.appendChild(periodBtns);
-
-            const rightPriceWrap = document.createElement('div');
-            rightPriceWrap.className = 'chart-price-wrap';
-            const rightPriceCanvas = document.createElement('canvas');
-            rightPriceWrap.appendChild(rightPriceCanvas);
-            rightCol.appendChild(rightPriceWrap);
-
-            const rightVolWrap = document.createElement('div');
-            rightVolWrap.className = 'chart-volume-wrap';
-            const rightVolCanvas = document.createElement('canvas');
-            rightVolWrap.appendChild(rightVolCanvas);
-            rightCol.appendChild(rightVolWrap);
-
-            row.appendChild(rightCol);
-            block.appendChild(row);
-            grid.appendChild(block);
-
-            // チャート描画
-            if (intraday) {
-                renderIntradayPrice(leftPriceCanvas, ticker, intraday, color);
-                renderVolumeChart(leftVolCanvas, ticker + '_iv', intraday.timestamps, intraday.volume, color);
-            } else {
-                leftPriceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">日中データなし</div>';
-                leftVolWrap.innerHTML = '';
-            }
-
-            if (daily) {
-                renderDailyPrice(rightPriceCanvas, ticker, daily, color);
-                renderVolumeChart(rightVolCanvas, ticker + '_dv', daily.dates, daily.volume, color);
-            } else {
-                rightPriceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">長期データ取得中...</div>';
-                rightVolWrap.innerHTML = '';
-            }
-        });
-
+        tickers.forEach(ticker => addChartBlock(ticker));
         document.getElementById('chartStatus').textContent =
             '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
     }
 
-    // MA 線の共通定義: { period, color, dash }
+    // MA 線の共通定義
     const MA_COLORS = [
         { color: '#ffd43b', dash: [4, 2] },
         { color: '#cc5de8', dash: [6, 3] },
@@ -843,21 +1005,80 @@
     }
 
     // ========== データ取得 ==========
-    function onTickerChange() {
-        const tickers = getSelectedTickers();
-        if (tickers.length === 0) {
-            destroyAllCharts();
-            document.getElementById('chartGrid').innerHTML = '';
-            document.getElementById('chartStatus').textContent = '銘柄を選択してください';
-            lastIntradayData = null;
-            lastDailyData = {};
-            return;
+    function handleTickerChange(oldTicker, newTicker) {
+        if (oldTicker) removeChartBlock(oldTicker);
+        if (newTicker) {
+            addChartBlock(newTicker);
+            fetchIntradayDataForTicker(newTicker);
+            fetchDailyDataForTicker(newTicker);
         }
-        // 銘柄変更時: まずDOMを構築（現在のキャッシュデータで描画）、その後非同期でデータ取得
-        renderAllCharts();
-        document.getElementById('chartStatus').textContent = 'データ取得中...';
-        fetchIntradayData();
-        fetchDailyDataForAll();
+        if (getSelectedTickers().length === 0) {
+            document.getElementById('chartStatus').textContent = '銘柄を選択してください';
+        }
+    }
+
+    function fetchIntradayDataForTicker(ticker) {
+        fetch(API_CHART + '?tickers=' + ticker)
+            .then(r => r.json())
+            .then(function(data) {
+                if (!lastIntradayData) lastIntradayData = { charts: {} };
+                if (data.charts[ticker]) {
+                    lastIntradayData.charts[ticker] = data.charts[ticker];
+                }
+                updateIntradayChartForTicker(ticker);
+            })
+            .catch(console.error);
+    }
+
+    function fetchDailyDataForTicker(ticker) {
+        const period = getDailyPeriod(ticker);
+        fetch(API_DAILY_CHART + '?tickers=' + ticker + '&months=' + period)
+            .then(r => r.json())
+            .then(function(data) {
+                if (data.charts[ticker]) {
+                    lastDailyData[ticker] = data.charts[ticker];
+                }
+                updateDailyChartForTicker(ticker);
+            })
+            .catch(console.error);
+    }
+
+    function updateIntradayChartForTicker(ticker) {
+        const block = document.querySelector('.chart-block[data-ticker="' + ticker + '"]');
+        if (!block) return;
+        const data = lastIntradayData && lastIntradayData.charts[ticker];
+        const color = CHART_COLORS[getTickerSelectorIndex(ticker) % CHART_COLORS.length];
+        destroyChartPair(ticker, '_ip', '_iv');
+        const col = block.querySelectorAll('.chart-col')[0];
+        if (!col) return;
+        const priceWrap = col.querySelector('.chart-price-wrap');
+        const volWrap = col.querySelector('.chart-volume-wrap');
+        if (data) {
+            refreshCanvasAndRender(priceWrap, function(c) { renderIntradayPrice(c, ticker, data, color); });
+            refreshCanvasAndRender(volWrap, function(c) { renderVolumeChart(c, ticker + '_iv', data.timestamps, data.volume, color); });
+        } else {
+            priceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">日中データなし</div>';
+            volWrap.innerHTML = '';
+        }
+    }
+
+    function updateDailyChartForTicker(ticker) {
+        const block = document.querySelector('.chart-block[data-ticker="' + ticker + '"]');
+        if (!block) return;
+        const data = lastDailyData[ticker];
+        const color = CHART_COLORS[getTickerSelectorIndex(ticker) % CHART_COLORS.length];
+        destroyChartPair(ticker, '_dp', '_dv');
+        const col = block.querySelectorAll('.chart-col')[1];
+        if (!col) return;
+        const priceWrap = col.querySelector('.chart-price-wrap');
+        const volWrap = col.querySelector('.chart-volume-wrap');
+        if (data) {
+            refreshCanvasAndRender(priceWrap, function(c) { renderDailyPrice(c, ticker, data, color); });
+            refreshCanvasAndRender(volWrap, function(c) { renderVolumeChart(c, ticker + '_dv', data.dates, data.volume, color); });
+        } else {
+            priceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">長期データ取得中...</div>';
+            volWrap.innerHTML = '';
+        }
     }
 
     function fetchIntradayData() {
@@ -924,36 +1145,13 @@
             '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
     }
 
-    function fetchDailyDataForAll() {
-        const tickers = getSelectedTickers();
-        if (tickers.length === 0) return;
-        fetch(API_DAILY_CHART + '?tickers=' + tickers.join(',') + '&months=' + dailyPeriod)
-            .then(r => r.json())
-            .then(function(data) {
-                tickers.forEach(function(t) {
-                    if (data.charts[t]) {
-                        lastDailyData[t] = data.charts[t];
-                    }
-                });
-                updateDailyChartsOnly();
-            })
-            .catch(function() {
-                document.getElementById('chartStatus').textContent = '長期データ取得エラー';
-            });
-    }
-
-    function updateDailyChartsOnly() {
-        updateChartsForSide(
-            1, '_dp', '_dv',
-            function(t) { return lastDailyData[t]; },
-            renderDailyPrice,
-            function(c, t, d, color) { renderVolumeChart(c, t + '_dv', d.dates, d.volume, color); },
-            '長期データ取得中...'
-        );
-    }
-
     // ========== 初期化 ==========
-    fetch(API_STOCKS).then(r => r.json()).then(function(data) {
+    fetch(API_CATEGORIES).then(r => r.json()).then(function(data) {
+        categoryList = data.categories;
+        renderCategoryTabs(data.categories);
+    });
+
+    fetch(API_STOCKS + '?category=' + currentCategory).then(r => r.json()).then(function(data) {
         stockList = data.stocks;
         addTickerSelector();
     });

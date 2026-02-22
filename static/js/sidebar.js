@@ -5,10 +5,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // .htmx-link に htmx属性を一括付与
     setupHtmxLinks(document);
 
-    // htmxでコンテンツ差し替え後、新しいコンテンツ内のリンクにも付与
+    // htmxでコンテンツ差し替え後、新しいコンテンツ内のリンクにも付与 & スクロール位置リセット
     document.addEventListener("htmx:afterSettle", (e) => {
         setupHtmxLinks(e.detail.target);
         setupCodeTabs(e.detail.target);
+        // メインコンテンツの先頭にスクロール
+        const main = document.getElementById("main-content");
+        if (main && main.contains(e.detail.target)) {
+            main.scrollTo(0, 0);
+        }
     });
 
     // サイドバー: イベント委譲で分類フォルダの開閉

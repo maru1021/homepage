@@ -16,7 +16,7 @@ import yfinance as yf
 
 from stock_monitor.config import DAILY_FETCH_DELAY, STOCKS
 from stock_monitor.models import DailyStockPrice, StockFetchLog
-from stock_monitor.utils import build_ohlcv_defaults, parse_ohlcv
+from stock_monitor.utils import batch_download, build_ohlcv_defaults, parse_ohlcv
 
 logger = logging.getLogger(__name__)
 
@@ -33,28 +33,34 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(f'日足データ取得を開始します（銘柄数: {len(STOCKS)}）')
 
-        has_data = DailyStockPrice.objects.exists()
-        if has_data:
-            self._fetch_bulk_update()
+        # DBに既にデータがある銘柄を取得
+        existing_tickers = set(
+            DailyStockPrice.objects.values_list('ticker', flat=True).distinct()
+        )
+        new_tickers = {
+            t: n for t, n in STOCKS.items() if t not in existing_tickers
+        }
+
+        if not existing_tickers:
+            # 完全初回: 全銘柄を1つずつ取得
+            self._fetch_initial(STOCKS)
         else:
-            self._fetch_initial()
+            # 既存銘柄は直近5日分をバッチ更新
+            self._fetch_bulk_update()
+            # 新規銘柄があれば全期間を1つずつ取得
+            if new_tickers:
+                self.stdout.write(
+                    f'新規銘柄 {len(new_tickers)}件 の過去データを取得します...'
+                )
+                self._fetch_initial(new_tickers)
 
         self.stdout.write(self.style.SUCCESS('日足データ取得完了'))
 
     def _fetch_bulk_update(self):
-        """2回目以降: 全銘柄一括で直近5日分"""
-        self.stdout.write('更新モード: 直近5日分を一括取得')
-        tickers_str = ' '.join(STOCKS.keys())
+        """2回目以降: 全銘柄をバッチ分割で直近5日分取得"""
+        self.stdout.write('更新モード: 直近5日分をバッチ取得')
 
-        try:
-            data = yf.download(
-                tickers_str, period='5d', interval='1d',
-                progress=False, threads=True, group_by='ticker',
-            )
-        except Exception as e:
-            logger.error(f'一括ダウンロードエラー: {e}')
-            self.stderr.write(f'エラー: {e}')
-            return
+        data = batch_download(list(STOCKS.keys()), period='5d', interval='1d')
 
         if data.empty:
             self.stderr.write('データ空')
@@ -78,13 +84,13 @@ class Command(BaseCommand):
         )
         self.stdout.write(f'{saved_count}銘柄, {total_records}件を更新')
 
-    def _fetch_initial(self):
-        """初回: 1銘柄ずつ全期間取得（レートリミット回避）"""
-        self.stdout.write('初回モード: 1銘柄ずつ全期間を取得します')
+    def _fetch_initial(self, stocks_dict):
+        """1銘柄ずつ全期間取得（レートリミット回避）"""
+        self.stdout.write(f'初回取得モード: {len(stocks_dict)}銘柄を1つずつ取得します')
 
         total_saved = 0
         total_records = 0
-        items = list(STOCKS.items())
+        items = list(stocks_dict.items())
 
         for i, (ticker, name) in enumerate(items):
             self.stdout.write(f'[{i+1}/{len(items)}] {name}({ticker}) を取得中...')

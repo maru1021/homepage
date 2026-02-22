@@ -14,14 +14,13 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-import yfinance as yf
-
 from stock_monitor.config import (
-    DAILY_CLOSE_MINUTES, FETCH_INTERVAL, INTRADAY_RETENTION_DAYS,
-    JST, STOCKS, get_all_market_tickers,
+    CATEGORY_LABELS, DAILY_CLOSE_MINUTES, FETCH_INTERVAL,
+    INTRADAY_RETENTION_DAYS, JST, MARKET_OVERVIEW_BY_CATEGORY, STOCKS,
+    STOCKS_BY_CATEGORY, get_active_categories, is_market_open,
 )
-from stock_monitor.models import StockPrice, DailyStockPrice, StockFetchLog
-from stock_monitor.utils import build_ohlcv_defaults, parse_ohlcv
+from stock_monitor.models import DailyStockPrice, StockFetchLog, StockPrice
+from stock_monitor.utils import batch_download, build_ohlcv_defaults, parse_ohlcv
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +52,22 @@ class Command(BaseCommand):
                 self.stderr.write(f'初回日足取得エラー: {e}')
 
         while True:
-            try:
-                self._fetch_intraday()
-            except Exception as e:
-                logger.error(f'分足取得エラー: {e}')
-                StockFetchLog.objects.create(
-                    tickers_count=0, success=False, message=str(e),
+            active = get_active_categories()
+            if not active:
+                self.stdout.write('全市場が閉場中のため分足取得をスキップします')
+            else:
+                active_labels = ', '.join(
+                    CATEGORY_LABELS.get(c, c) for c in active
                 )
-                self.stderr.write(f'エラー: {e}')
+                self.stdout.write(f'アクティブ市場: {active_labels}')
+                try:
+                    self._fetch_intraday(active)
+                except Exception as e:
+                    logger.error(f'分足取得エラー: {e}')
+                    StockFetchLog.objects.create(
+                        tickers_count=0, success=False, message=str(e),
+                    )
+                    self.stderr.write(f'エラー: {e}')
 
             # 閉場後に日足を取得（15:10 JST 以降、1日1回）
             self._try_fetch_daily()
@@ -87,15 +94,18 @@ class Command(BaseCommand):
                 logger.error(f'日足取得エラー: {e}')
                 self.stderr.write(f'日足取得エラー: {e}')
 
-    def _fetch_intraday(self):
+    def _fetch_intraday(self, active_categories):
         self.stdout.write(f'[{timezone.now():%H:%M:%S}] 分足データ取得中...')
 
-        # 個別銘柄 + マーケット概況ティッカーを統合して取得
-        all_tickers = {**STOCKS, **get_all_market_tickers()}
-        tickers_str = ' '.join(all_tickers.keys())
-        data = yf.download(
-            tickers_str, period='1d', interval='1m',
-            progress=False, threads=True, group_by='ticker',
+        # アクティブなカテゴリの銘柄 + 概況ティッカーのみ取得
+        all_tickers = {}
+        for cat in active_categories:
+            all_tickers.update(STOCKS_BY_CATEGORY.get(cat, {}))
+            for items in MARKET_OVERVIEW_BY_CATEGORY.get(cat, {}).values():
+                for ticker, name in items:
+                    all_tickers[ticker] = name
+        data = batch_download(
+            list(all_tickers.keys()), period='1d', interval='1m',
         )
 
         if data.empty:

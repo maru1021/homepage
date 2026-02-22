@@ -1,5 +1,12 @@
 """stock_monitor の共通ユーティリティ"""
+import logging
+import time
+
 import pandas as pd
+
+from .config import BATCH_DELAY, BATCH_SIZE, MAX_RETRIES, RETRY_BACKOFF_BASE
+
+logger = logging.getLogger(__name__)
 
 
 def to_series(col):
@@ -25,6 +32,69 @@ def parse_ohlcv(ticker_data):
     valid_idx = mask[mask].index
 
     return o, h, l, c, v, valid_idx
+
+
+def batch_download(tickers_list, **yf_kwargs):
+    """ティッカーを BATCH_SIZE ずつ分割して yf.download() を実行。
+
+    429 エラー時は指数バックオフでリトライ。
+    結果を pd.concat(axis=1) で結合して返却。
+    """
+    import yfinance as yf
+
+    batches = [
+        tickers_list[i:i + BATCH_SIZE]
+        for i in range(0, len(tickers_list), BATCH_SIZE)
+    ]
+
+    all_data = []
+    for batch_idx, batch in enumerate(batches):
+        tickers_str = ' '.join(batch)
+        success = False
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                data = yf.download(
+                    tickers_str, progress=False, threads=True,
+                    group_by='ticker', **yf_kwargs,
+                )
+                if not data.empty:
+                    # 1銘柄のみの場合、マルチレベルカラムにならないので補正
+                    if len(batch) == 1 and not isinstance(
+                        data.columns, pd.MultiIndex,
+                    ):
+                        data.columns = pd.MultiIndex.from_product(
+                            [batch, data.columns],
+                        )
+                    all_data.append(data)
+                success = True
+                break
+            except Exception as e:
+                err_str = str(e)
+                if '429' in err_str or 'Too Many Requests' in err_str:
+                    wait = RETRY_BACKOFF_BASE * (2 ** attempt)
+                    logger.warning(
+                        'Rate limited (batch %d/%d), retry in %ds...',
+                        batch_idx + 1, len(batches), wait,
+                    )
+                    time.sleep(wait)
+                else:
+                    logger.error('Batch %d/%d error: %s',
+                                 batch_idx + 1, len(batches), e)
+                    break
+
+        if not success:
+            logger.warning('Batch %d/%d skipped', batch_idx + 1, len(batches))
+
+        # 最後のバッチ以外は待機
+        if batch_idx < len(batches) - 1:
+            time.sleep(BATCH_DELAY)
+
+    if not all_data:
+        return pd.DataFrame()
+    if len(all_data) == 1:
+        return all_data[0]
+    return pd.concat(all_data, axis=1)
 
 
 def build_ohlcv_defaults(name, o, h, l, c, v, ts):

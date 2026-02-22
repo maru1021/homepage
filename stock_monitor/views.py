@@ -5,8 +5,9 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from .config import (
-    DEFAULT_DAILY_MONTHS, JST, MARKET_OVERVIEW, MAX_CHART_TICKERS, STOCKS,
-    get_all_market_tickers,
+    CATEGORY_JP_STOCK, CATEGORY_LABELS, DEFAULT_DAILY_MONTHS, JST,
+    MAX_CHART_TICKERS, STOCKS, STOCKS_BY_CATEGORY,
+    get_market_overview_for_category, get_stocks_for_category,
 )
 from .models import DailyStockPrice, StockPrice
 
@@ -80,22 +81,33 @@ def _parse_tickers_param(request):
     return [t for t in requested if t in STOCKS][:MAX_CHART_TICKERS]
 
 
+def _parse_category(request):
+    """リクエストからカテゴリを取得。無効なら jp_stock を返す"""
+    cat = request.GET.get('category', CATEGORY_JP_STOCK)
+    if cat not in STOCKS_BY_CATEGORY:
+        return CATEGORY_JP_STOCK
+    return cat
+
+
 # ========== API エンドポイント ==========
 
 def api_prices(request):
-    """DB から最新取引日の価格と始値を取得して返却"""
+    """DB から最新取引日の価格と始値を取得して返却（カテゴリフィルタ対応）"""
+    category = _parse_category(request)
+    category_stocks = get_stocks_for_category(category)
+
     trading_date = _get_latest_trading_date()
     if not trading_date:
         return JsonResponse({
             'stocks': [], 'has_prev': False,
-            'total_tracked': len(STOCKS), 'fetched': 0,
+            'total_tracked': len(category_stocks), 'fetched': 0,
             'timestamp': timezone.now().timestamp(),
         })
 
     day_start = _make_day_start(trading_date)
 
     stocks = []
-    for ticker, name in STOCKS.items():
+    for ticker, name in category_stocks.items():
         change = _calc_intraday_change(ticker, day_start)
         if not change:
             continue
@@ -114,7 +126,7 @@ def api_prices(request):
     return JsonResponse({
         'stocks': result_stocks,
         'has_prev': False,
-        'total_tracked': len(STOCKS),
+        'total_tracked': len(category_stocks),
         'fetched': len(stocks),
         'timestamp': timezone.now().timestamp(),
     })
@@ -191,34 +203,40 @@ def api_daily_chart_data(request):
 
 
 def api_market_overview(request):
-    """マーケット概況（指数・為替・先物）の最新データを返却"""
+    """カテゴリに応じたマーケット概況データを返却"""
+    category = _parse_category(request)
+    overview = get_market_overview_for_category(category)
     trading_date = _get_latest_trading_date()
-    market_tickers = get_all_market_tickers()
     no_data = {'price': None, 'diff': None, 'pct': None}
 
     if not trading_date:
         result = {}
-        for category, items in MARKET_OVERVIEW.items():
-            result[category] = [
+        for section_name, items in overview.items():
+            result[section_name] = [
                 {'ticker': t, 'name': n, **no_data} for t, n in items
             ]
         return JsonResponse(result)
 
     day_start = _make_day_start(trading_date)
 
-    # 各ティッカーの変動を一括計算
+    # 全ティッカーの変動を一括計算
+    all_tickers = {}
+    for items in overview.values():
+        for ticker, name in items:
+            all_tickers[ticker] = name
+
     overview_data = {}
-    for ticker, name in market_tickers.items():
+    for ticker in all_tickers:
         change = _calc_intraday_change(ticker, day_start)
         overview_data[ticker] = change or no_data
 
-    # カテゴリ別に整形
+    # セクション別に整形
     result = {}
-    for category, items in MARKET_OVERVIEW.items():
-        result[category] = []
+    for section_name, items in overview.items():
+        result[section_name] = []
         for ticker, name in items:
             d = overview_data.get(ticker, no_data)
-            result[category].append({
+            result[section_name].append({
                 'ticker': ticker, 'name': name, **d,
             })
 
@@ -226,7 +244,21 @@ def api_market_overview(request):
 
 
 def api_stock_list(request):
-    """銘柄一覧を返却（セレクトボックス用）"""
-    stocks = [{'ticker': t, 'name': n} for t, n in STOCKS.items()]
+    """銘柄一覧を返却（カテゴリフィルタ対応）"""
+    category = request.GET.get('category', '')
+    if category and category in STOCKS_BY_CATEGORY:
+        source = get_stocks_for_category(category)
+    else:
+        source = STOCKS
+    stocks = [{'ticker': t, 'name': n} for t, n in source.items()]
     stocks.sort(key=lambda x: x['ticker'])
     return JsonResponse({'stocks': stocks})
+
+
+def api_categories(request):
+    """カテゴリ一覧を返却"""
+    categories = [
+        {'key': k, 'label': v, 'count': len(STOCKS_BY_CATEGORY[k])}
+        for k, v in CATEGORY_LABELS.items()
+    ]
+    return JsonResponse({'categories': categories})
