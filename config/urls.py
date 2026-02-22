@@ -43,6 +43,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
     path('admin/', admin.site.urls),
     path('drive/', include('dkc_drive.urls')),
+    path('world/', include('world.urls')),
     path('stocks/', include('stock_monitor.urls')),
     path('', include('blog.urls')),
 ]

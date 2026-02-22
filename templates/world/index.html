@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>3D World</title>
+    <link rel="stylesheet" href="{% static 'world/css/world.css' %}">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <h1>LOADING WORLD</h1>
+        <div class="loading-bar-container">
+            <div class="loading-bar"></div>
+        </div>
+    </div>
+
+    <!-- 3D Canvas -->
+    <canvas id="world-canvas"></canvas>
+
+    <!-- Minimap -->
+    <div id="minimap">
+        <canvas id="minimap-canvas"></canvas>
+    </div>
+
+    <!-- FPS Counter -->
+    <div id="fps-counter">-- FPS</div>
+
+    <!-- Center Marker -->
+    <div id="center-marker"></div>
+
+    <!-- Left Joystick (Movement) -->
+    <div class="joystick joystick-left">
+        <div class="joystick-base"></div>
+        <div class="joystick-stick"></div>
+        <span class="joystick-label">MOVE</span>
+    </div>
+
+    <!-- Right Joystick (Camera) -->
+    <div class="joystick joystick-right">
+        <div class="joystick-base"></div>
+        <div class="joystick-stick"></div>
+        <span class="joystick-label">CAMERA</span>
+    </div>
+
+    <script type="module" src="{% static 'world/js/world.js' %}"></script>
+</body>
+</html>

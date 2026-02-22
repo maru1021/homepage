@@ -1,0 +1,9 @@
+export const TERRAIN_SIZE = 1200;
+export const TERRAIN_SEGMENTS = 400;
+export const WATER_LEVEL = -1.5;
+export const PLAYER_HEIGHT = 2.5;
+export const MOVE_SPEED = 35;
+export const CAMERA_DISTANCE = 14;
+export const CAMERA_MIN_PHI = 0.15;
+export const CAMERA_MAX_PHI = Math.PI / 2 - 0.05;
+export const CAMERA_AUTO_TURN_SPEED = 1.8;
