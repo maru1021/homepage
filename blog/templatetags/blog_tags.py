@@ -64,7 +64,7 @@ def glossary_tooltip(content):
                 return text.replace(search, repl, 1)
             return text
 
-        return re.sub(r'[^<]+(?=<|$)', _replacer, html)
+        return re.sub(r'(?<=>)[^<]+(?=<|$)', _replacer, html)
 
     for term in terms:
         desc_escaped = escape(term.description, quote=True)
