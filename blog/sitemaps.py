@@ -1,4 +1,5 @@
 from django.contrib.sitemaps import Sitemap
+from django.db.models import Max, Q
 
 from .models import Article, Classification
 
@@ -26,8 +27,25 @@ class CategorySitemap(Sitemap):
     def items(self):
         return Classification.objects.all()
 
+    def lastmod(self, obj):
+        """この分類と子孫分類に属する記事の最新更新日時を返す"""
+        ids = [obj.pk]
+        self._collect_descendant_ids(obj, ids)
+        result = (
+            Article.objects
+            .filter(is_published=True, classification_id__in=ids)
+            .aggregate(latest=Max("updated_at"))
+        )
+        return result["latest"]
+
     def location(self, obj):
         return f"/category/{obj.get_slug_path()}/"
+
+    @staticmethod
+    def _collect_descendant_ids(classification, id_list):
+        for child in classification.children.all():
+            id_list.append(child.pk)
+            CategorySitemap._collect_descendant_ids(child, id_list)
 
 
 class StaticSitemap(Sitemap):

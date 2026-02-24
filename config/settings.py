@@ -59,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # X-Frame-Options はNginx側で設定するためXFrameOptionsMiddlewareは除外
+    'django.middleware.http.ConditionalGetMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'config.security_middleware.SecurityLoggingMiddleware',
     'config.security_middleware.AccessLoggingMiddleware',

@@ -14,11 +14,14 @@ ARTICLES_PER_PAGE = 12
 RELATED_ARTICLES_COUNT = 5
 SEARCH_RESULTS_LIMIT = 20
 
-_PUBLISHED_ARTICLES = (
-    Article.objects
-    .filter(is_published=True)
-    .select_related("classification__parent__parent")
-)
+
+def _published_articles():
+    """公開記事のベースQuerySetを返す（毎回新鮮なQuerySetを生成）"""
+    return (
+        Article.objects
+        .filter(is_published=True)
+        .select_related("classification__parent__parent")
+    )
 
 
 def _render(request, full_template, partial_template, context):
@@ -49,7 +52,7 @@ def _collect_descendant_ids(classification, id_list):
 
 def article_list(request):
     """トップページ: 最新記事（ページネーション対応）"""
-    page_obj = _paginate(_PUBLISHED_ARTICLES.all(), request)
+    page_obj = _paginate(_published_articles().all(), request)
     return _render(request, "blog/article_list.html", "blog/_article_list_content.html", {
         "articles": page_obj,
         "page_obj": page_obj,
@@ -70,7 +73,7 @@ def category_detail(request, path):
     # この分類と子孫分類の全記事を取得
     classification_ids = [classification.pk]
     _collect_descendant_ids(classification, classification_ids)
-    articles = _PUBLISHED_ARTICLES.filter(classification_id__in=classification_ids)
+    articles = _published_articles().filter(classification_id__in=classification_ids)
 
     page_obj = _paginate(articles, request)
 
@@ -87,7 +90,7 @@ def article_search(request):
     """記事検索（AJAX / 通常アクセス両対応）"""
     q = request.GET.get("q", "").strip()
     if q:
-        articles = _PUBLISHED_ARTICLES.filter(
+        articles = _published_articles().filter(
             Q(title__icontains=q) | Q(excerpt__icontains=q) | Q(content__icontains=q)
         )[:SEARCH_RESULTS_LIMIT]
     else:
@@ -101,7 +104,7 @@ def article_search(request):
 def article_detail(request, path):
     """記事詳細ページ（URLは /article/分類1/分類2/.../記事slug/）"""
     slug = path.strip("/").split("/")[-1]
-    article = get_object_or_404(_PUBLISHED_ARTICLES, slug=slug)
+    article = get_object_or_404(_published_articles(), slug=slug)
 
     redirect_response = _redirect_if_wrong_path(request, article.get_absolute_url())
     if redirect_response:
@@ -112,7 +115,7 @@ def article_detail(request, path):
     if article.classification:
         ancestors = article.classification.get_ancestors() + [article.classification]
         related_articles = list(
-            _PUBLISHED_ARTICLES
+            _published_articles()
             .filter(classification=article.classification)
             .exclude(pk=article.pk)
             .order_by("-published_at")[:RELATED_ARTICLES_COUNT]

@@ -16,6 +16,8 @@
 {% endif %}
 {% endblock %}
 
+{% block robots %}{% if not articles %}<meta name="robots" content="noindex, follow">{% endif %}{% endblock %}
+
 {% block structured_data %}
 <script type="application/ld+json">
 {
@@ -43,6 +45,31 @@
       {% endfor %}
     ]
   }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "トップ",
+      "item": "https://{{ request.get_host }}/"
+    }{% for ancestor in ancestors %},
+    {
+      "@type": "ListItem",
+      "position": {{ forloop.counter|add:1 }},
+      "name": "{{ ancestor.name }}",
+      "item": "https://{{ request.get_host }}/category/{{ ancestor.get_slug_path }}/"
+    }{% endfor %},
+    {
+      "@type": "ListItem",
+      "position": {{ ancestors|length|add:2 }},
+      "name": "{{ classification.name }}"
+    }
+  ]
 }
 </script>
 {% endblock %}

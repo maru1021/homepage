@@ -8,7 +8,7 @@
 {% block og_type %}article{% endblock %}
 {% block og_title %}{{ article.title }}{% endblock %}
 {% block og_description %}{{ article.excerpt|default:article.title }}{% endblock %}
-{% block og_image %}{% if article.thumbnail %}<meta property="og:image" content="https://{{ request.get_host }}{{ article.thumbnail.url }}">{% endif %}{% endblock %}
+{% block og_image %}{% if article.thumbnail %}<meta property="og:image" content="https://{{ request.get_host }}{{ article.thumbnail.url }}">{% else %}<meta property="og:image" content="https://{{ request.get_host }}{% static 'image/og-default.png' %}">{% endif %}{% endblock %}
 
 {% block twitter_title %}{{ article.title }}{% endblock %}
 {% block twitter_description %}{{ article.excerpt|default:article.title }}{% endblock %}
@@ -37,14 +37,20 @@
   "datePublished": "{{ article.published_at|date:'c' }}",
   "dateModified": "{{ article.updated_at|date:'c' }}",
   "wordCount": {{ article.content|word_count }},
-  {% if article.thumbnail %}"image": "https://{{ request.get_host }}{{ article.thumbnail.url }}",{% endif %}
+  {% if article.thumbnail %}"image": "https://{{ request.get_host }}{{ article.thumbnail.url }}",{% else %}"image": "https://{{ request.get_host }}{% static 'image/og-default.png' %}",{% endif %}
   "author": {
     "@type": "Person",
-    "name": "マルオモスキート"
+    "name": "マルオモスキート",
+    "url": "https://x.com/maru1121433"
   },
   "publisher": {
     "@type": "Organization",
-    "name": "{{ SITE_NAME }}"
+    "name": "{{ SITE_NAME }}",
+    "url": "https://{{ request.get_host }}/",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://{{ request.get_host }}{% static 'image/og-default.png' %}"
+    }
   },
   "mainEntityOfPage": {
     "@type": "WebPage",
@@ -53,6 +59,31 @@
   "articleSection": "{{ article.classification.name }}",
   "keywords": [{% for ancestor in ancestors %}"{{ ancestor.name }}", {% endfor %}"{{ article.classification.name }}"]
   {% endif %}
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "トップ",
+      "item": "https://{{ request.get_host }}/"
+    }{% for ancestor in ancestors %},
+    {
+      "@type": "ListItem",
+      "position": {{ forloop.counter|add:1 }},
+      "name": "{{ ancestor.name }}",
+      "item": "https://{{ request.get_host }}/category/{{ ancestor.get_slug_path }}/"
+    }{% endfor %},
+    {
+      "@type": "ListItem",
+      "position": {{ ancestors|length|add:2 }},
+      "name": "{{ article.title }}"
+    }
+  ]
 }
 </script>
 {% endblock %}

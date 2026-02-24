@@ -8,9 +8,16 @@ class LatestArticlesFeed(Feed):
     title = settings.SITE_NAME
     description = "Python・JavaScript・PHP・Ruby・Linux・Docker・ネットワーク・セキュリティなど、Web開発に必要な技術を幅広く解説する技術ブログ"
     link = "/"
+    language = "ja"
+    author_name = "マルオモスキート"
 
     def items(self):
-        return Article.objects.filter(is_published=True).order_by("-published_at")[:20]
+        return (
+            Article.objects
+            .filter(is_published=True)
+            .select_related("classification")
+            .order_by("-published_at")[:20]
+        )
 
     def item_title(self, item):
         return item.title
@@ -26,3 +33,11 @@ class LatestArticlesFeed(Feed):
 
     def item_updateddate(self, item):
         return item.updated_at
+
+    def item_categories(self, item):
+        if item.classification:
+            return [item.classification.name]
+        return []
+
+    def item_author_name(self, item):
+        return "マルオモスキート"
