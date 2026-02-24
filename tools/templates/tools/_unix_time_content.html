@@ -1,0 +1,100 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Unix時間変換</div>
+    <h1>Unix時間変換</h1>
+    <p class="tool-desc">Unixタイムスタンプ（エポック秒）と人間が読める日時を相互変換します。</p>
+
+    <div class="ut-now">
+        <span>現在のUnix時間:</span>
+        <code id="nowUnix"></code>
+        <button id="useNowBtn" type="button" class="btn-sm">使用</button>
+    </div>
+
+    <div class="ut-section">
+        <h2>Unixタイムスタンプ → 日時</h2>
+        <div class="tool-form">
+            <input type="text" id="tsInput" placeholder="例: 1700000000" autocomplete="off">
+            <button id="toDateBtn" type="button">変換</button>
+        </div>
+        <div id="tsError" class="tool-error" style="display:none"></div>
+        <div id="tsResult" class="ut-result" style="display:none">
+            <table class="tool-table">
+                <tr><th>ローカル</th><td id="r-local"></td></tr>
+                <tr><th>UTC</th><td id="r-utc"></td></tr>
+                <tr><th>ISO 8601</th><td id="r-iso"></td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="ut-section">
+        <h2>日時 → Unixタイムスタンプ</h2>
+        <div class="ut-datetime-row">
+            <input type="datetime-local" id="dtInput" step="1">
+            <button id="toTsBtn" type="button">変換</button>
+        </div>
+        <div id="dtResult" class="ut-result" style="display:none">
+            <table class="tool-table">
+                <tr><th>秒</th><td id="r-sec"></td></tr>
+                <tr><th>ミリ秒</th><td id="r-ms"></td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ut-now { display: flex; align-items: center; gap: 0.5rem; padding: 0.8rem 1rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 0.9rem; }
+.ut-now code { font-family: 'SF Mono', monospace; font-weight: 700; color: var(--color-primary); font-size: 1.1rem; }
+.btn-sm { padding: 0.2rem 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-white); cursor: pointer; font-size: 0.8rem; }
+.btn-sm:hover { border-color: var(--color-primary); }
+.ut-section { margin-bottom: 2rem; }
+.ut-section h2 { font-size: 1.1rem; color: var(--color-dark); margin-bottom: 0.8rem; }
+.ut-result { margin-top: 0.8rem; }
+.ut-datetime-row { display: flex; gap: 0.5rem; }
+.ut-datetime-row input { padding: 0.6rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px; outline: none; }
+.ut-datetime-row input:focus { border-color: var(--color-primary); }
+.ut-datetime-row button { padding: 0.6rem 1.5rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 1rem; cursor: pointer; }
+</style>
+<script>
+(function() {
+    const nowEl = document.getElementById('nowUnix');
+    const tsInput = document.getElementById('tsInput');
+    const dtInput = document.getElementById('dtInput');
+
+    function updateNow() { nowEl.textContent = Math.floor(Date.now() / 1000); }
+    setInterval(updateNow, 1000); updateNow();
+
+    document.getElementById('useNowBtn').addEventListener('click', () => {
+        tsInput.value = nowEl.textContent;
+    });
+
+    // Now を datetime-local にセット
+    const now = new Date();
+    dtInput.value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+
+    document.getElementById('toDateBtn').addEventListener('click', () => {
+        const errEl = document.getElementById('tsError');
+        const resEl = document.getElementById('tsResult');
+        errEl.style.display = 'none';
+        const val = tsInput.value.trim();
+        let ts = parseInt(val);
+        if (isNaN(ts)) { errEl.textContent = '有効な数値を入力してください'; errEl.style.display = 'block'; resEl.style.display = 'none'; return; }
+        // ミリ秒っぽい場合は変換
+        if (ts > 9999999999) ts = Math.floor(ts / 1000);
+        const d = new Date(ts * 1000);
+        document.getElementById('r-local').textContent = d.toLocaleString('ja-JP');
+        document.getElementById('r-utc').textContent = d.toUTCString();
+        document.getElementById('r-iso').textContent = d.toISOString();
+        resEl.style.display = 'block';
+    });
+    tsInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('toDateBtn').click(); });
+
+    document.getElementById('toTsBtn').addEventListener('click', () => {
+        const resEl = document.getElementById('dtResult');
+        const d = new Date(dtInput.value);
+        if (isNaN(d.getTime())) { resEl.style.display = 'none'; return; }
+        const sec = Math.floor(d.getTime() / 1000);
+        document.getElementById('r-sec').textContent = sec;
+        document.getElementById('r-ms').textContent = d.getTime();
+        resEl.style.display = 'block';
+    });
+})();
+</script>

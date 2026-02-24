@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Unix時間変換 - Unixタイムスタンプ変換ツール{% endblock %}
+{% block meta_description %}Unixタイムスタンプ（エポック秒）と日時を相互変換する無料オンラインツール。現在のUnix時間のリアルタイム表示にも対応。{% endblock %}
+{% block og_title %}Unix時間変換 - Unixタイムスタンプ変換ツール{% endblock %}
+{% block og_description %}Unixタイムスタンプと日時を相互変換する無料ツール。現在のUnix時間もリアルタイム表示{% endblock %}
+{% block twitter_title %}Unix時間変換 - Unixタイムスタンプ変換ツール{% endblock %}
+{% block twitter_description %}Unixタイムスタンプと日時を相互変換する無料ツール。現在のUnix時間もリアルタイム表示{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Unix時間変換",
+  "description": "Unixタイムスタンプと日時を相互変換する無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:unix_time' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "Unix時間変換" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_unix_time_content.html" %}
+{% endblock %}

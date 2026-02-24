@@ -1,0 +1,194 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Base64エンコード/デコード</div>
+    <h1>Base64エンコード/デコード</h1>
+    <p class="tool-desc">テキストや画像をBase64に変換します。</p>
+
+    <!-- タブ切り替え -->
+    <div class="b64-tabs">
+        <button type="button" class="b64-tab active" data-tab="text">テキスト</button>
+        <button type="button" class="b64-tab" data-tab="image">画像</button>
+    </div>
+
+    <!-- テキストタブ -->
+    <div id="tab-text" class="b64-panel">
+        <div class="tool-actions">
+            <button id="encodeBtn" type="button">エンコード ↓</button>
+            <button id="decodeBtn" type="button" class="btn-secondary">デコード ↑</button>
+            <button id="copyBtn" type="button" class="btn-secondary">結果をコピー</button>
+        </div>
+        <div id="error" class="tool-error" style="display:none"></div>
+        <label class="tool-label">入力テキスト</label>
+        <textarea id="inputText" class="tool-textarea" rows="8" placeholder="エンコードまたはデコードするテキスト"></textarea>
+        <label class="tool-label">結果</label>
+        <textarea id="outputText" class="tool-textarea" rows="8" readonly></textarea>
+    </div>
+
+    <!-- 画像タブ -->
+    <div id="tab-image" class="b64-panel" style="display:none">
+        <div id="dropZone" class="b64-drop">
+            <p>ここに画像をドラッグ&ドロップ<br>または</p>
+            <label class="b64-file-label">
+                ファイルを選択
+                <input type="file" id="fileInput" accept="image/*" hidden>
+            </label>
+        </div>
+        <div id="imgPreviewArea" style="display:none">
+            <div class="b64-img-info">
+                <span id="imgFileName"></span>
+                <span id="imgFileSize"></span>
+                <span id="imgDimensions"></span>
+            </div>
+            <div class="b64-img-preview">
+                <img id="imgPreview" alt="プレビュー">
+            </div>
+        </div>
+        <div id="imgOutputArea" style="display:none">
+            <div class="tool-actions">
+                <button id="copyDataUrlBtn" type="button">Data URLをコピー</button>
+                <button id="copyBase64OnlyBtn" type="button" class="btn-secondary">Base64のみコピー</button>
+                <button id="copyImgTagBtn" type="button" class="btn-secondary">&lt;img&gt;タグをコピー</button>
+            </div>
+            <label class="tool-label">Data URL（src属性にそのまま使用可能）</label>
+            <textarea id="imgOutput" class="tool-textarea" rows="6" readonly></textarea>
+        </div>
+        <div id="imgError" class="tool-error" style="display:none"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin: 1rem 0 0.3rem; color: var(--color-text-light); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); word-break: break-all; }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.tool-textarea[readonly] { background: var(--color-bg-subtle); }
+
+.b64-tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid var(--color-border); }
+.b64-tab { padding: 0.6rem 1.5rem; border: none; background: none; font-size: 0.95rem; cursor: pointer; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.2s, border-color 0.2s; }
+.b64-tab:hover { color: var(--color-text); }
+.b64-tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 600; }
+
+.b64-drop { border: 2px dashed var(--color-border); border-radius: var(--radius-lg); padding: 2.5rem 1rem; text-align: center; color: var(--color-text-muted); transition: border-color 0.2s, background 0.2s; }
+.b64-drop.dragover { border-color: var(--color-primary); background: rgba(59, 130, 246, 0.04); }
+.b64-drop p { margin-bottom: 0.8rem; line-height: 1.6; }
+.b64-file-label { display: inline-block; padding: 0.5rem 1.5rem; background: var(--color-primary); color: #fff; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.b64-file-label:hover { opacity: 0.85; }
+
+.b64-img-info { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 0.5rem; font-size: 0.85rem; color: var(--color-text-muted); }
+.b64-img-preview { margin-bottom: 1rem; }
+.b64-img-preview img { max-width: 100%; max-height: 300px; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+</style>
+<script>
+(function() {
+    // --- タブ切り替え ---
+    document.querySelectorAll('.b64-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelector('.b64-tab.active').classList.remove('active');
+            tab.classList.add('active');
+            document.querySelectorAll('.b64-panel').forEach(p => p.style.display = 'none');
+            document.getElementById('tab-' + tab.dataset.tab).style.display = 'block';
+        });
+    });
+
+    // --- テキストタブ ---
+    const input = document.getElementById('inputText');
+    const output = document.getElementById('outputText');
+    const errorEl = document.getElementById('error');
+    function showError(msg) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+    function hideError() { errorEl.style.display = 'none'; }
+
+    document.getElementById('encodeBtn').addEventListener('click', () => {
+        hideError();
+        try { output.value = btoa(unescape(encodeURIComponent(input.value))); }
+        catch (e) { showError('エンコードに失敗しました'); }
+    });
+    document.getElementById('decodeBtn').addEventListener('click', () => {
+        hideError();
+        try { output.value = decodeURIComponent(escape(atob(input.value.trim()))); }
+        catch (e) { showError('無効なBase64文字列です'); }
+    });
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(output.value);
+    });
+
+    // --- 画像タブ ---
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const imgPreviewArea = document.getElementById('imgPreviewArea');
+    const imgOutputArea = document.getElementById('imgOutputArea');
+    const imgPreview = document.getElementById('imgPreview');
+    const imgOutput = document.getElementById('imgOutput');
+    const imgError = document.getElementById('imgError');
+
+    let currentDataUrl = '';
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function processFile(file) {
+        imgError.style.display = 'none';
+        if (!file.type.startsWith('image/')) {
+            imgError.textContent = '画像ファイルを選択してください';
+            imgError.style.display = 'block';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            imgError.textContent = 'ファイルサイズは10MB以下にしてください';
+            imgError.style.display = 'block';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentDataUrl = e.target.result;
+
+            // プレビュー表示
+            imgPreview.src = currentDataUrl;
+            document.getElementById('imgFileName').textContent = file.name;
+            document.getElementById('imgFileSize').textContent = formatSize(file.size);
+
+            imgPreview.onload = function() {
+                document.getElementById('imgDimensions').textContent = imgPreview.naturalWidth + ' x ' + imgPreview.naturalHeight + ' px';
+            };
+
+            imgPreviewArea.style.display = 'block';
+            imgOutput.value = currentDataUrl;
+            imgOutputArea.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ドラッグ&ドロップ
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) processFile(file);
+    });
+
+    // ファイル選択
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files[0]) processFile(fileInput.files[0]);
+    });
+
+    // コピーボタン
+    document.getElementById('copyDataUrlBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(currentDataUrl);
+    });
+    document.getElementById('copyBase64OnlyBtn').addEventListener('click', () => {
+        const base64Only = currentDataUrl.split(',')[1] || '';
+        navigator.clipboard.writeText(base64Only);
+    });
+    document.getElementById('copyImgTagBtn').addEventListener('click', () => {
+        const tag = '<img src="' + currentDataUrl + '" alt="">';
+        navigator.clipboard.writeText(tag);
+    });
+})();
+</script>

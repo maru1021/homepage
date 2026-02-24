@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}文字数カウンター - 無料オンラインツール{% endblock %}
+{% block meta_description %}テキストの文字数・単語数・バイト数をリアルタイムで計算する無料ツール。全角半角の区別やスペース除外にも対応。{% endblock %}
+{% block og_title %}文字数カウンター - 無料オンラインツール{% endblock %}
+{% block og_description %}テキストの文字数・単語数・バイト数をリアルタイムで計算する無料ツール{% endblock %}
+{% block twitter_title %}文字数カウンター - 無料オンラインツール{% endblock %}
+{% block twitter_description %}テキストの文字数・単語数・バイト数をリアルタイムで計算する無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "文字数カウンター",
+  "description": "テキストの文字数・単語数・バイト数をリアルタイムで計算する無料ツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:char_counter' %}",
+  "applicationCategory": "UtilityApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "文字数カウンター" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_char_counter_content.html" %}
+{% endblock %}

@@ -1,0 +1,103 @@
+<div class="tool-page tool-page-wide">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; テキスト比較 (diff)</div>
+    <h1>テキスト比較 (diff)</h1>
+    <p class="tool-desc">2つのテキストを比較して、差分をハイライト表示します。</p>
+
+    <div class="diff-inputs">
+        <div class="diff-col">
+            <label class="tool-label">テキスト1（元）</label>
+            <textarea id="text1" class="tool-textarea" rows="12" placeholder="元のテキスト"></textarea>
+        </div>
+        <div class="diff-col">
+            <label class="tool-label">テキスト2（変更後）</label>
+            <textarea id="text2" class="tool-textarea" rows="12" placeholder="変更後のテキスト"></textarea>
+        </div>
+    </div>
+
+    <div class="tool-actions">
+        <button id="diffBtn" type="button">比較する</button>
+        <button id="clearBtn" type="button" class="btn-secondary">クリア</button>
+    </div>
+
+    <div id="diffResult" class="diff-result" style="display:none">
+        <div class="diff-stats" id="diffStats"></div>
+        <div class="diff-output" id="diffOutput"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-page-wide { max-width: 960px; }
+.diff-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.3rem; color: var(--color-text-light); }
+.tool-textarea { width: 100%; padding: 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.diff-stats { font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.8rem; }
+.diff-output { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.6; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: auto; }
+.diff-line { padding: 0 0.8rem; white-space: pre-wrap; word-break: break-all; }
+.diff-add { background: #d4edda; }
+.diff-del { background: #f8d7da; }
+.diff-eq { background: transparent; }
+.diff-line-num { display: inline-block; width: 3em; color: var(--color-text-muted); text-align: right; margin-right: 0.8rem; user-select: none; }
+@media (max-width: 640px) { .diff-inputs { grid-template-columns: 1fr; } }
+</style>
+<script>
+(function() {
+    // 簡易 LCS ベースの行diff
+    function diffLines(a, b) {
+        const al = a.split('\n'), bl = b.split('\n');
+        const m = al.length, n = bl.length;
+        // LCS テーブル
+        const dp = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+        for (let i = 1; i <= m; i++)
+            for (let j = 1; j <= n; j++)
+                dp[i][j] = al[i-1] === bl[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+
+        // バックトラック
+        const result = [];
+        let i = m, j = n;
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && al[i-1] === bl[j-1]) {
+                result.unshift({type: 'eq', line: al[i-1]}); i--; j--;
+            } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+                result.unshift({type: 'add', line: bl[j-1]}); j--;
+            } else {
+                result.unshift({type: 'del', line: al[i-1]}); i--;
+            }
+        }
+        return result;
+    }
+
+    function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    document.getElementById('diffBtn').addEventListener('click', () => {
+        const t1 = document.getElementById('text1').value;
+        const t2 = document.getElementById('text2').value;
+        const result = diffLines(t1, t2);
+
+        let adds = 0, dels = 0;
+        let html = '';
+        let ln1 = 0, ln2 = 0;
+        for (const r of result) {
+            let prefix = ' ', cls = 'diff-eq', num = '';
+            if (r.type === 'add') { prefix = '+'; cls = 'diff-add'; adds++; ln2++; num = ln2; }
+            else if (r.type === 'del') { prefix = '-'; cls = 'diff-del'; dels++; ln1++; num = ln1; }
+            else { ln1++; ln2++; num = ln1; }
+            html += `<div class="diff-line ${cls}"><span class="diff-line-num">${num}</span>${prefix} ${esc(r.line)}</div>`;
+        }
+
+        document.getElementById('diffStats').textContent = `${adds} 行追加、${dels} 行削除、${result.length - adds - dels} 行変更なし`;
+        document.getElementById('diffOutput').innerHTML = html;
+        document.getElementById('diffResult').style.display = 'block';
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('text1').value = '';
+        document.getElementById('text2').value = '';
+        document.getElementById('diffResult').style.display = 'none';
+    });
+})();
+</script>

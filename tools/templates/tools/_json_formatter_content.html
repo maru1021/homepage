@@ -1,0 +1,49 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; JSON整形ツール</div>
+    <h1>JSON整形ツール</h1>
+    <p class="tool-desc">JSONを貼り付けて整形・圧縮・構文チェックができます。</p>
+
+    <div class="tool-actions">
+        <button id="formatBtn" type="button">整形</button>
+        <button id="minifyBtn" type="button" class="btn-secondary">圧縮</button>
+        <button id="copyBtn" type="button" class="btn-secondary">コピー</button>
+        <button id="clearBtn" type="button" class="btn-secondary">クリア</button>
+    </div>
+    <div id="error" class="tool-error" style="display:none"></div>
+    <textarea id="jsonInput" class="tool-textarea" rows="20" placeholder='{"key": "value"}'></textarea>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.btn-secondary:hover { background: var(--color-bg-hover); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+</style>
+<script>
+(function() {
+    const input = document.getElementById('jsonInput');
+    const errorEl = document.getElementById('error');
+    function showError(msg) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+    function hideError() { errorEl.style.display = 'none'; }
+
+    document.getElementById('formatBtn').addEventListener('click', () => {
+        hideError();
+        try { input.value = JSON.stringify(JSON.parse(input.value), null, 2); }
+        catch (e) { showError('JSON構文エラー: ' + e.message); }
+    });
+    document.getElementById('minifyBtn').addEventListener('click', () => {
+        hideError();
+        try { input.value = JSON.stringify(JSON.parse(input.value)); }
+        catch (e) { showError('JSON構文エラー: ' + e.message); }
+    });
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(input.value);
+    });
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        input.value = ''; hideError();
+    });
+})();
+</script>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Cron式ジェネレータ - 無料オンラインツール{% endblock %}
+{% block meta_description %}GUIで簡単にcron式（crontab）を組み立てられる無料オンラインツール。分・時・日・月・曜日を選択するだけでcron式を生成。{% endblock %}
+{% block og_title %}Cron式ジェネレータ - 無料オンラインツール{% endblock %}
+{% block og_description %}GUIで簡単にcron式を組み立てられる無料ツール。分・時・日・月・曜日を選択するだけ{% endblock %}
+{% block twitter_title %}Cron式ジェネレータ - 無料オンラインツール{% endblock %}
+{% block twitter_description %}GUIで簡単にcron式を組み立てられる無料ツール。分・時・日・月・曜日を選択するだけ{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Cron式ジェネレータ",
+  "description": "GUIで簡単にcron式を組み立てられる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:cron_generator' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "Cron式ジェネレータ" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_cron_generator_content.html" %}
+{% endblock %}

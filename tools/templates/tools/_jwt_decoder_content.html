@@ -1,0 +1,90 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; JWTデコーダー</div>
+    <h1>JWTデコーダー</h1>
+    <p class="tool-desc">JWTトークンを貼り付けると、ヘッダーとペイロードの中身を確認できます。署名の検証は行いません。</p>
+
+    <label class="tool-label">JWTトークン</label>
+    <textarea id="jwtInput" class="tool-textarea" rows="5" placeholder="eyJhbGciOiJIUzI1NiIs..."></textarea>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+
+    <div id="result" style="display:none">
+        <div class="jwt-section">
+            <h2>ヘッダー <span class="jwt-part-color" style="color:#e94560">（赤）</span></h2>
+            <pre id="r-header" class="jwt-code"></pre>
+        </div>
+        <div class="jwt-section">
+            <h2>ペイロード <span class="jwt-part-color" style="color:#8e44ad">（紫）</span></h2>
+            <pre id="r-payload" class="jwt-code"></pre>
+        </div>
+        <div class="jwt-section">
+            <h2>有効期限</h2>
+            <div id="r-expiry" class="jwt-expiry"></div>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin: 0 0 0.3rem; color: var(--color-text-light); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; resize: vertical; outline: none; background: var(--color-bg-white); word-break: break-all; }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.jwt-section { margin-top: 1.5rem; }
+.jwt-section h2 { font-size: 1rem; margin-bottom: 0.5rem; color: var(--color-dark); }
+.jwt-part-color { font-size: 0.85rem; font-weight: normal; }
+.jwt-code { padding: 1rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+.jwt-expiry { padding: 0.8rem 1rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.9rem; }
+.jwt-expired { color: #c0392b; font-weight: 600; }
+.jwt-valid { color: #27ae60; font-weight: 600; }
+</style>
+<script>
+(function() {
+    const input = document.getElementById('jwtInput');
+    const errorEl = document.getElementById('error');
+    const resultEl = document.getElementById('result');
+
+    function b64decode(s) {
+        s = s.replace(/-/g, '+').replace(/_/g, '/');
+        while (s.length % 4) s += '=';
+        return decodeURIComponent(escape(atob(s)));
+    }
+
+    function decode() {
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+        const jwt = input.value.trim();
+        if (!jwt) return;
+
+        const parts = jwt.split('.');
+        if (parts.length !== 3) { errorEl.textContent = 'JWTは3つのパート（header.payload.signature）で構成されます'; errorEl.style.display = 'block'; return; }
+
+        try {
+            const header = JSON.parse(b64decode(parts[0]));
+            const payload = JSON.parse(b64decode(parts[1]));
+
+            document.getElementById('r-header').textContent = JSON.stringify(header, null, 2);
+            document.getElementById('r-payload').textContent = JSON.stringify(payload, null, 2);
+
+            const expiryEl = document.getElementById('r-expiry');
+            if (payload.exp) {
+                const expDate = new Date(payload.exp * 1000);
+                const now = new Date();
+                const expired = now > expDate;
+                expiryEl.innerHTML = `${expDate.toLocaleString('ja-JP')} <span class="${expired ? 'jwt-expired' : 'jwt-valid'}">${expired ? '（期限切れ）' : '（有効）'}</span>`;
+            } else if (payload.iat) {
+                const iatDate = new Date(payload.iat * 1000);
+                expiryEl.textContent = `発行日時: ${iatDate.toLocaleString('ja-JP')}（有効期限なし）`;
+            } else {
+                expiryEl.textContent = '有効期限情報なし';
+            }
+
+            resultEl.style.display = 'block';
+        } catch (e) {
+            errorEl.textContent = 'JWTのデコードに失敗しました: ' + e.message;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    let timer;
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(decode, 300); });
+})();
+</script>

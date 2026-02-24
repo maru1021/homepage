@@ -1,0 +1,95 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ポートスキャナー</div>
+    <h1>ポートスキャナー</h1>
+    <p class="tool-desc">ホスト名を入力して開放されているポートを確認します。自身が管理するサーバーの確認にお使いください。</p>
+
+    <div class="tool-form">
+        <input type="text" id="hostInput" placeholder="例: example.com または 192.168.1.1" autocomplete="off" spellcheck="false">
+        <button id="scanBtn" type="button">スキャン</button>
+    </div>
+    <div class="ps-options">
+        <label class="tool-label" style="margin-top:0">ポート指定（カンマ区切り、空欄で主要ポート）</label>
+        <input type="text" id="portsInput" placeholder="例: 22,80,443,3306" autocomplete="off" class="ps-port-input">
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">スキャン中...（ポート数によって時間がかかります）</div>
+
+    <div id="result" style="display:none">
+        <div class="ps-summary">
+            <span>ホスト: <strong id="r-host"></strong></span>
+            <span>IP: <strong id="r-ip"></strong></span>
+            <span>開放: <strong id="r-open-count"></strong></span>
+        </div>
+        <table class="tool-table">
+            <thead>
+                <tr><th>ポート</th><th>状態</th><th>サービス</th></tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ps-options { margin-bottom: 1rem; }
+.ps-port-input { width: 100%; padding: 0.6rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 14px; outline: none; font-family: 'SF Mono', monospace; }
+.ps-port-input:focus { border-color: var(--color-primary); }
+.ps-summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.9rem; color: var(--color-text-muted); }
+.ps-open { color: #27ae60; font-weight: 600; }
+.ps-closed { color: #c0392b; }
+.tool-table thead th { background: var(--color-bg-subtle); font-weight: 600; font-size: 0.85rem; color: var(--color-text-light); }
+</style>
+<script>
+(function() {
+    const hostInput = document.getElementById('hostInput');
+    const portsInput = document.getElementById('portsInput');
+    const btn = document.getElementById('scanBtn');
+    const errorEl = document.getElementById('error');
+    const loadingEl = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+
+    async function scan() {
+        const host = hostInput.value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+        if (!host) return;
+        hostInput.value = host;
+
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+        btn.disabled = true;
+
+        let url = '/tools/api/port-scan/?host=' + encodeURIComponent(host);
+        const ports = portsInput.value.trim();
+        if (ports) url += '&ports=' + encodeURIComponent(ports);
+
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (!resp.ok) { errorEl.textContent = data.error || 'スキャンに失敗しました'; errorEl.style.display = 'block'; return; }
+
+            document.getElementById('r-host').textContent = data.host;
+            document.getElementById('r-ip').textContent = data.ip;
+
+            const body = document.getElementById('resultBody');
+            body.innerHTML = '';
+            let openCount = 0;
+
+            for (const r of data.results) {
+                if (r.open) openCount++;
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td>' + r.port + '</td>'
+                    + '<td class="' + (r.open ? 'ps-open' : 'ps-closed') + '">' + (r.open ? 'OPEN' : 'CLOSED') + '</td>'
+                    + '<td>' + (r.service || '-') + '</td>';
+                body.appendChild(tr);
+            }
+            document.getElementById('r-open-count').textContent = openCount + ' / ' + data.results.length;
+
+            resultEl.style.display = 'block';
+        } catch { errorEl.textContent = '通信エラーが発生しました'; errorEl.style.display = 'block'; }
+        finally { loadingEl.style.display = 'none'; btn.disabled = false; }
+    }
+
+    btn.addEventListener('click', scan);
+    hostInput.addEventListener('keydown', e => { if (e.key === 'Enter') scan(); });
+})();
+</script>

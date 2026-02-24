@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}SSL/TLS証明書チェッカー - 無料オンラインツール{% endblock %}
+{% block meta_description %}ドメインのSSL/TLS証明書情報（発行者・有効期限・SAN・プロトコル）を確認できる無料オンラインツール。証明書の期限切れチェックに便利。{% endblock %}
+{% block og_title %}SSL/TLS証明書チェッカー - 無料オンラインツール{% endblock %}
+{% block og_description %}ドメインのSSL/TLS証明書情報と有効期限を確認できる無料ツール{% endblock %}
+{% block twitter_title %}SSL/TLS証明書チェッカー - 無料オンラインツール{% endblock %}
+{% block twitter_description %}ドメインのSSL/TLS証明書情報と有効期限を確認できる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "SSL/TLS証明書チェッカー",
+  "description": "SSL/TLS証明書の発行者・有効期限・SANを確認できる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:ssl_checker' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "SSL/TLS証明書チェッカー" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_ssl_checker_content.html" %}
+{% endblock %}

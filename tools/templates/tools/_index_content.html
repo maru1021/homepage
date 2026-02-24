@@ -1,0 +1,229 @@
+<div class="tools-index">
+    <h1>便利ツール</h1>
+    <p class="tools-index-desc">Web開発やIT業務に役立つ無料オンラインツール集です。</p>
+
+    <div class="tools-grid">
+        <a href="{% url 'tools:ip_lookup' %}" class="tool-card htmx-link">
+            <div class="tool-icon">🌐</div>
+            <div class="tool-info">
+                <h2>IPアドレスからの住所検索</h2>
+                <p>IPアドレスから地域・ISP情報を調べる</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:json_formatter' %}" class="tool-card htmx-link">
+            <div class="tool-icon">{ }</div>
+            <div class="tool-info">
+                <h2>JSON整形ツール</h2>
+                <p>JSONの整形・圧縮・構文チェック</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:base64' %}" class="tool-card htmx-link">
+            <div class="tool-icon">B64</div>
+            <div class="tool-info">
+                <h2>Base64エンコード/デコード</h2>
+                <p>テキスト・画像のBase64変換</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:password_generator' %}" class="tool-card htmx-link">
+            <div class="tool-icon">🔑</div>
+            <div class="tool-info">
+                <h2>パスワード生成器</h2>
+                <p>安全なランダムパスワードを生成</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:qr_code' %}" class="tool-card htmx-link">
+            <div class="tool-icon">▣</div>
+            <div class="tool-info">
+                <h2>QRコード生成</h2>
+                <p>URLやテキストからQRコードを作成</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:char_counter' %}" class="tool-card htmx-link">
+            <div class="tool-icon">Aa</div>
+            <div class="tool-info">
+                <h2>文字数カウンター</h2>
+                <p>文字数・単語数・バイト数を計算</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:whois' %}" class="tool-card htmx-link">
+            <div class="tool-icon">🔍</div>
+            <div class="tool-info">
+                <h2>Whois検索</h2>
+                <p>ドメインの登録情報を調べる</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:regex_tester' %}" class="tool-card htmx-link">
+            <div class="tool-icon">/.*/<br></div>
+            <div class="tool-info">
+                <h2>正規表現テスター</h2>
+                <p>正規表現のリアルタイムマッチ確認</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:cron_generator' %}" class="tool-card htmx-link">
+            <div class="tool-icon">⏰</div>
+            <div class="tool-info">
+                <h2>Cron式ジェネレータ</h2>
+                <p>GUIでcron式を簡単に組み立て</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:color_converter' %}" class="tool-card htmx-link">
+            <div class="tool-icon">🎨</div>
+            <div class="tool-info">
+                <h2>色変換ツール</h2>
+                <p>HEX/RGB/HSL相互変換</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:url_encode' %}" class="tool-card htmx-link">
+            <div class="tool-icon">%20</div>
+            <div class="tool-info">
+                <h2>URLエンコード/デコード</h2>
+                <p>日本語URL等のパーセントエンコード変換</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:unix_time' %}" class="tool-card htmx-link">
+            <div class="tool-icon">&#x1F552;</div>
+            <div class="tool-info">
+                <h2>Unix時間変換</h2>
+                <p>Unixタイムスタンプと日時の相互変換</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:diff' %}" class="tool-card htmx-link">
+            <div class="tool-icon">+/-</div>
+            <div class="tool-info">
+                <h2>テキスト比較 (diff)</h2>
+                <p>2つのテキストの差分をハイライト表示</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:hash_generator' %}" class="tool-card htmx-link">
+            <div class="tool-icon">#</div>
+            <div class="tool-info">
+                <h2>ハッシュ生成</h2>
+                <p>MD5/SHA-1/SHA-256のハッシュ計算</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:html_escape' %}" class="tool-card htmx-link">
+            <div class="tool-icon">&lt;/&gt;</div>
+            <div class="tool-info">
+                <h2>HTMLエスケープ</h2>
+                <p>HTML特殊文字のエスケープ/アンエスケープ</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:jwt_decoder' %}" class="tool-card htmx-link">
+            <div class="tool-icon">JWT</div>
+            <div class="tool-info">
+                <h2>JWTデコーダー</h2>
+                <p>JWTトークンの中身を確認</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:unit_converter' %}" class="tool-card htmx-link">
+            <div class="tool-icon">&#x21C4;</div>
+            <div class="tool-info">
+                <h2>単位変換</h2>
+                <p>長さ/重さ/温度/面積の変換</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:age_calculator' %}" class="tool-card htmx-link">
+            <div class="tool-icon">&#x1F382;</div>
+            <div class="tool-info">
+                <h2>年齢・入学卒業年 早見表</h2>
+                <p>生まれ年から年齢・入学卒業年・厄年を一覧表示</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:http_headers' %}" class="tool-card htmx-link">
+            <div class="tool-icon">H</div>
+            <div class="tool-info">
+                <h2>HTTPヘッダー確認</h2>
+                <p>レスポンスヘッダーとセキュリティ設定を確認</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:ssl_checker' %}" class="tool-card htmx-link">
+            <div class="tool-icon">&#x1F512;</div>
+            <div class="tool-info">
+                <h2>SSL/TLS証明書チェッカー</h2>
+                <p>証明書の発行者・有効期限・SANを確認</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:port_scanner' %}" class="tool-card htmx-link">
+            <div class="tool-icon">&#x1F50C;</div>
+            <div class="tool-info">
+                <h2>ポートスキャナー</h2>
+                <p>サーバーの開放ポートを確認</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:password_strength' %}" class="tool-card htmx-link">
+            <div class="tool-icon">&#x1F6E1;</div>
+            <div class="tool-info">
+                <h2>パスワード強度チェッカー</h2>
+                <p>パスワードの安全性を診断</p>
+            </div>
+        </a>
+        <a href="{% url 'tools:subnet_calculator' %}" class="tool-card htmx-link">
+            <div class="tool-icon">IP</div>
+            <div class="tool-info">
+                <h2>サブネット計算機</h2>
+                <p>CIDR/サブネットマスクからネットワーク情報を計算</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<style>
+.tools-index {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+.tools-index h1 {
+    font-size: 1.5rem;
+    color: var(--color-dark);
+    margin-bottom: 0.5rem;
+}
+.tools-index-desc {
+    color: var(--color-text-light);
+    margin-bottom: 2rem;
+}
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.tool-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem;
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: var(--color-text);
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+.tool-card:hover {
+    box-shadow: var(--shadow-card);
+    border-color: var(--color-primary);
+}
+.tool-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-md);
+    color: var(--color-primary);
+    font-weight: bold;
+}
+.tool-info h2 {
+    font-size: 0.95rem;
+    margin-bottom: 0.2rem;
+    color: var(--color-dark);
+}
+.tool-info p {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+}
+</style>

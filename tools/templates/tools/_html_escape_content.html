@@ -1,0 +1,58 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; HTMLエスケープ</div>
+    <h1>HTMLエスケープ/アンエスケープ</h1>
+    <p class="tool-desc">&lt; &gt; &amp; " ' などのHTML特殊文字をエスケープ/アンエスケープします。</p>
+
+    <div class="tool-actions">
+        <button id="escapeBtn" type="button">エスケープ ↓</button>
+        <button id="unescapeBtn" type="button" class="btn-secondary">アンエスケープ ↑</button>
+        <button id="copyBtn" type="button" class="btn-secondary">結果をコピー</button>
+    </div>
+
+    <label class="tool-label">入力</label>
+    <textarea id="inputText" class="tool-textarea" rows="8" placeholder='例: <div class="test">Hello & World</div>'></textarea>
+    <label class="tool-label">結果</label>
+    <textarea id="outputText" class="tool-textarea" rows="8" readonly></textarea>
+
+    <div class="html-ref">
+        <h2>変換対応表</h2>
+        <table class="tool-table">
+            <tr><th>文字</th><th>エスケープ後</th></tr>
+            <tr><td>&amp;</td><td>&amp;amp;</td></tr>
+            <tr><td>&lt;</td><td>&amp;lt;</td></tr>
+            <tr><td>&gt;</td><td>&amp;gt;</td></tr>
+            <tr><td>"</td><td>&amp;quot;</td></tr>
+            <tr><td>'</td><td>&amp;#39;</td></tr>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin: 1rem 0 0.3rem; color: var(--color-text-light); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.tool-textarea[readonly] { background: var(--color-bg-subtle); }
+.html-ref { margin-top: 2rem; }
+.html-ref h2 { font-size: 1rem; margin-bottom: 0.5rem; color: var(--color-dark); }
+</style>
+<script>
+(function() {
+    const input = document.getElementById('inputText');
+    const output = document.getElementById('outputText');
+
+    function escapeHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function unescapeHtml(s) {
+        return s.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+    }
+
+    document.getElementById('escapeBtn').addEventListener('click', () => { output.value = escapeHtml(input.value); });
+    document.getElementById('unescapeBtn').addEventListener('click', () => { output.value = unescapeHtml(input.value); });
+    document.getElementById('copyBtn').addEventListener('click', () => { navigator.clipboard.writeText(output.value); });
+})();
+</script>

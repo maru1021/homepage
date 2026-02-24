@@ -1,0 +1,53 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; URLエンコード/デコード</div>
+    <h1>URLエンコード/デコード</h1>
+    <p class="tool-desc">URLのパーセントエンコード（%xx）とデコードを行います。</p>
+
+    <div class="tool-actions">
+        <button id="encodeBtn" type="button">エンコード ↓</button>
+        <button id="encodeCompBtn" type="button" class="btn-secondary">コンポーネントのみ</button>
+        <button id="decodeBtn" type="button" class="btn-secondary">デコード ↑</button>
+        <button id="copyBtn" type="button" class="btn-secondary">結果をコピー</button>
+    </div>
+    <div id="error" class="tool-error" style="display:none"></div>
+    <label class="tool-label">入力</label>
+    <textarea id="inputText" class="tool-textarea" rows="6" placeholder="URLまたはテキストを入力"></textarea>
+    <label class="tool-label">結果</label>
+    <textarea id="outputText" class="tool-textarea" rows="6" readonly></textarea>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin: 1rem 0 0.3rem; color: var(--color-text-light); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.tool-textarea[readonly] { background: var(--color-bg-subtle); }
+</style>
+<script>
+(function() {
+    const input = document.getElementById('inputText');
+    const output = document.getElementById('outputText');
+    const errorEl = document.getElementById('error');
+    function showError(msg) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+    function hideError() { errorEl.style.display = 'none'; }
+
+    document.getElementById('encodeBtn').addEventListener('click', () => {
+        hideError();
+        try { output.value = encodeURI(input.value); } catch(e) { showError('エンコードに失敗しました'); }
+    });
+    document.getElementById('encodeCompBtn').addEventListener('click', () => {
+        hideError();
+        try { output.value = encodeURIComponent(input.value); } catch(e) { showError('エンコードに失敗しました'); }
+    });
+    document.getElementById('decodeBtn').addEventListener('click', () => {
+        hideError();
+        try { output.value = decodeURIComponent(input.value); } catch(e) { showError('無効なエンコード文字列です'); }
+    });
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(output.value);
+    });
+})();
+</script>

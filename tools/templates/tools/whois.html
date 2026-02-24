@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Whois検索 - ドメイン登録情報調査{% endblock %}
+{% block meta_description %}ドメインのWhois情報（登録者・レジストラ・有効期限・ネームサーバー）を調べる無料オンラインツール。RDAP対応。{% endblock %}
+{% block og_title %}Whois検索 - ドメイン登録情報調査{% endblock %}
+{% block og_description %}ドメインのWhois情報（登録者・有効期限・ネームサーバー）を調べる無料ツール{% endblock %}
+{% block twitter_title %}Whois検索 - ドメイン登録情報調査{% endblock %}
+{% block twitter_description %}ドメインのWhois情報（登録者・有効期限・ネームサーバー）を調べる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Whois検索",
+  "description": "ドメインの登録情報（Whois）を調べる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:whois' %}",
+  "applicationCategory": "UtilityApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "Whois検索" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_whois_content.html" %}
+{% endblock %}

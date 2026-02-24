@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}ハッシュ生成 - MD5/SHA-1/SHA-256計算ツール{% endblock %}
+{% block meta_description %}テキストのMD5・SHA-1・SHA-256ハッシュ値をブラウザ上で計算する無料オンラインツール。ファイルのチェックサム確認にも便利。{% endblock %}
+{% block og_title %}ハッシュ生成 - MD5/SHA-1/SHA-256計算ツール{% endblock %}
+{% block og_description %}テキストのMD5・SHA-1・SHA-256ハッシュ値をブラウザ上で計算する無料ツール{% endblock %}
+{% block twitter_title %}ハッシュ生成 - MD5/SHA-1/SHA-256計算ツール{% endblock %}
+{% block twitter_description %}テキストのMD5・SHA-1・SHA-256ハッシュ値をブラウザ上で計算する無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "ハッシュ生成",
+  "description": "テキストのMD5・SHA-1・SHA-256ハッシュ値を計算する無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:hash_generator' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "ハッシュ生成" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_hash_generator_content.html" %}
+{% endblock %}

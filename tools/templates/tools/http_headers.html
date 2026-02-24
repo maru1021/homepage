@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}HTTPヘッダー確認 - セキュリティヘッダーチェック{% endblock %}
+{% block meta_description %}任意のURLのHTTPレスポンスヘッダーを確認し、セキュリティヘッダー（HSTS・CSP・X-Frame-Options等）の設定状況をチェックできる無料ツール。{% endblock %}
+{% block og_title %}HTTPヘッダー確認 - セキュリティヘッダーチェック{% endblock %}
+{% block og_description %}URLのHTTPレスポンスヘッダーとセキュリティヘッダーの設定状況を確認できる無料ツール{% endblock %}
+{% block twitter_title %}HTTPヘッダー確認 - セキュリティヘッダーチェック{% endblock %}
+{% block twitter_description %}URLのHTTPレスポンスヘッダーとセキュリティヘッダーの設定状況を確認できる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "HTTPヘッダー確認",
+  "description": "HTTPレスポンスヘッダーとセキュリティヘッダーの設定状況を確認できる無料ツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:http_headers' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "HTTPヘッダー確認" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_http_headers_content.html" %}
+{% endblock %}

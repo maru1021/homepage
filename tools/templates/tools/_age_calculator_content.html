@@ -1,0 +1,163 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 年齢・入学卒業年 早見表</div>
+    <h1>生まれ年から年齢・入学卒業年 早見表</h1>
+    <p class="tool-desc">生まれ年を入力するだけで、現在の年齢・学校の入学卒業年・厄年・長寿祝いが一覧で確認できます。</p>
+
+    <div class="age-form">
+        <label class="tool-label">生まれ年（西暦）</label>
+        <div class="age-form-row">
+            <input type="number" id="birthYear" placeholder="例: 1990" min="1900" max="2030">
+            <span class="age-form-suffix">年生まれ</span>
+        </div>
+        <div class="age-wareki" id="warekiDisplay"></div>
+    </div>
+
+    <div id="result" class="age-result" style="display:none">
+        <div class="age-main">
+            <span>今年 <strong id="ageYears" class="age-big"></strong></span>
+            <span class="age-unit">歳</span>
+            <span class="age-sub" id="ageSub"></span>
+        </div>
+
+        <div class="age-milestones" id="milestones"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.age-form { margin-bottom: 1.5rem; }
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.3rem; color: var(--color-text-light); }
+.age-form-row { display: flex; align-items: center; gap: 0.5rem; }
+.age-form-row input { width: 140px; padding: 0.7rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 18px; outline: none; text-align: center; }
+.age-form-row input:focus { border-color: var(--color-primary); }
+.age-form-suffix { font-size: 1rem; color: var(--color-text-light); }
+.age-wareki { margin-top: 0.4rem; font-size: 0.9rem; color: var(--color-text-muted); }
+.age-result { text-align: center; }
+.age-main { margin-bottom: 1.5rem; font-size: 1.1rem; }
+.age-big { font-size: 3.5rem; font-weight: 700; color: var(--color-primary); }
+.age-unit { font-size: 1.5rem; color: var(--color-text-light); }
+.age-sub { display: block; font-size: 0.9rem; color: var(--color-text-muted); margin-top: 0.3rem; }
+.age-milestones { text-align: left; }
+.age-milestones h2 { font-size: 1.1rem; color: var(--color-dark); margin-bottom: 0.8rem; text-align: center; }
+.ms-table { width: 100%; border-collapse: collapse; background: var(--color-bg-white); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden; }
+.ms-table th, .ms-table td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid var(--color-border-light); font-size: 0.9rem; }
+.ms-table th { background: var(--color-bg-subtle); color: var(--color-text-light); font-weight: 600; }
+.ms-table tr:last-child th, .ms-table tr:last-child td { border-bottom: none; }
+.ms-past { color: var(--color-text-muted); }
+.ms-current { background: #fff8e1; font-weight: 600; }
+.ms-future { color: var(--color-text); }
+.ms-section-header td { background: var(--color-dark); color: #fff; font-weight: 600; font-size: 0.85rem; padding: 0.4rem 1rem; }
+</style>
+<script>
+(function() {
+    const birthInput = document.getElementById('birthYear');
+    const resultEl = document.getElementById('result');
+    const warekiEl = document.getElementById('warekiDisplay');
+
+    function toWareki(year) {
+        if (year >= 2019) return '令和' + (year - 2018) + '年';
+        if (year >= 1989) return '平成' + (year - 1988) + '年';
+        if (year >= 1926) return '昭和' + (year - 1925) + '年';
+        if (year >= 1912) return '大正' + (year - 1911) + '年';
+        if (year >= 1868) return '明治' + (year - 1867) + '年';
+        return '';
+    }
+
+    function calculate() {
+        const by = parseInt(birthInput.value);
+        if (!by || by < 1900 || by > 2030) {
+            resultEl.style.display = 'none';
+            warekiEl.textContent = '';
+            return;
+        }
+
+        warekiEl.textContent = toWareki(by) + ' 生まれ';
+
+        const now = new Date();
+        const nowYear = now.getFullYear();
+        const age = nowYear - by;
+
+        document.getElementById('ageYears').textContent = age;
+        document.getElementById('ageSub').textContent = `（誕生日前の場合は ${age - 1} 歳）`;
+
+        // 学年基準年（4月〜翌3月を1学年とするため、by をそのまま使う）
+        const sy = by; // 4/2〜翌4/1 の標準ケース
+
+        const sections = [
+            { title: '学校・入学卒業', items: [
+                { event: '小学校入学', year: sy + 7, month: 4, age: age_at(by, sy + 7) },
+                { event: '小学校卒業', year: sy + 13, month: 3, age: age_at(by, sy + 13) },
+                { event: '中学校入学', year: sy + 13, month: 4, age: age_at(by, sy + 13) },
+                { event: '中学校卒業', year: sy + 16, month: 3, age: age_at(by, sy + 16) },
+                { event: '高校入学', year: sy + 16, month: 4, age: age_at(by, sy + 16) },
+                { event: '高校卒業', year: sy + 19, month: 3, age: age_at(by, sy + 19) },
+                { event: '大学入学（4年制）', year: sy + 19, month: 4, age: age_at(by, sy + 19) },
+                { event: '大学卒業（4年制）', year: sy + 23, month: 3, age: age_at(by, sy + 23) },
+            ]},
+            { title: '届け年・成人', items: [
+                { event: '成人（18歳）', year: by + 18, month: null, age: '18歳' },
+                { event: '成人式（旧20歳）', year: by + 20, month: 1, age: '20歳' },
+            ]},
+            { title: '厄年（男性）', items: [
+                { event: '前厄', year: by + 24, month: null, age: '24歳' },
+                { event: '本厄', year: by + 25, month: null, age: '25歳' },
+                { event: '後厄', year: by + 26, month: null, age: '26歳' },
+                { event: '前厄', year: by + 41, month: null, age: '41歳' },
+                { event: '大厄（本厄）', year: by + 42, month: null, age: '42歳' },
+                { event: '後厄', year: by + 43, month: null, age: '43歳' },
+                { event: '前厄', year: by + 60, month: null, age: '60歳' },
+                { event: '本厄', year: by + 61, month: null, age: '61歳' },
+                { event: '後厄', year: by + 62, month: null, age: '62歳' },
+            ]},
+            { title: '厄年（女性）', items: [
+                { event: '前厄', year: by + 18, month: null, age: '18歳' },
+                { event: '本厄', year: by + 19, month: null, age: '19歳' },
+                { event: '後厄', year: by + 20, month: null, age: '20歳' },
+                { event: '前厄', year: by + 32, month: null, age: '32歳' },
+                { event: '大厄（本厄）', year: by + 33, month: null, age: '33歳' },
+                { event: '後厄', year: by + 34, month: null, age: '34歳' },
+                { event: '前厄', year: by + 36, month: null, age: '36歳' },
+                { event: '本厄', year: by + 37, month: null, age: '37歳' },
+                { event: '後厄', year: by + 38, month: null, age: '38歳' },
+                { event: '前厄', year: by + 60, month: null, age: '60歳' },
+                { event: '本厄', year: by + 61, month: null, age: '61歳' },
+                { event: '後厄', year: by + 62, month: null, age: '62歳' },
+            ]},
+            { title: '長寿祝い', items: [
+                { event: '還暦', year: by + 60, month: null, age: '60歳' },
+                { event: '古希', year: by + 70, month: null, age: '70歳' },
+                { event: '喜寿', year: by + 77, month: null, age: '77歳' },
+                { event: '傘寿', year: by + 80, month: null, age: '80歳' },
+                { event: '米寿', year: by + 88, month: null, age: '88歳' },
+                { event: '卒寿', year: by + 90, month: null, age: '90歳' },
+                { event: '白寿', year: by + 99, month: null, age: '99歳' },
+                { event: '百寿', year: by + 100, month: null, age: '100歳' },
+            ]},
+        ];
+
+        let html = '<h2>入学卒業年・届け年・厄年・長寿祝い 早見表</h2>';
+        html += '<table class="ms-table"><tr><th>イベント</th><th>西暦</th><th>和暦</th><th>年齢</th></tr>';
+
+        for (const sec of sections) {
+            html += `<tr class="ms-section-header"><td colspan="4">${sec.title}</td></tr>`;
+            for (const m of sec.items) {
+                let cls = 'ms-future';
+                if (m.year < nowYear) cls = 'ms-past';
+                if (m.year === nowYear) cls = 'ms-current';
+                const monthStr = m.month ? m.month + '月' : '';
+                html += `<tr class="${cls}"><td>${m.event}</td><td>${m.year}年${monthStr}</td><td>${toWareki(m.year)}</td><td>${m.age}</td></tr>`;
+            }
+        }
+        html += '</table>';
+        document.getElementById('milestones').innerHTML = html;
+
+        resultEl.style.display = 'block';
+    }
+
+    function age_at(birthYear, eventYear) {
+        return (eventYear - birthYear - 1) + '〜' + (eventYear - birthYear) + '歳';
+    }
+
+    birthInput.addEventListener('input', calculate);
+    calculate();
+})();
+</script>

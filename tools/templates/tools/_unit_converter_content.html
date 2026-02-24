@@ -1,0 +1,121 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 単位変換</div>
+    <h1>単位変換</h1>
+    <p class="tool-desc">カテゴリと単位を選んで数値を変換します。</p>
+
+    <div class="uc-category">
+        <button type="button" class="uc-cat-btn active" data-cat="length">長さ</button>
+        <button type="button" class="uc-cat-btn" data-cat="weight">重さ</button>
+        <button type="button" class="uc-cat-btn" data-cat="temperature">温度</button>
+        <button type="button" class="uc-cat-btn" data-cat="area">面積</button>
+        <button type="button" class="uc-cat-btn" data-cat="volume">体積</button>
+        <button type="button" class="uc-cat-btn" data-cat="data">データ</button>
+    </div>
+
+    <div class="uc-converter">
+        <div class="uc-row">
+            <input type="number" id="fromVal" value="1" step="any">
+            <select id="fromUnit"></select>
+        </div>
+        <div class="uc-arrow">=</div>
+        <div class="uc-row">
+            <input type="number" id="toVal" readonly>
+            <select id="toUnit"></select>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.uc-category { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+.uc-cat-btn { padding: 0.5rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-white); cursor: pointer; font-size: 0.9rem; }
+.uc-cat-btn:hover { border-color: var(--color-primary); }
+.uc-cat-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.uc-converter { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.uc-row { display: flex; gap: 0.5rem; flex: 1; min-width: 200px; }
+.uc-row input { width: 120px; padding: 0.6rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px; outline: none; }
+.uc-row input:focus { border-color: var(--color-primary); }
+.uc-row input[readonly] { background: var(--color-bg-subtle); }
+.uc-row select { flex: 1; padding: 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 15px; outline: none; }
+.uc-row select:focus { border-color: var(--color-primary); }
+.uc-arrow { font-size: 1.5rem; font-weight: bold; color: var(--color-text-muted); }
+</style>
+<script>
+(function() {
+    const units = {
+        length: {mm:'ミリメートル',cm:'センチメートル',m:'メートル',km:'キロメートル',in:'インチ',ft:'フィート',yd:'ヤード',mi:'マイル'},
+        weight: {mg:'ミリグラム',g:'グラム',kg:'キログラム',t:'トン',oz:'オンス',lb:'ポンド'},
+        temperature: {'C':'摂氏(°C)','F':'華氏(°F)','K':'ケルビン(K)'},
+        area: {mm2:'mm²',cm2:'cm²',m2:'m²',km2:'km²',ha:'ヘクタール',acre:'エーカー',tsubo:'坪'},
+        volume: {ml:'ミリリットル',l:'リットル',m3:'m³',gal_us:'ガロン(US)',fl_oz:'fl oz',cup:'カップ'},
+        data: {B:'バイト',KB:'キロバイト',MB:'メガバイト',GB:'ギガバイト',TB:'テラバイト'},
+    };
+
+    // 基準単位への変換係数
+    const toBase = {
+        length: {mm:0.001,cm:0.01,m:1,km:1000,in:0.0254,ft:0.3048,yd:0.9144,mi:1609.344},
+        weight: {mg:0.001,g:1,kg:1000,t:1000000,oz:28.3495,lb:453.592},
+        area: {mm2:0.000001,cm2:0.0001,m2:1,km2:1000000,ha:10000,acre:4046.86,tsubo:3.30579},
+        volume: {ml:0.001,l:1,m3:1000,gal_us:3.78541,fl_oz:0.0295735,cup:0.24},
+        data: {B:1,KB:1024,MB:1048576,GB:1073741824,TB:1099511627776},
+    };
+
+    const fromVal = document.getElementById('fromVal');
+    const toVal = document.getElementById('toVal');
+    const fromUnit = document.getElementById('fromUnit');
+    const toUnit = document.getElementById('toUnit');
+
+    let currentCat = 'length';
+
+    function populateUnits() {
+        const u = units[currentCat];
+        fromUnit.innerHTML = '';
+        toUnit.innerHTML = '';
+        const keys = Object.keys(u);
+        keys.forEach((k, i) => {
+            fromUnit.add(new Option(u[k], k));
+            toUnit.add(new Option(u[k], k));
+        });
+        if (keys.length > 1) toUnit.selectedIndex = 1;
+        convert();
+    }
+
+    function convert() {
+        const val = parseFloat(fromVal.value);
+        if (isNaN(val)) { toVal.value = ''; return; }
+        const from = fromUnit.value;
+        const to = toUnit.value;
+
+        if (currentCat === 'temperature') {
+            let celsius;
+            if (from === 'C') celsius = val;
+            else if (from === 'F') celsius = (val - 32) * 5/9;
+            else celsius = val - 273.15;
+
+            let result;
+            if (to === 'C') result = celsius;
+            else if (to === 'F') result = celsius * 9/5 + 32;
+            else result = celsius + 273.15;
+            toVal.value = parseFloat(result.toPrecision(10));
+        } else {
+            const base = val * toBase[currentCat][from];
+            const result = base / toBase[currentCat][to];
+            toVal.value = parseFloat(result.toPrecision(10));
+        }
+    }
+
+    document.querySelectorAll('.uc-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelector('.uc-cat-btn.active').classList.remove('active');
+            btn.classList.add('active');
+            currentCat = btn.dataset.cat;
+            populateUnits();
+        });
+    });
+
+    fromVal.addEventListener('input', convert);
+    fromUnit.addEventListener('change', convert);
+    toUnit.addEventListener('change', convert);
+
+    populateUnits();
+})();
+</script>

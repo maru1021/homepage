@@ -1,0 +1,66 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; QRコード生成</div>
+    <h1>QRコード生成</h1>
+    <p class="tool-desc">URLやテキストを入力してQRコードを生成します。</p>
+
+    <div class="tool-form">
+        <input type="text" id="qrInput" placeholder="URLまたはテキストを入力" autocomplete="off">
+        <button id="genBtn" type="button">生成</button>
+    </div>
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="qrResult" style="display:none; text-align:center; margin-top:1rem;">
+        <div id="qrCanvas"></div>
+        <button id="downloadBtn" type="button" class="btn-secondary" style="margin-top:1rem;">画像をダウンロード</button>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border); padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+#qrCanvas img { border: 8px solid #fff; box-shadow: var(--shadow-card); border-radius: var(--radius-md); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+(function() {
+    const input = document.getElementById('qrInput');
+    const errorEl = document.getElementById('error');
+    const resultEl = document.getElementById('qrResult');
+    const canvasEl = document.getElementById('qrCanvas');
+    let qr = null;
+
+    function generate() {
+        const text = input.value.trim();
+        if (!text) { errorEl.textContent = 'テキストを入力してください'; errorEl.style.display = 'block'; return; }
+        errorEl.style.display = 'none';
+        canvasEl.innerHTML = '';
+        try {
+            qr = new QRCode(canvasEl, {
+                text: text,
+                width: 256,
+                height: 256,
+                correctLevel: QRCode.CorrectLevel.M,
+            });
+            resultEl.style.display = 'block';
+        } catch (e) {
+            errorEl.textContent = 'QRコード生成に失敗しました';
+            errorEl.style.display = 'block';
+        }
+    }
+
+    document.getElementById('genBtn').addEventListener('click', generate);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+        const img = canvasEl.querySelector('img');
+        const canvas = canvasEl.querySelector('canvas');
+        if (!img && !canvas) return;
+        const a = document.createElement('a');
+        a.download = 'qrcode.png';
+        if (canvas) {
+            a.href = canvas.toDataURL('image/png');
+        } else {
+            a.href = img.src;
+        }
+        a.click();
+    });
+})();
+</script>

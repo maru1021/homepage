@@ -1,0 +1,137 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Cron式ジェネレータ</div>
+    <h1>Cron式ジェネレータ</h1>
+    <p class="tool-desc">GUIでcron式を組み立てます。各フィールドを設定すると、cron式がリアルタイムで生成されます。</p>
+
+    <div class="cron-output">
+        <code id="cronExpr">* * * * *</code>
+        <button id="copyBtn" type="button" class="btn-copy" title="コピー">コピー</button>
+    </div>
+    <div id="cronDesc" class="cron-desc"></div>
+
+    <div class="cron-fields">
+        <div class="cron-field">
+            <label>分 (0-59)</label>
+            <select id="minType"><option value="*">毎分</option><option value="*/n">n分ごと</option><option value="v">指定</option></select>
+            <input type="number" id="minVal" min="0" max="59" value="0" style="display:none">
+        </div>
+        <div class="cron-field">
+            <label>時 (0-23)</label>
+            <select id="hourType"><option value="*">毎時</option><option value="*/n">n時間ごと</option><option value="v">指定</option></select>
+            <input type="number" id="hourVal" min="0" max="23" value="0" style="display:none">
+        </div>
+        <div class="cron-field">
+            <label>日 (1-31)</label>
+            <select id="domType"><option value="*">毎日</option><option value="v">指定</option></select>
+            <input type="number" id="domVal" min="1" max="31" value="1" style="display:none">
+        </div>
+        <div class="cron-field">
+            <label>月 (1-12)</label>
+            <select id="monType"><option value="*">毎月</option><option value="v">指定</option></select>
+            <input type="number" id="monVal" min="1" max="12" value="1" style="display:none">
+        </div>
+        <div class="cron-field">
+            <label>曜日 (0-6)</label>
+            <select id="dowType"><option value="*">毎日</option><option value="v">指定</option></select>
+            <select id="dowVal" style="display:none">
+                <option value="0">日</option><option value="1">月</option><option value="2">火</option>
+                <option value="3">水</option><option value="4">木</option><option value="5">金</option><option value="6">土</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="cron-presets">
+        <label>プリセット:</label>
+        <button type="button" data-cron="* * * * *">毎分</button>
+        <button type="button" data-cron="0 * * * *">毎時</button>
+        <button type="button" data-cron="0 0 * * *">毎日0時</button>
+        <button type="button" data-cron="0 0 * * 1">毎週月曜</button>
+        <button type="button" data-cron="0 0 1 * *">毎月1日</button>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.cron-output { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; background: var(--color-dark); color: #fff; border-radius: var(--radius-md); margin-bottom: 0.5rem; }
+.cron-output code { font-size: 1.5rem; font-family: 'SF Mono', 'Fira Code', monospace; flex: 1; letter-spacing: 2px; }
+.btn-copy { background: rgba(255,255,255,0.15); border: none; color: #fff; padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem; }
+.btn-copy:hover { background: rgba(255,255,255,0.25); }
+.cron-desc { color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+.cron-fields { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; }
+.cron-field { display: flex; align-items: center; gap: 0.8rem; }
+.cron-field label { width: 100px; font-weight: 600; font-size: 0.9rem; color: var(--color-text-light); flex-shrink: 0; }
+.cron-field select, .cron-field input { padding: 0.4rem 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.9rem; outline: none; }
+.cron-field select:focus, .cron-field input:focus { border-color: var(--color-primary); }
+.cron-presets { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.cron-presets label { font-weight: 600; font-size: 0.9rem; color: var(--color-text-light); }
+.cron-presets button { padding: 0.3rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-white); cursor: pointer; font-size: 0.85rem; }
+.cron-presets button:hover { border-color: var(--color-primary); color: var(--color-primary); }
+</style>
+<script>
+(function() {
+    const fields = ['min', 'hour', 'dom', 'mon', 'dow'];
+    const cronExpr = document.getElementById('cronExpr');
+    const cronDesc = document.getElementById('cronDesc');
+
+    function getField(name) {
+        const type = document.getElementById(name + 'Type').value;
+        const valEl = document.getElementById(name + 'Val');
+        if (type === '*') return '*';
+        if (type === '*/n') return '*/' + (valEl.value || '1');
+        return valEl.value;
+    }
+
+    function update() {
+        const parts = fields.map(f => getField(f));
+        cronExpr.textContent = parts.join(' ');
+        describe(parts);
+    }
+
+    function describe(p) {
+        const descs = [];
+        const dowNames = ['日', '月', '火', '水', '木', '金', '土'];
+        if (p[0] === '*') descs.push('毎分');
+        else if (p[0].startsWith('*/')) descs.push(p[0].slice(2) + '分ごと');
+        else descs.push(p[0] + '分');
+
+        if (p[1] === '*') {}
+        else if (p[1].startsWith('*/')) descs.push(p[1].slice(2) + '時間ごと');
+        else descs.push(p[1] + '時');
+
+        if (p[2] !== '*') descs.push(p[2] + '日');
+        if (p[3] !== '*') descs.push(p[3] + '月');
+        if (p[4] !== '*') descs.push(dowNames[parseInt(p[4])] + '曜日');
+
+        cronDesc.textContent = descs.join(' / ') + ' に実行';
+    }
+
+    fields.forEach(f => {
+        const typeEl = document.getElementById(f + 'Type');
+        const valEl = document.getElementById(f + 'Val');
+        typeEl.addEventListener('change', () => {
+            valEl.style.display = typeEl.value === '*' ? 'none' : '';
+            update();
+        });
+        valEl.addEventListener('input', update);
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(cronExpr.textContent);
+    });
+
+    document.querySelectorAll('[data-cron]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const parts = btn.dataset.cron.split(' ');
+            fields.forEach((f, i) => {
+                const typeEl = document.getElementById(f + 'Type');
+                const valEl = document.getElementById(f + 'Val');
+                if (parts[i] === '*') { typeEl.value = '*'; valEl.style.display = 'none'; }
+                else if (parts[i].startsWith('*/')) { typeEl.value = '*/n'; valEl.value = parts[i].slice(2); valEl.style.display = ''; }
+                else { typeEl.value = 'v'; valEl.value = parts[i]; valEl.style.display = ''; }
+            });
+            update();
+        });
+    });
+
+    update();
+})();
+</script>

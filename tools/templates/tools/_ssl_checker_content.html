@@ -1,0 +1,112 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; SSL/TLS証明書チェッカー</div>
+    <h1>SSL/TLS証明書チェッカー</h1>
+    <p class="tool-desc">ドメイン名を入力してSSL/TLS証明書の情報を確認します。</p>
+
+    <div class="tool-form">
+        <input type="text" id="hostInput" placeholder="例: example.com または 219.94.232.146" autocomplete="off" spellcheck="false">
+        <button id="checkBtn" type="button">確認</button>
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">証明書を取得中...</div>
+
+    <div id="result" class="tool-result" style="display:none">
+        <div id="warningBanner" class="ssl-banner ssl-warn" style="display:none"></div>
+        <div id="expiryBanner" class="ssl-banner"></div>
+        <table class="tool-table">
+            <tbody>
+                <tr><th>ホスト</th><td id="r-host"></td></tr>
+                <tr><th>サブジェクト (CN)</th><td id="r-subject"></td></tr>
+                <tr><th>発行者</th><td id="r-issuer"></td></tr>
+                <tr><th>有効期間開始</th><td id="r-from"></td></tr>
+                <tr><th>有効期間終了</th><td id="r-to"></td></tr>
+                <tr><th>残り日数</th><td id="r-days"></td></tr>
+                <tr><th>プロトコル</th><td id="r-protocol"></td></tr>
+                <tr><th>シリアル番号</th><td id="r-serial"></td></tr>
+                <tr><th>SAN (代替名)</th><td id="r-sans"></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ssl-banner { padding: 0.8rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-weight: 600; }
+.ssl-ok { background: #d4edda; color: #155724; }
+.ssl-warn { background: #fff3cd; color: #856404; }
+.ssl-expired { background: #f8d7da; color: #721c24; }
+</style>
+<script>
+(function() {
+    const hostInput = document.getElementById('hostInput');
+    const btn = document.getElementById('checkBtn');
+    const errorEl = document.getElementById('error');
+    const loadingEl = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+
+    async function check() {
+        const host = hostInput.value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+        if (!host) return;
+        hostInput.value = host;
+
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/tools/api/ssl-check/?host=' + encodeURIComponent(host));
+            const data = await resp.json();
+            if (!resp.ok) { errorEl.textContent = data.error || '確認に失敗しました'; errorEl.style.display = 'block'; return; }
+
+            const warnBanner = document.getElementById('warningBanner');
+            if (data.warning) {
+                warnBanner.textContent = data.warning;
+                warnBanner.style.display = 'block';
+            } else {
+                warnBanner.style.display = 'none';
+            }
+
+            document.getElementById('r-host').textContent = data.host;
+            document.getElementById('r-subject').textContent = data.subject || '不明';
+            document.getElementById('r-issuer').textContent = data.issuer || '不明';
+            document.getElementById('r-from').textContent = data.not_before || '不明';
+            document.getElementById('r-to').textContent = data.not_after || '不明';
+            document.getElementById('r-protocol').textContent = data.protocol || '不明';
+            document.getElementById('r-serial').textContent = data.serial_number || '不明';
+            document.getElementById('r-sans').textContent = (data.sans || []).join(', ') || 'なし';
+
+            const days = data.days_remaining;
+            const daysEl = document.getElementById('r-days');
+            const banner = document.getElementById('expiryBanner');
+
+            if (days !== null) {
+                daysEl.textContent = days + '日';
+                if (days < 0) {
+                    daysEl.style.color = '#c0392b';
+                    banner.textContent = '証明書は期限切れです';
+                    banner.className = 'ssl-banner ssl-expired';
+                } else if (days <= 30) {
+                    daysEl.style.color = '#e67e22';
+                    banner.textContent = '証明書の期限が30日以内に切れます（残り' + days + '日）';
+                    banner.className = 'ssl-banner ssl-warn';
+                } else {
+                    daysEl.style.color = '#27ae60';
+                    banner.textContent = '証明書は有効です（残り' + days + '日）';
+                    banner.className = 'ssl-banner ssl-ok';
+                }
+                banner.style.display = 'block';
+            } else {
+                daysEl.textContent = '不明';
+                banner.style.display = 'none';
+            }
+
+            resultEl.style.display = 'block';
+        } catch { errorEl.textContent = '通信エラーが発生しました'; errorEl.style.display = 'block'; }
+        finally { loadingEl.style.display = 'none'; btn.disabled = false; }
+    }
+
+    btn.addEventListener('click', check);
+    hostInput.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+})();
+</script>

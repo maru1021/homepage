@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}テキスト比較 (diff) - 無料オンラインツール{% endblock %}
+{% block meta_description %}2つのテキストの差分をハイライト表示する無料オンラインdiffツール。追加・削除箇所を色分けで視覚的に確認できます。{% endblock %}
+{% block og_title %}テキスト比較 (diff) - 無料オンラインツール{% endblock %}
+{% block og_description %}2つのテキストの差分をハイライト表示する無料diffツール{% endblock %}
+{% block twitter_title %}テキスト比較 (diff) - 無料オンラインツール{% endblock %}
+{% block twitter_description %}2つのテキストの差分をハイライト表示する無料diffツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "テキスト比較 (diff)",
+  "description": "2つのテキストの差分をハイライト表示する無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:diff' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "テキスト比較 (diff)" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_diff_content.html" %}
+{% endblock %}

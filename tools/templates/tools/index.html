@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}便利ツール - 無料オンラインツール集{% endblock %}
+{% block meta_description %}IP検索・JSON整形・Base64変換・パスワード生成・QRコード・文字数カウント・Whois・正規表現・Cron・色変換・年齢早見表など、Web開発やIT業務に役立つ無料オンラインツール集{% endblock %}
+{% block og_title %}便利ツール - 無料オンラインツール集{% endblock %}
+{% block og_description %}Web開発やIT業務に役立つ無料オンラインツール集。JSON整形・Base64変換・パスワード生成・QRコード・正規表現テスターなど18種類以上{% endblock %}
+{% block twitter_title %}便利ツール - 無料オンラインツール集{% endblock %}
+{% block twitter_description %}Web開発やIT業務に役立つ無料オンラインツール集。JSON整形・Base64変換・パスワード生成・QRコード・正規表現テスターなど18種類以上{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "便利ツール - 無料オンラインツール集",
+  "description": "Web開発やIT業務に役立つ無料オンラインツール集",
+  "url": "https://{{ request.get_host }}{% url 'tools:index' %}",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "{{ SITE_NAME }}",
+    "url": "https://{{ request.get_host }}/"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_index_content.html" %}
+{% endblock %}

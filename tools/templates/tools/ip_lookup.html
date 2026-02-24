@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}IPアドレスからの住所検索 - 無料オンラインツール{% endblock %}
+{% block meta_description %}IPアドレスを入力するだけで、おおよその地域・ISP・組織情報を調べられる無料ツール。IPv4アドレスの位置情報を簡単に検索できます。{% endblock %}
+{% block og_title %}IPアドレスからの住所検索 - 無料オンラインツール{% endblock %}
+{% block og_description %}IPアドレスを入力するだけで、おおよその地域・ISP・組織情報を調べられる無料ツール{% endblock %}
+{% block twitter_title %}IPアドレスからの住所検索 - 無料オンラインツール{% endblock %}
+{% block twitter_description %}IPアドレスを入力するだけで、おおよその地域・ISP・組織情報を調べられる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "IPアドレスからの住所検索",
+  "description": "IPアドレスからおおよその地域・ISP情報を調べる無料ツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:ip_lookup' %}",
+  "applicationCategory": "UtilityApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "{{ SITE_NAME }}",
+    "url": "https://{{ request.get_host }}/"
+  },
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "IPアドレスからの住所検索" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_ip_lookup_content.html" %}
+{% endblock %}

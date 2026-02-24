@@ -1,0 +1,68 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; IPアドレスからの住所検索</div>
+    <h1>IPアドレスからの住所検索</h1>
+    <p class="tool-desc">IPアドレスを入力すると、おおよその地域・ISP情報を表示します。</p>
+
+    <div class="tool-form">
+        <input type="text" id="ipInput" placeholder="例: 8.8.8.8" autocomplete="off" spellcheck="false">
+        <button id="lookupBtn" type="button">検索</button>
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">検索中...</div>
+
+    <div id="result" class="tool-result" style="display:none">
+        <table class="tool-table">
+            <tbody>
+                <tr><th>国</th><td id="r-country"></td></tr>
+                <tr><th>地域</th><td id="r-region"></td></tr>
+                <tr><th>市区町村</th><td id="r-city"></td></tr>
+                <tr><th>郵便番号</th><td id="r-zip"></td></tr>
+                <tr><th>緯度</th><td id="r-lat"></td></tr>
+                <tr><th>経度</th><td id="r-lon"></td></tr>
+                <tr><th>タイムゾーン</th><td id="r-timezone"></td></tr>
+                <tr><th>ISP</th><td id="r-isp"></td></tr>
+                <tr><th>組織</th><td id="r-org"></td></tr>
+                <tr><th>AS</th><td id="r-as"></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<script>
+(function() {
+    const input = document.getElementById('ipInput');
+    const btn = document.getElementById('lookupBtn');
+    const errorEl = document.getElementById('error');
+    const loadingEl = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+
+    async function lookup() {
+        const ip = input.value.trim();
+        if (!ip) return;
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+        btn.disabled = true;
+        try {
+            const resp = await fetch('/tools/api/ip-lookup/?ip=' + encodeURIComponent(ip));
+            const data = await resp.json();
+            if (!resp.ok) { errorEl.textContent = data.error || '検索に失敗しました'; errorEl.style.display = 'block'; return; }
+            document.getElementById('r-country').textContent = data.country;
+            document.getElementById('r-region').textContent = data.region;
+            document.getElementById('r-city').textContent = data.city;
+            document.getElementById('r-zip').textContent = data.zip;
+            document.getElementById('r-lat').textContent = data.lat;
+            document.getElementById('r-lon').textContent = data.lon;
+            document.getElementById('r-timezone').textContent = data.timezone;
+            document.getElementById('r-isp').textContent = data.isp;
+            document.getElementById('r-org').textContent = data.org;
+            document.getElementById('r-as').textContent = data.as;
+            resultEl.style.display = 'block';
+        } catch { errorEl.textContent = '通信エラーが発生しました'; errorEl.style.display = 'block'; }
+        finally { loadingEl.style.display = 'none'; btn.disabled = false; }
+    }
+    btn.addEventListener('click', lookup);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+})();
+</script>

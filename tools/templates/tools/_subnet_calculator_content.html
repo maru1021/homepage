@@ -1,0 +1,168 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; サブネット計算機</div>
+    <h1>サブネット計算機</h1>
+    <p class="tool-desc">IPアドレスとCIDRまたはサブネットマスクからネットワーク情報を計算します。</p>
+
+    <div class="tool-form">
+        <input type="text" id="cidrInput" placeholder="例: 192.168.1.0/24" autocomplete="off" spellcheck="false">
+        <button id="calcBtn" type="button">計算</button>
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+
+    <div id="result" class="tool-result" style="display:none">
+        <table class="tool-table">
+            <tbody>
+                <tr><th>ネットワークアドレス</th><td id="r-network"></td></tr>
+                <tr><th>ブロードキャストアドレス</th><td id="r-broadcast"></td></tr>
+                <tr><th>使用可能ホスト範囲</th><td id="r-range"></td></tr>
+                <tr><th>使用可能ホスト数</th><td id="r-hosts"></td></tr>
+                <tr><th>サブネットマスク</th><td id="r-mask"></td></tr>
+                <tr><th>ワイルドカードマスク</th><td id="r-wildcard"></td></tr>
+                <tr><th>CIDR</th><td id="r-cidr"></td></tr>
+                <tr><th>IPクラス</th><td id="r-class"></td></tr>
+                <tr><th>ネットワーク種別</th><td id="r-type"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="sn-reference">
+        <h2>CIDR早見表</h2>
+        <table class="tool-table">
+            <thead><tr><th>CIDR</th><th>サブネットマスク</th><th>ホスト数</th></tr></thead>
+            <tbody id="refTable"></tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.sn-reference { margin-top: 2rem; }
+.sn-reference h2 { font-size: 1rem; color: var(--color-dark); margin-bottom: 0.5rem; }
+.tool-table thead th { background: var(--color-bg-subtle); font-weight: 600; font-size: 0.85rem; }
+</style>
+<script>
+(function() {
+    const cidrInput = document.getElementById('cidrInput');
+    const btn = document.getElementById('calcBtn');
+    const errorEl = document.getElementById('error');
+    const resultEl = document.getElementById('result');
+
+    function ipToInt(ip) {
+        const parts = ip.split('.').map(Number);
+        return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+    }
+
+    function intToIp(n) {
+        return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+    }
+
+    function maskToPrefix(mask) {
+        const n = ipToInt(mask);
+        let bits = 0;
+        for (let i = 31; i >= 0; i--) {
+            if ((n >>> i) & 1) bits++;
+            else break;
+        }
+        return bits;
+    }
+
+    function parse(input) {
+        input = input.trim();
+
+        // CIDR形式: 192.168.1.0/24
+        let match = input.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\/(\d{1,2})$/);
+        if (match) {
+            const ip = match[1];
+            const prefix = parseInt(match[2]);
+            if (prefix < 0 || prefix > 32) return null;
+            return { ip, prefix };
+        }
+
+        // IP + サブネットマスク: 192.168.1.0 255.255.255.0
+        match = input.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+        if (match) {
+            const ip = match[1];
+            const prefix = maskToPrefix(match[2]);
+            return { ip, prefix };
+        }
+
+        // IPのみ → /32
+        match = input.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+        if (match) {
+            return { ip: match[1], prefix: 32 };
+        }
+
+        return null;
+    }
+
+    function getClass(ip) {
+        const first = parseInt(ip.split('.')[0]);
+        if (first < 128) return 'A';
+        if (first < 192) return 'B';
+        if (first < 224) return 'C';
+        if (first < 240) return 'D (マルチキャスト)';
+        return 'E (予約)';
+    }
+
+    function getType(ipInt) {
+        const ip = intToIp(ipInt);
+        const parts = ip.split('.').map(Number);
+        if (parts[0] === 10) return 'プライベート (RFC1918)';
+        if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return 'プライベート (RFC1918)';
+        if (parts[0] === 192 && parts[1] === 168) return 'プライベート (RFC1918)';
+        if (parts[0] === 127) return 'ループバック';
+        if (parts[0] === 169 && parts[1] === 254) return 'リンクローカル';
+        return 'グローバル';
+    }
+
+    function calculate() {
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+
+        const parsed = parse(cidrInput.value);
+        if (!parsed) { errorEl.textContent = '有効なCIDR表記（例: 192.168.1.0/24）を入力してください'; errorEl.style.display = 'block'; return; }
+
+        const ipParts = parsed.ip.split('.').map(Number);
+        if (ipParts.some(p => p < 0 || p > 255)) { errorEl.textContent = '無効なIPアドレスです'; errorEl.style.display = 'block'; return; }
+
+        const ipInt = ipToInt(parsed.ip);
+        const prefix = parsed.prefix;
+        const maskInt = prefix === 0 ? 0 : (0xFFFFFFFF << (32 - prefix)) >>> 0;
+        const wildcardInt = (~maskInt) >>> 0;
+        const networkInt = (ipInt & maskInt) >>> 0;
+        const broadcastInt = (networkInt | wildcardInt) >>> 0;
+
+        const totalHosts = Math.pow(2, 32 - prefix);
+        const usableHosts = prefix >= 31 ? totalHosts : totalHosts - 2;
+
+        document.getElementById('r-network').textContent = intToIp(networkInt);
+        document.getElementById('r-broadcast').textContent = intToIp(broadcastInt);
+        if (prefix >= 31) {
+            document.getElementById('r-range').textContent = intToIp(networkInt) + ' - ' + intToIp(broadcastInt);
+        } else {
+            document.getElementById('r-range').textContent = intToIp(networkInt + 1) + ' - ' + intToIp(broadcastInt - 1);
+        }
+        document.getElementById('r-hosts').textContent = usableHosts.toLocaleString();
+        document.getElementById('r-mask').textContent = intToIp(maskInt);
+        document.getElementById('r-wildcard').textContent = intToIp(wildcardInt);
+        document.getElementById('r-cidr').textContent = '/' + prefix;
+        document.getElementById('r-class').textContent = 'クラス ' + getClass(parsed.ip);
+        document.getElementById('r-type').textContent = getType(ipInt);
+
+        resultEl.style.display = 'block';
+    }
+
+    btn.addEventListener('click', calculate);
+    cidrInput.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+
+    // CIDR早見表
+    const refBody = document.getElementById('refTable');
+    [32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,12,8].forEach(p => {
+        const mask = p === 0 ? 0 : (0xFFFFFFFF << (32 - p)) >>> 0;
+        const hosts = Math.pow(2, 32 - p) - (p >= 31 ? 0 : 2);
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>/' + p + '</td><td>' + intToIp(mask) + '</td><td>' + hosts.toLocaleString() + '</td>';
+        refBody.appendChild(tr);
+    });
+})();
+</script>

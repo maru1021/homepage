@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}単位変換ツール - 長さ/重さ/温度/面積/体積/データ{% endblock %}
+{% block meta_description %}長さ・重さ・温度・面積・体積・データサイズの単位変換ができる無料オンラインツール。メートル・インチ・ポンド・摂氏華氏など多数対応。{% endblock %}
+{% block og_title %}単位変換ツール - 長さ/重さ/温度/面積/体積/データ{% endblock %}
+{% block og_description %}長さ・重さ・温度・面積・体積・データサイズの単位変換ができる無料ツール{% endblock %}
+{% block twitter_title %}単位変換ツール - 長さ/重さ/温度/面積/体積/データ{% endblock %}
+{% block twitter_description %}長さ・重さ・温度・面積・体積・データサイズの単位変換ができる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "単位変換ツール",
+  "description": "長さ・重さ・温度・面積・体積の単位を変換できる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:unit_converter' %}",
+  "applicationCategory": "UtilityApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "単位変換ツール" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_unit_converter_content.html" %}
+{% endblock %}

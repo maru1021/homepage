@@ -1,0 +1,110 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; HTTPヘッダー確認</div>
+    <h1>HTTPヘッダー確認</h1>
+    <p class="tool-desc">URLを入力してHTTPレスポンスヘッダーとセキュリティヘッダーの設定状況を確認します。</p>
+
+    <div class="tool-form">
+        <input type="text" id="urlInput" placeholder="例: https://example.com または https://219.94.232.146" autocomplete="off" spellcheck="false">
+        <button id="checkBtn" type="button">確認</button>
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">確認中...</div>
+
+    <div id="result" style="display:none">
+        <h2 class="hh-section-title">ステータス: <span id="r-status"></span></h2>
+
+        <h2 class="hh-section-title">セキュリティヘッダー</h2>
+        <table class="tool-table">
+            <tbody id="securityBody"></tbody>
+        </table>
+
+        <h2 class="hh-section-title">全レスポンスヘッダー</h2>
+        <table class="tool-table">
+            <tbody id="headersBody"></tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.hh-section-title { font-size: 1rem; color: var(--color-dark); margin: 1.5rem 0 0.5rem; }
+.hh-section-title:first-of-type { margin-top: 1rem; }
+.hh-ok { color: #27ae60; font-weight: 600; }
+.hh-warn { color: #e67e22; font-weight: 600; }
+.hh-miss { color: #c0392b; font-weight: 600; }
+.hh-status-ok { color: #27ae60; font-weight: 700; }
+.hh-status-redirect { color: #e67e22; font-weight: 700; }
+.hh-status-error { color: #c0392b; font-weight: 700; }
+</style>
+<script>
+(function() {
+    const urlInput = document.getElementById('urlInput');
+    const btn = document.getElementById('checkBtn');
+    const errorEl = document.getElementById('error');
+    const loadingEl = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+
+    async function check() {
+        let url = urlInput.value.trim();
+        if (!url) return;
+        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+        urlInput.value = url;
+
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/tools/api/http-headers/?url=' + encodeURIComponent(url));
+            const data = await resp.json();
+            if (!resp.ok) { errorEl.textContent = data.error || '確認に失敗しました'; errorEl.style.display = 'block'; return; }
+
+            // ステータスコード
+            const sc = data.status_code;
+            const statusEl = document.getElementById('r-status');
+            statusEl.textContent = sc;
+            statusEl.className = sc < 300 ? 'hh-status-ok' : sc < 400 ? 'hh-status-redirect' : 'hh-status-error';
+
+            // セキュリティヘッダー
+            const secBody = document.getElementById('securityBody');
+            secBody.innerHTML = '';
+            for (const [name, info] of Object.entries(data.security)) {
+                const tr = document.createElement('tr');
+                const thEl = document.createElement('th');
+                thEl.textContent = name;
+                const tdEl = document.createElement('td');
+                if (info.present) {
+                    tdEl.innerHTML = '<span class="hh-ok">設定済</span> <code style="font-size:0.8rem;color:var(--color-text-muted)">' + escapeHtml(info.value) + '</code>';
+                } else {
+                    tdEl.innerHTML = '<span class="hh-miss">未設定</span>';
+                }
+                tr.appendChild(thEl);
+                tr.appendChild(tdEl);
+                secBody.appendChild(tr);
+            }
+
+            // 全ヘッダー
+            const hBody = document.getElementById('headersBody');
+            hBody.innerHTML = '';
+            for (const [name, value] of Object.entries(data.headers)) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<th>' + escapeHtml(name) + '</th><td style="word-break:break-all">' + escapeHtml(value) + '</td>';
+                hBody.appendChild(tr);
+            }
+
+            resultEl.style.display = 'block';
+        } catch { errorEl.textContent = '通信エラーが発生しました'; errorEl.style.display = 'block'; }
+        finally { loadingEl.style.display = 'none'; btn.disabled = false; }
+    }
+
+    function escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    btn.addEventListener('click', check);
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+})();
+</script>

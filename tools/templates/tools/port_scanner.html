@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}ポートスキャナー - オープンポート確認ツール{% endblock %}
+{% block meta_description %}サーバーの開放ポートを確認できる無料オンラインポートスキャナー。主要ポート（SSH・HTTP・HTTPS・MySQL等）の状態を一括チェック。{% endblock %}
+{% block og_title %}ポートスキャナー - オープンポート確認ツール{% endblock %}
+{% block og_description %}サーバーの開放ポートを確認できる無料オンラインポートスキャナー{% endblock %}
+{% block twitter_title %}ポートスキャナー - オープンポート確認ツール{% endblock %}
+{% block twitter_description %}サーバーの開放ポートを確認できる無料オンラインポートスキャナー{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "ポートスキャナー",
+  "description": "サーバーの開放ポートを確認できる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:port_scanner' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "ポートスキャナー" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_port_scanner_content.html" %}
+{% endblock %}

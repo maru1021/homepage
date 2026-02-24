@@ -1,0 +1,114 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ハッシュ生成</div>
+    <h1>ハッシュ生成</h1>
+    <p class="tool-desc">テキストを入力すると、各種ハッシュ値をリアルタイムで計算します。すべてブラウザ内で処理されます。</p>
+
+    <label class="tool-label">入力テキスト</label>
+    <textarea id="inputText" class="tool-textarea" rows="6" placeholder="ハッシュ化するテキストを入力"></textarea>
+
+    <div id="result" class="hash-result">
+        <div class="hash-row">
+            <label>MD5</label>
+            <div class="hash-value-row">
+                <code id="r-md5">-</code>
+                <button type="button" class="btn-copy" data-target="r-md5">コピー</button>
+            </div>
+        </div>
+        <div class="hash-row">
+            <label>SHA-1</label>
+            <div class="hash-value-row">
+                <code id="r-sha1">-</code>
+                <button type="button" class="btn-copy" data-target="r-sha1">コピー</button>
+            </div>
+        </div>
+        <div class="hash-row">
+            <label>SHA-256</label>
+            <div class="hash-value-row">
+                <code id="r-sha256">-</code>
+                <button type="button" class="btn-copy" data-target="r-sha256">コピー</button>
+            </div>
+        </div>
+        <div class="hash-row">
+            <label>SHA-512</label>
+            <div class="hash-value-row">
+                <code id="r-sha512">-</code>
+                <button type="button" class="btn-copy" data-target="r-sha512">コピー</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin: 0 0 0.3rem; color: var(--color-text-light); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 15px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.hash-result { margin-top: 1.5rem; }
+.hash-row { margin-bottom: 1rem; }
+.hash-row label { display: block; font-weight: 600; font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 0.2rem; }
+.hash-value-row { display: flex; align-items: center; gap: 0.5rem; }
+.hash-value-row code { flex: 1; padding: 0.6rem 0.8rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82rem; word-break: break-all; }
+.btn-copy { padding: 0.3rem 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-white); cursor: pointer; font-size: 0.8rem; flex-shrink: 0; }
+.btn-copy:hover { border-color: var(--color-primary); }
+</style>
+<script>
+(function() {
+    // MD5 実装 (RFC 1321)
+    function md5(str) {
+        function safeAdd(x,y){var l=(x&0xFFFF)+(y&0xFFFF);return(((x>>16)+(y>>16)+(l>>16))<<16)|(l&0xFFFF)}
+        function bitRotL(n,c){return(n<<c)|(n>>>(32-c))}
+        function md5cm(q,a,b,x,s,t){return safeAdd(bitRotL(safeAdd(safeAdd(a,q),safeAdd(x,t)),s),b)}
+        function ff(a,b,c,d,x,s,t){return md5cm((b&c)|((~b)&d),a,b,x,s,t)}
+        function gg(a,b,c,d,x,s,t){return md5cm((b&d)|(c&(~d)),a,b,x,s,t)}
+        function hh(a,b,c,d,x,s,t){return md5cm(b^c^d,a,b,x,s,t)}
+        function ii(a,b,c,d,x,s,t){return md5cm(c^(b|(~d)),a,b,x,s,t)}
+        function toUTF8(s){let o='';for(let i=0;i<s.length;i++){let c=s.charCodeAt(i);if(c<128)o+=String.fromCharCode(c);else if(c<2048){o+=String.fromCharCode((c>>6)|192);o+=String.fromCharCode((c&63)|128)}else{o+=String.fromCharCode((c>>12)|224);o+=String.fromCharCode(((c>>6)&63)|128);o+=String.fromCharCode((c&63)|128)}}return o}
+        str=toUTF8(str);
+        var x=[],i;for(i=0;i<str.length*8;i+=8)x[i>>5]|=(str.charCodeAt(i/8)&0xFF)<<(i%32);
+        x[str.length*8>>5]|=0x80<<((str.length*8)%32);x[(((str.length*8+64)>>>9)<<4)+14]=str.length*8;
+        var a=1732584193,b=-271733879,c=-1732584194,d=271733878;
+        for(i=0;i<x.length;i+=16){var oa=a,ob=b,oc=c,od=d;
+        a=ff(a,b,c,d,x[i],7,-680876936);d=ff(d,a,b,c,x[i+1],12,-389564586);c=ff(c,d,a,b,x[i+2],17,606105819);b=ff(b,c,d,a,x[i+3],22,-1044525330);a=ff(a,b,c,d,x[i+4],7,-176418897);d=ff(d,a,b,c,x[i+5],12,1200080426);c=ff(c,d,a,b,x[i+6],17,-1473231341);b=ff(b,c,d,a,x[i+7],22,-45705983);a=ff(a,b,c,d,x[i+8],7,1770035416);d=ff(d,a,b,c,x[i+9],12,-1958414417);c=ff(c,d,a,b,x[i+10],17,-42063);b=ff(b,c,d,a,x[i+11],22,-1990404162);a=ff(a,b,c,d,x[i+12],7,1804603682);d=ff(d,a,b,c,x[i+13],12,-40341101);c=ff(c,d,a,b,x[i+14],17,-1502002290);b=ff(b,c,d,a,x[i+15],22,1236535329);
+        a=gg(a,b,c,d,x[i+1],5,-165796510);d=gg(d,a,b,c,x[i+6],9,-1069501632);c=gg(c,d,a,b,x[i+11],14,643717713);b=gg(b,c,d,a,x[i],20,-373897302);a=gg(a,b,c,d,x[i+5],5,-701558691);d=gg(d,a,b,c,x[i+10],9,38016083);c=gg(c,d,a,b,x[i+15],14,-660478335);b=gg(b,c,d,a,x[i+4],20,-405537848);a=gg(a,b,c,d,x[i+9],5,568446438);d=gg(d,a,b,c,x[i+14],9,-1019803690);c=gg(c,d,a,b,x[i+3],14,-187363961);b=gg(b,c,d,a,x[i+8],20,1163531501);a=gg(a,b,c,d,x[i+13],5,-1444681467);d=gg(d,a,b,c,x[i+2],9,-51403784);c=gg(c,d,a,b,x[i+7],14,1735328473);b=gg(b,c,d,a,x[i+12],20,-1926607734);
+        a=hh(a,b,c,d,x[i+5],4,-378558);d=hh(d,a,b,c,x[i+8],11,-2022574463);c=hh(c,d,a,b,x[i+11],16,1839030562);b=hh(b,c,d,a,x[i+14],23,-35309556);a=hh(a,b,c,d,x[i+1],4,-1530992060);d=hh(d,a,b,c,x[i+4],11,1272893353);c=hh(c,d,a,b,x[i+7],16,-155497632);b=hh(b,c,d,a,x[i+10],23,-1094730640);a=hh(a,b,c,d,x[i+13],4,681279174);d=hh(d,a,b,c,x[i],11,-358537222);c=hh(c,d,a,b,x[i+3],16,-722521979);b=hh(b,c,d,a,x[i+6],23,76029189);a=hh(a,b,c,d,x[i+9],4,-640364487);d=hh(d,a,b,c,x[i+12],11,-421815835);c=hh(c,d,a,b,x[i+15],16,530742520);b=hh(b,c,d,a,x[i+2],23,-995338651);
+        a=ii(a,b,c,d,x[i],6,-198630844);d=ii(d,a,b,c,x[i+7],10,1126891415);c=ii(c,d,a,b,x[i+14],15,-1416354905);b=ii(b,c,d,a,x[i+5],21,-57434055);a=ii(a,b,c,d,x[i+12],6,1700485571);d=ii(d,a,b,c,x[i+3],10,-1894986606);c=ii(c,d,a,b,x[i+10],15,-1051523);b=ii(b,c,d,a,x[i+1],21,-2054922799);a=ii(a,b,c,d,x[i+8],6,1873313359);d=ii(d,a,b,c,x[i+15],10,-30611744);c=ii(c,d,a,b,x[i+14-1],15,1309151649);b=ii(b,c,d,a,x[i+12],21,-145523070);a=ii(a,b,c,d,x[i+3],6,-1120210379);d=ii(d,a,b,c,x[i+10],10,718787259);c=ii(c,d,a,b,x[i+1],15,-343485551);
+        a=safeAdd(a,oa);b=safeAdd(b,ob);c=safeAdd(c,oc);d=safeAdd(d,od)}
+        var hex='0123456789abcdef',s='';
+        for(var arr=[a,b,c,d],k=0;k<4;k++)for(var j=0;j<4;j++)s+=hex.charAt((arr[k]>>(j*8+4))&0xF)+hex.charAt((arr[k]>>(j*8))&0xF);
+        return s;
+    }
+
+    // Web Crypto API でハッシュ
+    async function digest(algo, text) {
+        const data = new TextEncoder().encode(text);
+        const buf = await crypto.subtle.digest(algo, data);
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    const input = document.getElementById('inputText');
+
+    async function update() {
+        const text = input.value;
+        if (!text) {
+            document.getElementById('r-md5').textContent = '-';
+            document.getElementById('r-sha1').textContent = '-';
+            document.getElementById('r-sha256').textContent = '-';
+            document.getElementById('r-sha512').textContent = '-';
+            return;
+        }
+        document.getElementById('r-md5').textContent = md5(text);
+        document.getElementById('r-sha1').textContent = await digest('SHA-1', text);
+        document.getElementById('r-sha256').textContent = await digest('SHA-256', text);
+        document.getElementById('r-sha512').textContent = await digest('SHA-512', text);
+    }
+
+    let timer;
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(update, 150); });
+
+    document.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const el = document.getElementById(btn.dataset.target);
+            if (el && el.textContent !== '-') navigator.clipboard.writeText(el.textContent);
+        });
+    });
+})();
+</script>

@@ -16,7 +16,58 @@
             {% endwith %}
         </div>
     </div>
-    <h3>ツール</h3>
+    <h3>便利ツール</h3>
+    <div class="sidebar-item">
+        <a href="{% url 'tools:index' %}" class="sidebar-admin-link htmx-link">ツール一覧</a>
+    </div>
+    <div class="sidebar-item">
+        <div class="sidebar-label sidebar-folder" data-slug="tools-general">
+            <span class="toggle">▶</span>
+            <span class="folder-name">一般ツール</span>
+        </div>
+        <div class="sidebar-children" style="display:none;">
+            <div class="sidebar-item"><a href="{% url 'tools:age_calculator' %}" class="sidebar-admin-link htmx-link">年齢・入学卒業年 早見表</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:unit_converter' %}" class="sidebar-admin-link htmx-link">単位変換</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:qr_code' %}" class="sidebar-admin-link htmx-link">QRコード生成</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:password_generator' %}" class="sidebar-admin-link htmx-link">パスワード生成器</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:char_counter' %}" class="sidebar-admin-link htmx-link">文字数カウンター</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:color_converter' %}" class="sidebar-admin-link htmx-link">色変換ツール</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:password_strength' %}" class="sidebar-admin-link htmx-link">パスワード強度チェッカー</a></div>
+        </div>
+    </div>
+    <div class="sidebar-item">
+        <div class="sidebar-label sidebar-folder" data-slug="tools-developer">
+            <span class="toggle">▶</span>
+            <span class="folder-name">開発者ツール</span>
+        </div>
+        <div class="sidebar-children" style="display:none;">
+            <div class="sidebar-item"><a href="{% url 'tools:json_formatter' %}" class="sidebar-admin-link htmx-link">JSON整形</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:base64' %}" class="sidebar-admin-link htmx-link">Base64変換</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:url_encode' %}" class="sidebar-admin-link htmx-link">URLエンコード/デコード</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:html_escape' %}" class="sidebar-admin-link htmx-link">HTMLエスケープ</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:regex_tester' %}" class="sidebar-admin-link htmx-link">正規表現テスター</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:diff' %}" class="sidebar-admin-link htmx-link">テキスト比較 (diff)</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:hash_generator' %}" class="sidebar-admin-link htmx-link">ハッシュ生成</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:jwt_decoder' %}" class="sidebar-admin-link htmx-link">JWTデコーダー</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:unix_time' %}" class="sidebar-admin-link htmx-link">Unix時間変換</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:cron_generator' %}" class="sidebar-admin-link htmx-link">Cron式ジェネレータ</a></div>
+        </div>
+    </div>
+    <div class="sidebar-item">
+        <div class="sidebar-label sidebar-folder" data-slug="tools-network">
+            <span class="toggle">▶</span>
+            <span class="folder-name">ネットワーク</span>
+        </div>
+        <div class="sidebar-children" style="display:none;">
+            <div class="sidebar-item"><a href="{% url 'tools:ip_lookup' %}" class="sidebar-admin-link htmx-link">IPアドレスからの住所検索</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:whois' %}" class="sidebar-admin-link htmx-link">Whois検索</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:http_headers' %}" class="sidebar-admin-link htmx-link">HTTPヘッダー確認</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:ssl_checker' %}" class="sidebar-admin-link htmx-link">SSL/TLS証明書チェッカー</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:port_scanner' %}" class="sidebar-admin-link htmx-link">ポートスキャナー</a></div>
+            <div class="sidebar-item"><a href="{% url 'tools:subnet_calculator' %}" class="sidebar-admin-link htmx-link">サブネット計算機</a></div>
+        </div>
+    </div>
+    <h3>その他</h3>
     <div class="sidebar-item">
         <a href="{% url 'stock_monitor:index' %}" class="sidebar-admin-link">株価モニター</a>
     </div>

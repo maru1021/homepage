@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}JSON整形ツール - 無料オンラインツール{% endblock %}
+{% block meta_description %}JSONの整形・圧縮・構文チェックがブラウザ上で簡単にできる無料オンラインツール。インデント付き整形やミニファイ（圧縮）に対応。{% endblock %}
+{% block og_title %}JSON整形ツール - 無料オンラインツール{% endblock %}
+{% block og_description %}JSONの整形・圧縮・構文チェックがブラウザ上で簡単にできる無料ツール{% endblock %}
+{% block twitter_title %}JSON整形ツール - 無料オンラインツール{% endblock %}
+{% block twitter_description %}JSONの整形・圧縮・構文チェックがブラウザ上で簡単にできる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "JSON整形ツール",
+  "description": "JSONの整形・圧縮・構文チェックができる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:json_formatter' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "JSON整形ツール" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_json_formatter_content.html" %}
+{% endblock %}

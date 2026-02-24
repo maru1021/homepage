@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Base64エンコード/デコード - 無料オンラインツール{% endblock %}
+{% block meta_description %}テキストや画像のBase64エンコード・デコードがブラウザ上で簡単にできる無料オンラインツール。画像をドラッグ&ドロップでData URLに変換、imgタグとしてコピーも可能。{% endblock %}
+{% block og_title %}Base64エンコード/デコード - 無料オンラインツール{% endblock %}
+{% block og_description %}テキストや画像のBase64変換がブラウザ上で簡単にできる無料ツール。画像のData URL変換にも対応{% endblock %}
+{% block twitter_title %}Base64エンコード/デコード - 無料オンラインツール{% endblock %}
+{% block twitter_description %}テキストや画像のBase64変換がブラウザ上で簡単にできる無料ツール。画像のData URL変換にも対応{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Base64エンコード/デコード",
+  "description": "テキストのBase64エンコード・デコードができる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:base64' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "Base64エンコード/デコード" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_base64_content.html" %}
+{% endblock %}

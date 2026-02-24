@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from blog.sitemaps import ArticleSitemap, CategorySitemap, StaticSitemap
+from tools.sitemaps import ToolsSitemap
 
 
 def robots_txt(request):
@@ -18,6 +19,7 @@ def robots_txt(request):
         "Disallow: /search/",
         "Disallow: /login/",
         "Disallow: /logout/",
+        "Disallow: /tools/api/",
         "",
         "User-agent: SemrushBot",
         "Disallow: /",
@@ -34,6 +36,7 @@ sitemaps = {
     "articles": ArticleSitemap,
     "categories": CategorySitemap,
     "static": StaticSitemap,
+    "tools": ToolsSitemap,
 }
 
 urlpatterns = [
@@ -45,6 +48,7 @@ urlpatterns = [
     path('drive/', include('dkc_drive.urls')),
     path('world/', include('world.urls')),
     path('stocks/', include('stock_monitor.urls')),
+    path('tools/', include('tools.urls')),
     path('', include('blog.urls')),
 ]
 

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}色変換ツール - HEX/RGB/HSL相互変換{% endblock %}
+{% block meta_description %}HEX・RGB・HSLカラーコードの相互変換ができる無料オンラインツール。カラーピッカー付きで直感的に色を選べます。{% endblock %}
+{% block og_title %}色変換ツール - HEX/RGB/HSL相互変換{% endblock %}
+{% block og_description %}HEX・RGB・HSLカラーコードの相互変換ができる無料ツール。カラーピッカー付き{% endblock %}
+{% block twitter_title %}色変換ツール - HEX/RGB/HSL相互変換{% endblock %}
+{% block twitter_description %}HEX・RGB・HSLカラーコードの相互変換ができる無料ツール。カラーピッカー付き{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "色変換ツール",
+  "description": "HEX・RGB・HSLの相互変換とカラーピッカーが使える無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:color_converter' %}",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "色変換ツール" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_color_converter_content.html" %}
+{% endblock %}

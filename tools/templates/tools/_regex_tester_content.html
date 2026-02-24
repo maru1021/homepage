@@ -1,0 +1,168 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 正規表現テスター</div>
+    <h1>正規表現テスター</h1>
+    <p class="tool-desc">正規表現パターンとテスト文字列を入力して、マッチ結果をリアルタイムで確認できます。</p>
+
+    <div class="regex-input-row">
+        <span class="regex-delim">/</span>
+        <input type="text" id="regexInput" placeholder="正規表現パターン" autocomplete="off" spellcheck="false">
+        <span class="regex-delim">/</span>
+        <input type="text" id="flagsInput" value="g" placeholder="flags" class="regex-flags" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="error" class="tool-error" style="display:none"></div>
+
+    <label class="tool-label">テスト文字列</label>
+    <div class="regex-editor">
+        <div id="highlight" class="regex-highlight"></div>
+        <textarea id="testInput" class="regex-textarea" rows="8" spellcheck="false" placeholder="ここにテスト文字列を入力..."></textarea>
+    </div>
+
+    <div class="regex-match-info">
+        <span id="matchCount">0 件のマッチ</span>
+    </div>
+
+    <div id="matchDetails" class="regex-matches"></div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.regex-input-row { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.5rem; }
+.regex-delim { font-size: 1.2rem; color: var(--color-primary); font-weight: bold; }
+.regex-input-row input { flex: 1; padding: 0.6rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 15px; outline: none; }
+.regex-input-row input:focus { border-color: var(--color-primary); }
+.regex-flags { max-width: 60px; text-align: center; }
+.tool-label { display: block; font-weight: 600; font-size: 0.9rem; margin: 1rem 0 0.3rem; color: var(--color-text-light); }
+
+.regex-editor {
+    position: relative;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.regex-editor:focus-within { border-color: var(--color-primary); }
+
+.regex-highlight, .regex-textarea {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+.regex-highlight {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    color: transparent;
+    background: transparent;
+    overflow: auto;
+}
+.regex-highlight mark {
+    background: #ffeaa7;
+    border-radius: 2px;
+    color: transparent;
+}
+.regex-textarea {
+    position: relative;
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    border: none;
+    outline: none;
+    resize: vertical;
+    min-height: 150px;
+    z-index: 1;
+    /* textarea の背景を透明にしてハイライトを見せる */
+    background: transparent;
+    caret-color: var(--color-text);
+}
+
+.regex-match-info { margin-top: 0.5rem; font-size: 0.85rem; color: var(--color-text-muted); }
+.regex-matches { margin-top: 1rem; }
+.regex-matches .match-item { padding: 0.4rem 0.8rem; background: var(--color-bg-subtle); border-radius: var(--radius-sm); margin-bottom: 0.3rem; font-family: monospace; font-size: 0.85rem; }
+.match-item .match-index { color: var(--color-text-muted); margin-right: 0.5rem; }
+.match-item .match-value { color: var(--color-primary); font-weight: 600; }
+</style>
+<script>
+(function() {
+    const regexInput = document.getElementById('regexInput');
+    const flagsInput = document.getElementById('flagsInput');
+    const testInput = document.getElementById('testInput');
+    const highlightEl = document.getElementById('highlight');
+    const errorEl = document.getElementById('error');
+    const matchCount = document.getElementById('matchCount');
+    const matchDetails = document.getElementById('matchDetails');
+
+    function escapeHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function update() {
+        errorEl.style.display = 'none';
+        const text = testInput.value;
+        const pattern = regexInput.value;
+
+        if (!pattern) {
+            highlightEl.innerHTML = escapeHtml(text) + '\n';
+            matchCount.textContent = '0 件のマッチ';
+            matchDetails.innerHTML = '';
+            return;
+        }
+
+        let re;
+        try {
+            re = new RegExp(pattern, flagsInput.value);
+        } catch (e) {
+            errorEl.textContent = e.message;
+            errorEl.style.display = 'block';
+            highlightEl.innerHTML = escapeHtml(text) + '\n';
+            matchCount.textContent = '0 件のマッチ';
+            matchDetails.innerHTML = '';
+            return;
+        }
+
+        const matches = [];
+        let html = '';
+        let lastIndex = 0;
+
+        if (re.global) {
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                if (m[0].length === 0) { re.lastIndex++; continue; }
+                matches.push({ index: m.index, value: m[0] });
+                html += escapeHtml(text.slice(lastIndex, m.index));
+                html += '<mark>' + escapeHtml(m[0]) + '</mark>';
+                lastIndex = m.index + m[0].length;
+            }
+        } else {
+            const m = re.exec(text);
+            if (m && m[0].length > 0) {
+                matches.push({ index: m.index, value: m[0] });
+                html += escapeHtml(text.slice(lastIndex, m.index));
+                html += '<mark>' + escapeHtml(m[0]) + '</mark>';
+                lastIndex = m.index + m[0].length;
+            }
+        }
+        html += escapeHtml(text.slice(lastIndex));
+        // 末尾に改行を追加して textarea とのスクロール位置を揃える
+        highlightEl.innerHTML = html + '\n';
+
+        matchCount.textContent = matches.length + ' 件のマッチ';
+        matchDetails.innerHTML = matches.slice(0, 50).map((m, i) =>
+            `<div class="match-item"><span class="match-index">#${i + 1} [${m.index}]</span><span class="match-value">${escapeHtml(m.value)}</span></div>`
+        ).join('');
+    }
+
+    // textarea のスクロールをハイライト層と同期
+    testInput.addEventListener('scroll', () => {
+        highlightEl.scrollTop = testInput.scrollTop;
+        highlightEl.scrollLeft = testInput.scrollLeft;
+    });
+
+    regexInput.addEventListener('input', update);
+    flagsInput.addEventListener('input', update);
+    testInput.addEventListener('input', update);
+    update();
+})();
+</script>

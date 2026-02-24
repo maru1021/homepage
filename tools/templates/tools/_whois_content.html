@@ -1,0 +1,69 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Whois検索</div>
+    <h1>Whois検索</h1>
+    <p class="tool-desc">ドメイン名を入力して登録情報を調べます。</p>
+
+    <div class="tool-form">
+        <input type="text" id="domainInput" placeholder="例: example.com" autocomplete="off" spellcheck="false">
+        <button id="lookupBtn" type="button">検索</button>
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">検索中...</div>
+
+    <div id="result" class="tool-result" style="display:none">
+        <table class="tool-table">
+            <tbody>
+                <tr><th>ドメイン</th><td id="r-domain"></td></tr>
+                <tr><th>レジストラ</th><td id="r-registrar"></td></tr>
+                <tr><th>ステータス</th><td id="r-status"></td></tr>
+                <tr><th>イベント</th><td id="r-events"></td></tr>
+                <tr><th>ネームサーバー</th><td id="r-ns"></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<script>
+(function() {
+    const input = document.getElementById('domainInput');
+    const btn = document.getElementById('lookupBtn');
+    const errorEl = document.getElementById('error');
+    const loadingEl = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+
+    const eventLabels = {
+        'registration': '登録日',
+        'expiration': '有効期限',
+        'last changed': '最終更新',
+        'last update of RDAP database': 'DB更新日',
+    };
+
+    async function lookup() {
+        const domain = input.value.trim();
+        if (!domain) return;
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+        btn.disabled = true;
+        try {
+            const resp = await fetch('/tools/api/whois/?domain=' + encodeURIComponent(domain));
+            const data = await resp.json();
+            if (!resp.ok) { errorEl.textContent = data.error || '検索に失敗しました'; errorEl.style.display = 'block'; return; }
+            document.getElementById('r-domain').textContent = data.domain;
+            document.getElementById('r-registrar').textContent = data.registrar || '不明';
+            document.getElementById('r-status').textContent = (data.status || []).join(', ') || '不明';
+            document.getElementById('r-events').innerHTML = (data.events || []).map(e => {
+                const label = eventLabels[e.action] || e.action;
+                const date = e.date ? new Date(e.date).toLocaleDateString('ja-JP') : '';
+                return `<div>${label}: ${date}</div>`;
+            }).join('');
+            document.getElementById('r-ns').textContent = (data.nameservers || []).join(', ') || '不明';
+            resultEl.style.display = 'block';
+        } catch { errorEl.textContent = '通信エラーが発生しました'; errorEl.style.display = 'block'; }
+        finally { loadingEl.style.display = 'none'; btn.disabled = false; }
+    }
+    btn.addEventListener('click', lookup);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+})();
+</script>

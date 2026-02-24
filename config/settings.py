@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'blog',
     'dkc_drive',
     'stock_monitor',
+    'tools',
 ]
 
 MIDDLEWARE = [
