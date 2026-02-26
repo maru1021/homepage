@@ -1,0 +1,285 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 音声文字起こし</div>
+    <h1>音声文字起こし</h1>
+    <p class="tool-desc">マイクからの音声をリアルタイムでテキストに変換します。Web Speech API を使用し、データはサーバーに送信されません。</p>
+
+    <div id="sttUnsupported" class="tool-error" style="display:none;">
+        このブラウザは音声認識に対応していません。Chrome / Edge の最新版をお使いください。
+    </div>
+
+    <div id="sttMain" style="display:none;">
+        <div class="stt-controls">
+            <div class="stt-lang-row">
+                <label for="sttLang">認識言語</label>
+                <select id="sttLang">
+                    <option value="ja-JP" selected>日本語</option>
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="zh-CN">中文（简体）</option>
+                    <option value="zh-TW">中文（繁體）</option>
+                    <option value="ko-KR">한국어</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                    <option value="es-ES">Español</option>
+                    <option value="pt-BR">Português</option>
+                </select>
+            </div>
+            <button id="sttBtn" class="stt-btn" type="button">
+                <span class="stt-mic-icon">&#x1F3A4;</span>
+                <span id="sttBtnLabel">録音開始</span>
+            </button>
+            <div id="sttStatus" class="stt-status"></div>
+        </div>
+
+        <div class="stt-interim-box">
+            <small>認識中テキスト（確定前）</small>
+            <div id="sttInterim" class="stt-interim-text"></div>
+        </div>
+
+        <div class="stt-result-header">
+            <strong>文字起こし結果</strong>
+            <span id="sttCharCount" class="stt-char-count">0 文字</span>
+        </div>
+        <textarea id="sttResult" class="stt-textarea" rows="12" placeholder="ここに文字起こし結果が表示されます..."></textarea>
+
+        <div class="stt-actions">
+            <button id="sttCopy" class="stt-action-btn" type="button">コピー</button>
+            <button id="sttClear" class="stt-action-btn stt-action-btn--danger" type="button">クリア</button>
+        </div>
+    </div>
+</div>
+
+{% include "tools/_tool_style.html" %}
+<style>
+.stt-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+}
+.stt-lang-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.stt-lang-row label {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+.stt-lang-row select {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    background: var(--color-bg-white);
+    outline: none;
+}
+.stt-lang-row select:focus {
+    border-color: var(--color-primary);
+}
+.stt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.4rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--color-primary);
+    color: #fff;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+.stt-btn:hover { opacity: 0.9; }
+.stt-btn.is-recording {
+    background: #c0392b;
+    animation: stt-pulse 1.2s infinite;
+}
+@keyframes stt-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(192,57,43,0); }
+}
+.stt-mic-icon { font-size: 1.1rem; }
+.stt-status {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+}
+.stt-interim-box {
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: 0.8rem 1rem;
+    margin-bottom: 1rem;
+    min-height: 2.5rem;
+}
+.stt-interim-box small {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.3rem;
+}
+.stt-interim-text {
+    font-size: 0.92rem;
+    color: var(--color-text-light);
+    font-style: italic;
+    min-height: 1.3em;
+}
+.stt-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+.stt-result-header strong {
+    font-size: 0.9rem;
+    color: var(--color-dark);
+}
+.stt-char-count {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+.stt-textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    resize: vertical;
+    outline: none;
+    background: var(--color-bg-white);
+    line-height: 1.7;
+}
+.stt-textarea:focus { border-color: var(--color-primary); }
+.stt-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+.stt-action-btn {
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    cursor: pointer;
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    transition: background 0.15s;
+}
+.stt-action-btn:hover { background: var(--color-bg-hover); }
+.stt-action-btn--danger { color: #c0392b; border-color: #e6b0aa; }
+.stt-action-btn--danger:hover { background: #fdf2f2; }
+</style>
+<script>
+(function() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        document.getElementById('sttUnsupported').style.display = 'block';
+        return;
+    }
+    document.getElementById('sttMain').style.display = 'block';
+
+    var recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    var btn = document.getElementById('sttBtn');
+    var btnLabel = document.getElementById('sttBtnLabel');
+    var langSelect = document.getElementById('sttLang');
+    var statusEl = document.getElementById('sttStatus');
+    var interimEl = document.getElementById('sttInterim');
+    var resultArea = document.getElementById('sttResult');
+    var charCountEl = document.getElementById('sttCharCount');
+    var copyBtn = document.getElementById('sttCopy');
+    var clearBtn = document.getElementById('sttClear');
+    var recording = false;
+
+    function updateCharCount() {
+        var len = resultArea.value.length;
+        charCountEl.textContent = len + ' 文字';
+    }
+
+    function startRecognition() {
+        recognition.lang = langSelect.value;
+        recognition.start();
+        recording = true;
+        btn.classList.add('is-recording');
+        btnLabel.textContent = '録音停止';
+        statusEl.textContent = '音声を認識中...';
+        langSelect.disabled = true;
+    }
+
+    function stopRecognition() {
+        recognition.stop();
+        recording = false;
+        btn.classList.remove('is-recording');
+        btnLabel.textContent = '録音開始';
+        statusEl.textContent = '';
+        interimEl.textContent = '';
+        langSelect.disabled = false;
+    }
+
+    btn.addEventListener('click', function() {
+        if (recording) {
+            stopRecognition();
+        } else {
+            startRecognition();
+        }
+    });
+
+    recognition.addEventListener('result', function(e) {
+        var interim = '';
+        var finalText = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+            var transcript = e.results[i][0].transcript;
+            if (e.results[i].isFinal) {
+                finalText += transcript;
+            } else {
+                interim += transcript;
+            }
+        }
+        interimEl.textContent = interim;
+        if (finalText) {
+            resultArea.value += finalText;
+            updateCharCount();
+        }
+    });
+
+    recognition.addEventListener('error', function(e) {
+        if (e.error === 'no-speech') {
+            statusEl.textContent = '音声が検出されませんでした。もう一度お試しください。';
+        } else if (e.error === 'not-allowed') {
+            statusEl.textContent = 'マイクへのアクセスが許可されていません。ブラウザの設定を確認してください。';
+            stopRecognition();
+        } else if (e.error !== 'aborted') {
+            statusEl.textContent = 'エラーが発生しました: ' + e.error;
+        }
+    });
+
+    recognition.addEventListener('end', function() {
+        if (recording) {
+            recognition.start();
+        }
+    });
+
+    copyBtn.addEventListener('click', function() {
+        var text = resultArea.value;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(function() {
+            var orig = copyBtn.textContent;
+            copyBtn.textContent = 'コピーしました';
+            setTimeout(function() { copyBtn.textContent = orig; }, 1500);
+        });
+    });
+
+    clearBtn.addEventListener('click', function() {
+        resultArea.value = '';
+        interimEl.textContent = '';
+        updateCharCount();
+    });
+
+    resultArea.addEventListener('input', updateCharCount);
+})();
+</script>

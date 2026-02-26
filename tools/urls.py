@@ -29,6 +29,8 @@ urlpatterns = [
     path("port-scanner/", views.port_scanner, name="port_scanner"),
     path("password-strength/", views.password_strength, name="password_strength"),
     path("subnet-calculator/", views.subnet_calculator, name="subnet_calculator"),
+    path("speech-to-text/", views.speech_to_text, name="speech_to_text"),
+    path("network-sim/", views.network_sim, name="network_sim"),
     # API
     path("api/ip-lookup/", views.api_ip_lookup, name="api_ip_lookup"),
     path("api/whois/", views.api_whois, name="api_whois"),

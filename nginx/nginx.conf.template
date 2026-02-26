@@ -1,6 +1,13 @@
+# www → non-www リダイレクト
 server {
     listen 80;
-    server_name _;
+    server_name www.maruomosquit.com;
+    return 301 https://maruomosquit.com$request_uri;
+}
+
+server {
+    listen 80;
+    server_name maruomosquit.com localhost;
 
     client_max_body_size 20M;
 

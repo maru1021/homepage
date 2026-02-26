@@ -1,0 +1,2176 @@
+<div class="netsim-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ネットワークシミュレーター</div>
+    <h1>ネットワークシミュレーター</h1>
+    <p class="tool-desc">デバイスを配置・接続し、ターミナルからコマンドを実行。右クリックで故障を設定して冗長構成の動作を確認できます。</p>
+
+    <div class="netsim-toolbar">
+        <div class="netsim-palette" id="netsimPalette"></div>
+        <div class="netsim-actions">
+            <button id="connectBtn" class="action-btn">ケーブル接続</button>
+            <button id="deleteBtn" class="action-btn action-btn-danger">削除</button>
+            <select id="presetSelect" class="action-select">
+                <option value="">プリセット...</option>
+                <optgroup label="基本">
+                    <option value="simple">シンプル (PC-Router-PC)</option>
+                    <option value="dns_web">DNS + Web構成</option>
+                </optgroup>
+                <optgroup label="冗長構成">
+                    <option value="redundant_router">冗長ルーター (2経路)</option>
+                    <option value="redundant_server">冗長サーバー (DNS+Web)</option>
+                </optgroup>
+                <optgroup label="企業/DC">
+                    <option value="corporate">企業ネットワーク (FW+DMZ)</option>
+                    <option value="datacenter">データセンター (3層構成)</option>
+                </optgroup>
+                <optgroup label="サービス構成">
+                    <option value="mail_system">メールシステム (SMTP中継)</option>
+                    <option value="full_enterprise">企業フル構成 (DHCP+DNS+Mail+LB)</option>
+                </optgroup>
+            </select>
+            <button id="clearBtn" class="action-btn action-btn-warn">全クリア</button>
+        </div>
+    </div>
+
+    <div class="netsim-workspace">
+        <canvas id="netsimCanvas" width="900" height="460"></canvas>
+        <div id="modeIndicator" class="mode-indicator" style="display:none"></div>
+    </div>
+
+    <div class="netsim-bottom">
+        <div class="netsim-panel" id="propsPanel">
+            <h3>プロパティ <span id="propsDevName" style="color:var(--color-text-muted);font-weight:400"></span></h3>
+            <div id="propsContent"><p class="panel-placeholder">デバイスをクリックして選択</p></div>
+        </div>
+        <div class="netsim-panel netsim-terminal-panel" id="terminalPanel">
+            <div class="terminal-header">
+                <h3>ターミナル</h3>
+                <span id="terminalHost" class="terminal-host">PCを右クリック →「ターミナルを開く」</span>
+            </div>
+            <div id="terminalOutput" class="terminal-output"></div>
+            <div class="terminal-input-row" id="terminalInputRow" style="display:none">
+                <span id="terminalPrompt" class="terminal-prompt">$</span>
+                <input type="text" id="terminalInput" class="terminal-input" autocomplete="off" spellcheck="false">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="netsimConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <p id="netsimConfirmMsg" class="mb-0"></p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pt-0">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary btn-sm" id="netsimConfirmOk">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Modal -->
+<div class="modal fade" id="netsimAlertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <p id="netsimAlertMsg" class="mb-0"></p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pt-0">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "tools/_tool_style.html" %}
+<style>
+.netsim-page {
+    --term-bg: #0c0c1d; --term-fg: #ccc; --term-green: #0f0; --term-red: #f55;
+    --term-blue: #5bf; --term-yellow: #fa0; --term-dim: #666;
+    /* ctx-menu styles are hardcoded (menu is appended to body, outside .netsim-page scope) */
+    --cap-header-bg: #1a1a2e;
+    --color-danger: #c0392b; --color-warn: #e67e22; --color-connect: #3498db; --color-place: #27ae60;
+    max-width: 980px; margin: 2rem auto; padding: 0 1rem;
+}
+.netsim-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .5rem }
+.netsim-palette { display: flex; gap: .3rem; flex-wrap: wrap }
+.palette-btn {
+    display: flex; align-items: center; gap: .25rem;
+    padding: .3rem .55rem; border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); background: var(--color-bg-white);
+    font-size: .75rem; cursor: pointer; transition: all .15s;
+}
+.palette-btn:hover { border-color: var(--color-primary); background: #fff0f3 }
+.palette-btn.active { border-color: var(--color-primary); background: #ffe0e6 }
+.netsim-actions { display: flex; gap: .3rem; align-items: center; margin-left: auto; flex-wrap: wrap }
+.action-btn {
+    padding: .3rem .7rem; border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); background: var(--color-bg-white);
+    font-size: .78rem; cursor: pointer; transition: all .15s;
+}
+.action-btn:hover { border-color: var(--color-primary) }
+.action-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary) }
+.action-btn-danger { color: var(--color-danger) }
+.action-btn-danger.active { background: var(--color-danger); color: #fff; border-color: var(--color-danger) }
+.action-btn-warn { color: var(--color-warn) }
+.action-select {
+    padding: .3rem; border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); font-size: .78rem; background: var(--color-bg-white);
+}
+.netsim-workspace {
+    position: relative; border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); background: #f8f9fa;
+    overflow: hidden; margin-bottom: .75rem;
+}
+#netsimCanvas { display: block; width: 100%; cursor: default }
+.mode-indicator {
+    position: absolute; top: 6px; left: 6px; padding: .15rem .5rem;
+    border-radius: var(--radius-md); font-size: .72rem; font-weight: 600;
+    color: #fff; pointer-events: none;
+}
+.mode-indicator.connect { background: var(--color-connect) }
+.mode-indicator.delete { background: var(--color-danger) }
+.mode-indicator.place { background: var(--color-place) }
+.netsim-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem }
+.netsim-panel {
+    background: var(--color-bg-white); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: .75rem;
+    overflow-y: auto; max-height: 350px;
+}
+.netsim-panel h3 {
+    font-size: .88rem; color: var(--color-dark); margin: 0 0 .5rem 0;
+    border-bottom: 1px solid var(--color-border-light); padding-bottom: .3rem;
+}
+.panel-placeholder { color: var(--color-text-muted); font-size: .82rem }
+.props-table { width: 100%; border-collapse: collapse; font-size: .78rem }
+.props-table th, .props-table td {
+    padding: .25rem .4rem; text-align: left;
+    border-bottom: 1px solid var(--color-border-light);
+}
+.props-table th { width: 90px; color: var(--color-text-light); font-weight: 600 }
+.props-table input, .props-table select {
+    padding: .2rem .35rem; border: 1px solid var(--color-border);
+    border-radius: 3px; font-size: .78rem;
+}
+.props-table .btn-sm {
+    padding: .12rem .4rem; font-size: .72rem; border: 1px solid var(--color-border);
+    border-radius: 3px; background: var(--color-bg-white); cursor: pointer;
+}
+.props-table .btn-sm:hover { border-color: var(--color-primary) }
+.editable-table { width: 100%; border-collapse: collapse; font-size: .75rem; margin-top: .4rem }
+.editable-table th, .editable-table td { padding: .2rem .3rem; border-bottom: 1px solid var(--color-border-light) }
+.editable-table th { background: var(--color-bg-subtle); font-weight: 600; font-size: .72rem }
+.section-title { font-size: .82rem; margin: .6rem 0 .2rem; color: var(--color-dark); font-weight: 600 }
+.netsim-terminal-panel { display: flex; flex-direction: column }
+.terminal-header {
+    display: flex; align-items: baseline; gap: .5rem;
+    border-bottom: 1px solid var(--color-border-light);
+    padding-bottom: .3rem; margin-bottom: .4rem;
+}
+.terminal-header h3 { margin: 0; border: none; padding: 0 }
+.terminal-host { font-size: .75rem; color: var(--color-text-muted) }
+.terminal-output {
+    flex: 1; font-family: 'Courier New', monospace; font-size: .76rem;
+    background: var(--term-bg); color: var(--term-fg); padding: .5rem;
+    border-radius: var(--radius-md); min-height: 180px; max-height: 260px;
+    overflow-y: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.45;
+}
+.terminal-input-row {
+    display: flex; align-items: center; gap: .3rem; margin-top: .3rem;
+    background: var(--term-bg); padding: .3rem .5rem; border-radius: var(--radius-md);
+}
+.terminal-prompt { font-family: 'Courier New', monospace; font-size: .76rem; color: var(--term-green); white-space: nowrap }
+.terminal-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--term-green); font-family: 'Courier New', monospace; font-size: .76rem; caret-color: var(--term-green);
+}
+.t-ok { color: var(--term-green) } .t-err { color: var(--term-red) } .t-info { color: var(--term-blue) }
+.t-warn { color: var(--term-yellow) } .t-hop { color: #ff0 } .t-dim { color: var(--term-dim) } .t-white { color: #fff }
+.ctx-menu {
+    position: fixed; background: #fff; border: 1px solid #ddd;
+    border-radius: 6px; padding: 4px 0; z-index: 9999;
+    min-width: 170px; box-shadow: 0 4px 16px rgba(0,0,0,.15);
+}
+.ctx-menu-item {
+    padding: 6px 14px; font-size: .8rem; color: #333; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+}
+.ctx-menu-item:hover { background: #f0f0f0 }
+.ctx-menu-sep { border-top: 1px solid #ddd; margin: 3px 0 }
+.ctx-menu-item .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
+.capture-log-wrap { max-height: 180px; overflow-y: auto; margin-top: .3rem }
+.capture-log { width: 100%; border-collapse: collapse; font-size: .7rem; font-family: 'Courier New', monospace }
+.capture-log th { background: var(--cap-header-bg); color: var(--term-green); padding: .15rem .3rem; position: sticky; top: 0; font-weight: 600; text-align: left }
+.capture-log td { padding: .12rem .3rem; border-bottom: 1px solid var(--color-border-light); white-space: nowrap }
+.capture-log tr:hover { background: #f0f8ff }
+@media (max-width: 700px) {
+    .netsim-bottom { grid-template-columns: 1fr }
+    .netsim-toolbar { flex-direction: column; align-items: stretch }
+    .netsim-actions { margin-left: 0 }
+}
+</style>
+
+<script>
+(function() {
+'use strict';
+
+// ─── Device Type Definitions ───
+function serverSvg(c) {
+    return `<rect x="10" y="4" width="20" height="32" rx="2" fill="none" stroke="${c}" stroke-width="2"/><circle cx="20" cy="12" r="3" fill="${c}"/><line x1="14" y1="20" x2="26" y2="20" stroke="${c}" stroke-width="1.5"/><line x1="14" y1="25" x2="26" y2="25" stroke="${c}" stroke-width="1.5"/>`;
+}
+
+const DEV_TYPES = {
+    router:   { label: 'Router',  title: 'ルーター',         color: '#e94560', ports: 4, routing: true,  server: false, canvasLabel: null,
+        svg: c => `<circle cx="20" cy="20" r="16" fill="none" stroke="${c}" stroke-width="2.5"/><line x1="10" y1="20" x2="30" y2="20" stroke="${c}" stroke-width="2"/><polygon points="27,17 31,20 27,23" fill="${c}"/><polygon points="13,17 9,20 13,23" fill="${c}"/>` },
+    l3switch: { label: 'L3-SW',   title: 'L3スイッチ',       color: '#3498db', ports: 8, routing: true,  server: false, canvasLabel: 'L3',
+        svg: c => `<rect x="6" y="10" width="28" height="20" rx="3" fill="none" stroke="${c}" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="10" fill="${c}" font-weight="bold">L3</text>` },
+    l2switch: { label: 'L2-SW',   title: 'L2スイッチ',       color: '#27ae60', ports: 8, routing: false, server: false, canvasLabel: 'L2',
+        svg: c => `<rect x="6" y="10" width="28" height="20" rx="3" fill="none" stroke="${c}" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="10" fill="${c}" font-weight="bold">L2</text>` },
+    pc:       { label: 'PC',      title: 'PC',               color: '#8e44ad', ports: 1, routing: false, server: false, canvasLabel: null,
+        svg: c => `<rect x="8" y="6" width="24" height="18" rx="2" fill="none" stroke="${c}" stroke-width="2"/><line x1="14" y1="28" x2="26" y2="28" stroke="${c}" stroke-width="2"/><line x1="20" y1="24" x2="20" y2="28" stroke="${c}" stroke-width="2"/>` },
+    dns:      { label: 'DNS',     title: 'DNSサーバー',      color: '#e67e22', ports: 1, routing: false, server: 'dns',      canvasLabel: 'DNS',  netstat: ['udp %s:53'],                        svg: c => serverSvg(c) },
+    web:      { label: 'Web',     title: 'Webサーバー',      color: '#16a085', ports: 1, routing: false, server: 'web',      canvasLabel: 'WWW',  netstat: ['tcp %s:80'],                        svg: c => serverSvg(c) },
+    proxy:    { label: 'Proxy',   title: 'プロキシサーバー', color: '#9b59b6', ports: 2, routing: false, server: 'proxy',    canvasLabel: 'PXY',  netstat: ['tcp %s:8080'],                      svg: c => serverSvg(c) },
+    firewall: { label: 'FW',      title: 'ファイアウォール', color: '#c0392b', ports: 2, routing: true,  server: 'firewall', canvasLabel: 'FW',
+        svg: c => `<rect x="8" y="8" width="24" height="24" rx="2" fill="none" stroke="${c}" stroke-width="2"/><line x1="8" y1="16" x2="32" y2="16" stroke="${c}" stroke-width="1.5"/><line x1="8" y1="24" x2="32" y2="24" stroke="${c}" stroke-width="1.5"/>` },
+    dhcp:     { label: 'DHCP',    title: 'DHCPサーバー',     color: '#1abc9c', ports: 1, routing: false, server: 'dhcp',     canvasLabel: 'DHCP', netstat: ['udp %s:67'],                        svg: c => serverSvg(c) },
+    mail:     { label: 'Mail',    title: 'メールサーバー',   color: '#e74c3c', ports: 1, routing: false, server: 'mail',     canvasLabel: 'MAIL', netstat: ['tcp %s:25', 'tcp %s:110'],          svg: c => serverSvg(c) },
+    lb:       { label: 'LB',      title: 'ロードバランサー', color: '#2980b9', ports: 3, routing: false, server: 'lb',       canvasLabel: 'LB',   netstat: ['tcp %s:80'],                        svg: c => serverSvg(c) },
+    ftp:      { label: 'FTP',     title: 'FTPサーバー',      color: '#d35400', ports: 1, routing: false, server: 'ftp',      canvasLabel: 'FTP',  netstat: ['tcp %s:21'],                        svg: c => serverSvg(c) },
+    ntp:      { label: 'NTP',     title: 'NTPサーバー',      color: '#8e44ad', ports: 1, routing: false, server: 'ntp',      canvasLabel: 'NTP',  netstat: ['udp %s:123'],                       svg: c => serverSvg(c) },
+    radius:   { label: 'RADIUS',  title: 'RADIUSサーバー',   color: '#2c3e50', ports: 1, routing: false, server: 'radius',   canvasLabel: 'RAD',  netstat: ['udp %s:1812', 'udp %s:1813'],      svg: c => serverSvg(c) },
+    capture:  { label: 'Capture', title: 'パケットキャプチャ', color: '#00bcd4', ports: 2, routing: false, server: 'capture', canvasLabel: 'CAP', netstat: ['raw %s:* (promiscuous)'],
+        svg: c => `<rect x="8" y="8" width="24" height="24" rx="3" fill="none" stroke="${c}" stroke-width="2"/><polyline points="12,20 16,13 20,27 24,16 28,20" fill="none" stroke="${c}" stroke-width="2"/>` },
+};
+
+// Generate palette buttons from DEV_TYPES
+(function buildPalette() {
+    const palette = document.getElementById('netsimPalette');
+    Object.entries(DEV_TYPES).forEach(([type, info]) => {
+        const btn = document.createElement('button');
+        btn.className = 'palette-btn';
+        btn.dataset.type = type;
+        btn.title = info.title;
+        btn.innerHTML = `<svg viewBox="0 0 40 40" width="20" height="20">${info.svg(info.color)}</svg> ${info.label}`;
+        palette.appendChild(btn);
+    });
+})();
+
+// ─── Constants ───
+const GRID_SIZE = 40;
+const DEV_HIT_RADIUS = 25;
+const LINK_HIT_RADIUS = 8;
+const MAX_HOPS = 20;
+const MAX_CAPTURE_PACKETS = 100;
+const ANIM_FRAMES = 25;
+const ANIM_BLINK_MS = 120;
+const ANIM_BLINK_COUNT = 5;
+
+// ─── State ───
+let devices = [], links = [], nextId = 1;
+let selectedDevice = null, mode = 'select', connectSrc = null;
+let dragDev = null, dragOff = { x: 0, y: 0 };
+let animPackets = [], terminalDev = null;
+
+// ─── DOM refs ───
+const canvas = document.getElementById('netsimCanvas');
+const ctx2d = canvas.getContext('2d');
+const modeInd = document.getElementById('modeIndicator');
+
+// ─── Utility Functions ───
+function gid() { return nextId++ }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML }
+function $(id) { return document.getElementById(id) }
+function linkPeer(lk, devId) { return lk.devA === devId ? lk.devB : lk.devA }
+function devIp(dev, fallback) { return dev.interfaces.find(i => i.ip)?.ip || (fallback ?? '?') }
+function linkedPeer(dev, iface) { const lk = findLink(iface.linkId); if (!lk) return null; return findDev(linkPeer(lk, dev.id)) }
+function requireArg(args, usage) { if (!args[0]) { tOut('Usage: ' + usage, 't-err'); return false } return true }
+function netsimAlert(msg) {
+    document.getElementById('netsimAlertMsg').textContent = msg;
+    new bootstrap.Modal(document.getElementById('netsimAlertModal')).show();
+}
+function netsimConfirm(msg, onOk) {
+    document.getElementById('netsimConfirmMsg').textContent = msg;
+    const modal = new bootstrap.Modal(document.getElementById('netsimConfirmModal'));
+    const btn = document.getElementById('netsimConfirmOk');
+    const handler = () => { btn.removeEventListener('click', handler); modal.hide(); onOk() };
+    btn.addEventListener('click', handler);
+    modal.show();
+}
+function capturePush(dev, pkt) { dev.capturedPackets.push(pkt); if (dev.capturedPackets.length > MAX_CAPTURE_PACKETS) dev.capturedPackets.shift() }
+
+// IP utilities
+function ipToInt(ip) {
+    const p = ip.split('.').map(Number);
+    return ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]) >>> 0;
+}
+function intToIp(n) {
+    return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+}
+function maskToPrefix(m) {
+    const n = ipToInt(m);
+    let b = 0;
+    for (let i = 31; i >= 0; i--) { if ((n >>> i) & 1) b++; else break }
+    return b;
+}
+function netAddr(ip, mask) { return (ipToInt(ip) & ipToInt(mask)) >>> 0 }
+function sameNet(a, b, mask) { return netAddr(a, mask) === netAddr(b, mask) }
+function validIp(s) {
+    const m = s.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    return m && m.slice(1).every(v => +v >= 0 && +v <= 255);
+}
+function genMac(did, p) {
+    const h = s => ('0' + s.toString(16)).slice(-2);
+    return `02:00:00:${h(did)}:${h(p)}:01`;
+}
+function isBridge(d) {
+    return d.type === 'l2switch' || (d.type === 'capture' && d.captureMode === 'inline');
+}
+
+// ─── Canvas Resize ───
+function resizeCanvas() {
+    const r = canvas.parentElement.getBoundingClientRect();
+    const w = Math.floor(r.width), h = 460, dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+    render();
+}
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas, 0);
+
+// ─── Device / Link CRUD ───
+function createDev(type, x, y) {
+    const info = DEV_TYPES[type];
+    const ifaces = [];
+    for (let i = 0; i < info.ports; i++) {
+        ifaces.push({ ip: '', mask: '255.255.255.0', linkId: null });
+    }
+    return {
+        id: gid(), type, x, y, name: info.label + (nextId - 1), down: false,
+        interfaces: ifaces, routes: [], dnsServer: '', defaultGw: '', proxyAddr: '',
+        // Server-type properties (unused keys are harmless)
+        dnsRecords: [], webHostname: '', webContent: '<h1>It works!</h1>',
+        proxyTarget: '', fwRules: [],
+        dhcpPool: { start: '', end: '', mask: '255.255.255.0', gateway: '', dns: '' },
+        mailDomain: '', mailUsers: [],
+        lbTargets: [], lbMethod: 'round-robin', lbHostname: '',
+        ftpFiles: ['index.html', 'readme.txt', 'data.csv'],
+        ntpStratum: 1, radiusUsers: [],
+        captureMode: 'inline', capturedPackets: [], mirrorPort: -1,
+    };
+}
+
+function mkLink(dA, pA, dB, pB) {
+    const id = gid();
+    dA.interfaces[pA].linkId = id;
+    dB.interfaces[pB].linkId = id;
+    links.push({ id, devA: dA.id, portA: pA, devB: dB.id, portB: pB, down: false });
+    return id;
+}
+
+function findDev(id) { return devices.find(d => d.id === id) }
+function findLink(id) { return links.find(l => l.id === id) }
+function findDevByIp(ip) { return devices.find(d => d.interfaces.some(i => i.ip === ip)) }
+function freePort(dev) {
+    const limit = (dev.type === 'capture' && dev.captureMode === 'mirror') ? 1 : dev.interfaces.length;
+    for (let i = 0; i < limit; i++) { if (dev.interfaces[i].linkId === null) return i }
+    return -1;
+}
+
+function devAt(mx, my) {
+    for (let i = devices.length - 1; i >= 0; i--) {
+        const d = devices[i];
+        if (Math.abs(mx - d.x) < DEV_HIT_RADIUS && Math.abs(my - d.y) < DEV_HIT_RADIUS) return d;
+    }
+    return null;
+}
+
+function linkAt(mx, my) {
+    for (const l of links) {
+        const a = findDev(l.devA), b = findDev(l.devB);
+        if (!a || !b) continue;
+        if (ptSegDist(mx, my, a.x, a.y, b.x, b.y) < LINK_HIT_RADIUS) return l;
+    }
+    return null;
+}
+
+function ptSegDist(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    if (!l2) return Math.hypot(px - ax, py - ay);
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+function removeLink(lid) {
+    const l = findLink(lid);
+    if (!l) return;
+    const a = findDev(l.devA), b = findDev(l.devB);
+    if (a && a.interfaces[l.portA]) a.interfaces[l.portA].linkId = null;
+    if (b && b.interfaces[l.portB]) b.interfaces[l.portB].linkId = null;
+    links = links.filter(x => x.id !== lid);
+}
+
+function removeDev(did) {
+    links.filter(l => l.devA === did || l.devB === did).forEach(l => removeLink(l.id));
+    devices = devices.filter(d => d.id !== did);
+    if (selectedDevice && selectedDevice.id === did) { selectedDevice = null; renderProps() }
+    if (terminalDev && terminalDev.id === did) { terminalDev = null; renderTermHeader() }
+}
+
+function resetState() {
+    devices = []; links = []; animPackets = [];
+    nextId = 1; selectedDevice = null; terminalDev = null;
+}
+
+// ─── Canvas Rendering ───
+function render() {
+    const c = ctx2d;
+    const w = canvas.width / (window.devicePixelRatio || 1);
+    const h = canvas.height / (window.devicePixelRatio || 1);
+    c.clearRect(0, 0, w, h);
+
+    drawGrid(c, w, h);
+    links.forEach(l => drawLink(c, l));
+    devices.forEach(d => drawDevice(c, d));
+    animPackets.forEach(p => drawPacket(c, p));
+}
+
+function drawGrid(c, w, h) {
+    c.strokeStyle = '#e8e8f0'; c.lineWidth = .5;
+    for (let x = 0; x < w; x += GRID_SIZE) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke() }
+    for (let y = 0; y < h; y += GRID_SIZE) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke() }
+}
+
+function drawIpLabel(c, text, x, y, color) {
+    c.font = '9px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    const w = c.measureText(text).width + 4;
+    c.fillStyle = '#fff';
+    c.fillRect(x - w / 2, y - 6, w, 12);
+    c.fillStyle = color;
+    c.fillText(text, x, y);
+}
+
+function drawLink(c, l) {
+    const a = findDev(l.devA), b = findDev(l.devB);
+    if (!a || !b) return;
+
+    const isDown = l.down || a.down || b.down;
+    c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y);
+    c.setLineDash(isDown ? [6, 4] : []);
+    c.strokeStyle = isDown ? '#f55' : '#999';
+    c.lineWidth = 2;
+    c.stroke(); c.setLineDash([]);
+
+    // IP labels on each end (offset perpendicular to link to avoid overlapping devices)
+    c.font = '9px monospace';
+    const ifA = a.interfaces[l.portA], ifB = b.interfaces[l.portB];
+    if ((ifA && ifA.ip) || (ifB && ifB.ip)) {
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        // Perpendicular unit vector (rotated 90° left)
+        const px = -dy / len * 12, py = dx / len * 12;
+        const labelColor = l.down ? '#f55' : '#555';
+        if (ifA && ifA.ip) drawIpLabel(c, ifA.ip, a.x + dx * .28 + px, a.y + dy * .28 + py, labelColor);
+        if (ifB && ifB.ip) drawIpLabel(c, ifB.ip, a.x + dx * .72 + px, a.y + dy * .72 + py, labelColor);
+    }
+
+    // Down marker
+    if (l.down) {
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        c.fillStyle = '#f55'; c.font = 'bold 14px sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText('✕', mx, my);
+    }
+}
+
+function drawDevice(c, d) {
+    const info = DEV_TYPES[d.type];
+    const sel = selectedDevice && selectedDevice.id === d.id;
+    const isTerm = terminalDev && terminalDev.id === d.id;
+    const col = d.down ? '#888' : info.color;
+    const fillBg = d.down ? '#ddd' : '#fff';
+
+    c.save();
+    if (sel) { c.shadowColor = col; c.shadowBlur = 12 }
+    if (isTerm && !d.down) { c.shadowColor = '#0f0'; c.shadowBlur = 8 }
+
+    const lw = sel ? 3 : 2;
+    if (d.type === 'router') {
+        c.beginPath(); c.arc(d.x, d.y, 22, 0, Math.PI * 2);
+        c.fillStyle = fillBg; c.fill(); c.strokeStyle = col; c.lineWidth = lw; c.stroke();
+        c.beginPath(); c.moveTo(d.x - 11, d.y); c.lineTo(d.x + 11, d.y);
+        c.strokeStyle = col; c.lineWidth = 2; c.stroke();
+        c.fillStyle = col;
+        c.beginPath(); c.moveTo(d.x + 7, d.y - 4); c.lineTo(d.x + 11, d.y); c.lineTo(d.x + 7, d.y + 4); c.fill();
+        c.beginPath(); c.moveTo(d.x - 7, d.y - 4); c.lineTo(d.x - 11, d.y); c.lineTo(d.x - 7, d.y + 4); c.fill();
+    } else if (d.type === 'l3switch' || d.type === 'l2switch') {
+        c.fillStyle = fillBg; c.fillRect(d.x - 22, d.y - 14, 44, 28);
+        c.strokeStyle = col; c.lineWidth = lw; c.strokeRect(d.x - 22, d.y - 14, 44, 28);
+        c.fillStyle = col; c.font = 'bold 10px sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(d.type === 'l3switch' ? 'L3' : 'L2', d.x, d.y);
+    } else if (d.type === 'pc') {
+        c.fillStyle = fillBg; c.fillRect(d.x - 16, d.y - 15, 32, 22);
+        c.strokeStyle = col; c.lineWidth = lw; c.strokeRect(d.x - 16, d.y - 15, 32, 22);
+        c.beginPath(); c.moveTo(d.x, d.y + 7); c.lineTo(d.x, d.y + 12); c.stroke();
+        c.beginPath(); c.moveTo(d.x - 8, d.y + 12); c.lineTo(d.x + 8, d.y + 12); c.stroke();
+    } else if (d.type === 'capture') {
+        // Capture device: rect with waveform
+        c.fillStyle = fillBg; c.fillRect(d.x - 18, d.y - 16, 36, 32);
+        c.strokeStyle = col; c.lineWidth = lw; c.strokeRect(d.x - 18, d.y - 16, 36, 32);
+        c.beginPath();
+        c.moveTo(d.x - 10, d.y); c.lineTo(d.x - 5, d.y - 8); c.lineTo(d.x, d.y + 8);
+        c.lineTo(d.x + 5, d.y - 4); c.lineTo(d.x + 10, d.y);
+        c.strokeStyle = col; c.lineWidth = 2; c.stroke();
+    } else {
+        // Server types (dns, web, proxy, firewall, etc.)
+        c.fillStyle = fillBg; c.fillRect(d.x - 16, d.y - 18, 32, 36);
+        c.strokeStyle = col; c.lineWidth = lw; c.strokeRect(d.x - 16, d.y - 18, 32, 36);
+        c.fillStyle = col; c.font = 'bold 9px sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(info.canvasLabel || d.type, d.x, d.y - 5);
+        c.beginPath(); c.arc(d.x, d.y + 8, 3, 0, Math.PI * 2);
+        c.fillStyle = d.down ? '#f55' : col; c.fill();
+    }
+    c.restore();
+
+    // Down overlay
+    if (d.down) {
+        c.save();
+        c.fillStyle = 'rgba(255,50,50,0.7)'; c.font = 'bold 18px sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText('✕', d.x, d.y);
+        c.restore();
+    }
+
+    // Terminal indicator
+    if (isTerm && d.type === 'pc' && !d.down) {
+        c.save();
+        c.beginPath(); c.arc(d.x + 16, d.y - 15, 5, 0, Math.PI * 2);
+        c.fillStyle = '#0f0'; c.fill();
+        c.fillStyle = '#000'; c.font = 'bold 7px sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText('>_', d.x + 16, d.y - 15);
+        c.restore();
+    }
+
+    // Name label
+    c.fillStyle = d.down ? '#999' : '#333';
+    c.font = '10px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'top';
+    const labelY = d.type === 'pc' ? 15 : d.type === 'router' ? 24 : d.type === 'capture' ? 18 : d.type.startsWith('l') ? 16 : 20;
+    c.fillText(d.name + (d.down ? ' [DOWN]' : ''), d.x, d.y + labelY);
+}
+
+function drawPacket(c, p) {
+    c.beginPath(); c.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    c.fillStyle = p.color || '#ff0'; c.fill();
+    c.strokeStyle = '#333'; c.lineWidth = 1; c.stroke();
+}
+
+// ─── Mode Management ───
+function setMode(m) {
+    mode = m;
+    connectSrc = null;
+    document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+    $('connectBtn').classList.remove('active');
+    $('deleteBtn').classList.remove('active');
+
+    if (m.startsWith('place:')) {
+        const t = m.split(':')[1];
+        document.querySelector(`.palette-btn[data-type="${t}"]`)?.classList.add('active');
+        modeInd.textContent = '配置: ' + DEV_TYPES[t].label;
+        modeInd.className = 'mode-indicator place';
+        modeInd.style.display = '';
+        canvas.style.cursor = 'crosshair';
+    } else if (m === 'connect') {
+        $('connectBtn').classList.add('active');
+        modeInd.textContent = 'ケーブル接続';
+        modeInd.className = 'mode-indicator connect';
+        modeInd.style.display = '';
+        canvas.style.cursor = 'pointer';
+    } else if (m === 'delete') {
+        $('deleteBtn').classList.add('active');
+        modeInd.textContent = '削除';
+        modeInd.className = 'mode-indicator delete';
+        modeInd.style.display = '';
+        canvas.style.cursor = 'pointer';
+    } else {
+        modeInd.style.display = 'none';
+        canvas.style.cursor = 'default';
+    }
+}
+
+// Toolbar button bindings
+document.querySelectorAll('.palette-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const t = btn.dataset.type;
+        setMode(mode === 'place:' + t ? 'select' : 'place:' + t);
+    });
+});
+$('connectBtn').addEventListener('click', () => setMode(mode === 'connect' ? 'select' : 'connect'));
+$('deleteBtn').addEventListener('click', () => setMode(mode === 'delete' ? 'select' : 'delete'));
+
+// ─── Canvas Mouse Events ───
+function cpos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+canvas.addEventListener('mousedown', e => {
+    if (e.button === 2) return;
+    const p = cpos(e);
+
+    if (mode.startsWith('place:')) {
+        const t = mode.split(':')[1];
+        const d = createDev(t, p.x, p.y);
+        devices.push(d);
+        selectedDevice = d;
+        renderProps(); render();
+        return;
+    }
+    if (mode === 'delete') {
+        const d = devAt(p.x, p.y);
+        if (d) { removeDev(d.id); render(); return }
+        const l = linkAt(p.x, p.y);
+        if (l) { removeLink(l.id); render() }
+        return;
+    }
+    if (mode === 'connect') {
+        const d = devAt(p.x, p.y);
+        if (!d) return;
+        if (!connectSrc) {
+            connectSrc = d; selectedDevice = d; renderProps(); render();
+        } else {
+            if (connectSrc.id === d.id) { connectSrc = null; return }
+            const pA = freePort(connectSrc), pB = freePort(d);
+            if (pA === -1 || pB === -1) { netsimAlert('空きポートがありません'); connectSrc = null; return }
+            mkLink(connectSrc, pA, d, pB);
+            connectSrc = null; render();
+        }
+        return;
+    }
+    // Select / drag mode
+    const d = devAt(p.x, p.y);
+    if (d) {
+        selectedDevice = d; dragDev = d;
+        dragOff = { x: p.x - d.x, y: p.y - d.y };
+    } else {
+        selectedDevice = null; dragDev = null;
+    }
+    renderProps(); render();
+});
+
+canvas.addEventListener('mousemove', e => {
+    if (!dragDev) return;
+    const p = cpos(e);
+    dragDev.x = p.x - dragOff.x;
+    dragDev.y = p.y - dragOff.y;
+    render();
+});
+canvas.addEventListener('mouseup', () => { dragDev = null });
+canvas.addEventListener('mouseleave', () => { dragDev = null });
+
+// ─── Context Menu ───
+let ctxMenuEl = null;
+
+function closeCtx() {
+    if (ctxMenuEl) { ctxMenuEl.remove(); ctxMenuEl = null }
+}
+
+function ctxItem(text, fn, color) {
+    const el = document.createElement('div');
+    el.className = 'ctx-menu-item';
+    if (color) el.style.color = color;
+    el.textContent = text;
+    el.addEventListener('click', e => { e.stopPropagation(); fn(); closeCtx() });
+    return el;
+}
+
+function ctxSep() {
+    const el = document.createElement('div');
+    el.className = 'ctx-menu-sep';
+    return el;
+}
+
+canvas.addEventListener('contextmenu', e => {
+    e.preventDefault(); closeCtx();
+    const p = cpos(e);
+    const d = devAt(p.x, p.y);
+    const l = d ? null : linkAt(p.x, p.y);
+    if (!d && !l) return;
+
+    const menu = document.createElement('div');
+    menu.className = 'ctx-menu';
+    ctxMenuEl = menu;
+
+    if (d) {
+        selectedDevice = d; renderProps(); render();
+        if (d.type === 'pc') {
+            const isTerm = terminalDev && terminalDev.id === d.id;
+            menu.appendChild(ctxItem(isTerm ? 'ターミナルを閉じる' : 'ターミナルを開く', () => {
+                if (isTerm) {
+                    terminalDev = null;
+                } else {
+                    terminalDev = d; clearTerminal();
+                    tOut(`${d.name} ターミナル起動\nhelp でコマンド一覧を表示\n`, 't-info');
+                }
+                renderTermHeader(); render();
+            }));
+            menu.appendChild(ctxSep());
+        }
+        menu.appendChild(ctxItem(
+            d.down ? '復旧する' : '故障させる',
+            () => { d.down = !d.down; renderProps(); render() },
+            d.down ? '#0f0' : '#fa0'
+        ));
+        menu.appendChild(ctxSep());
+        menu.appendChild(ctxItem('削除', () => { removeDev(d.id); render() }, '#f55'));
+    } else if (l) {
+        menu.appendChild(ctxItem(
+            l.down ? 'リンク復旧' : 'リンク障害',
+            () => { l.down = !l.down; render() },
+            l.down ? '#0f0' : '#fa0'
+        ));
+        menu.appendChild(ctxSep());
+        menu.appendChild(ctxItem('ケーブル削除', () => { removeLink(l.id); render() }, '#f55'));
+    }
+
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    document.body.appendChild(menu);
+
+    setTimeout(() => {
+        function handler(ev) {
+            if (ctxMenuEl && !ctxMenuEl.contains(ev.target)) {
+                closeCtx(); document.removeEventListener('click', handler);
+            }
+        }
+        document.addEventListener('click', handler);
+    }, 10);
+});
+
+// ─── Editable Table Renderer (generic) ───
+// columns: [{ header, prefix, cls, key, width, type?, options?, getValue }]
+// rows: array of row data
+// addBtnId: id for the add button, addLabel: button text
+function renderEditableTable(title, columns, rows, addBtnId, addLabel) {
+    let h = `<div class="section-title">${title}</div>`;
+    h += '<table class="editable-table"><thead><tr>';
+    columns.forEach(c => { h += `<th>${c.header}</th>` });
+    h += '<th></th></tr></thead><tbody>';
+    rows.forEach((row, ri) => {
+        h += '<tr>';
+        columns.forEach(c => {
+            const val = c.getValue ? c.getValue(row) : (c.key ? row[c.key] : row);
+            if (c.type === 'select') {
+                h += `<td><select class="${c.prefix}-${c.cls}" data-r="${ri}">`;
+                c.options.forEach(o => { h += `<option ${val === o ? 'selected' : ''}>${o}</option>` });
+                h += '</select></td>';
+            } else {
+                h += `<td><input class="${c.prefix}-${c.cls}" data-r="${ri}" value="${esc(String(val ?? ''))}" ${c.placeholder ? `placeholder="${c.placeholder}"` : ''} style="width:${c.width || '80px'}"></td>`;
+            }
+        });
+        h += `<td><button class="btn-sm ${columns[0].prefix}-x" data-r="${ri}">x</button></td></tr>`;
+    });
+    h += `</tbody></table><button class="btn-sm" id="${addBtnId}" style="margin-top:.2rem">${addLabel}</button>`;
+    return h;
+}
+
+// ─── Device-specific settings definition ───
+const DEVICE_SETTINGS = {
+    pc: { fields: [
+        { id: 'pGw', key: 'defaultGw', label: 'デフォルトGW', placeholder: '例: 192.168.1.1' },
+        { id: 'pDns', key: 'dnsServer', label: 'DNSサーバー', placeholder: '例: 10.0.0.53' },
+        { id: 'pProxy', key: 'proxyAddr', label: 'プロキシ', placeholder: '例: 10.0.0.100:8080' },
+    ]},
+    web: { title: 'Webサーバー設定', fields: [
+        { id: 'pWebHost', key: 'webHostname', label: 'ホスト名', placeholder: '例: www.example.com', width: '160px' },
+    ], textarea: { id: 'pWebContent', key: 'webContent', label: 'コンテンツ' } },
+    proxy: { title: 'プロキシ設定', fields: [
+        { id: 'pProxyTarget', key: 'proxyTarget', label: '転送先IP', placeholder: '例: 10.0.2.80' },
+    ]},
+    mail: { title: 'メールサーバー設定', fields: [
+        { id: 'pMailDomain', key: 'mailDomain', label: 'ドメイン', placeholder: '例: example.com', width: '160px' },
+    ]},
+    lb: { title: 'ロードバランサー設定', fields: [
+        { id: 'pLbHost', key: 'lbHostname', label: '仮想ホスト', placeholder: '例: www.example.com', width: '160px' },
+    ], select: { id: 'pLbMethod', key: 'lbMethod', label: '方式', options: ['round-robin', 'least-conn', 'ip-hash'] } },
+    ntp: { title: 'NTPサーバー設定', fields: [
+        { id: 'pNtpStratum', key: 'ntpStratum', label: 'Stratum', type: 'number', extra: 'min="1" max="15"', width: '60px' },
+    ]},
+};
+
+// Editable table definitions: { dataKey, prefix, columns, addBtnId, addLabel, addDefault, title }
+const EDITABLE_TABLES = {
+    _routing: { dataKey: 'routes', prefix: 'rt', title: 'ルーティングテーブル', addBtnId: 'addRoute', addLabel: '+ ルート',
+        addDefault: { dest: '', mask: '255.255.255.0', gateway: '' },
+        columns: [
+            { header: '宛先', cls: 'd', key: 'dest', width: '85px' },
+            { header: 'マスク', cls: 'm', key: 'mask', width: '85px' },
+            { header: 'GW', cls: 'g', key: 'gateway', width: '85px' },
+        ]},
+    dns: { dataKey: 'dnsRecords', prefix: 'dn', title: 'DNSレコード', addBtnId: 'addDns', addLabel: '+ レコード',
+        addDefault: { name: '', type: 'A', value: '' },
+        columns: [
+            { header: 'ドメイン', cls: 'n', key: 'name', width: '100px' },
+            { header: 'タイプ', cls: 't', key: 'type', type: 'select', options: ['A', 'CNAME', 'MX', 'NS', 'TXT'] },
+            { header: '値', cls: 'v', key: 'value', width: '100px' },
+        ]},
+    firewall: { dataKey: 'fwRules', prefix: 'fw', title: 'FWルール', addBtnId: 'addFw', addLabel: '+ ルール',
+        addDefault: { action: 'allow', srcIp: '', dstIp: '', dstPort: '' },
+        columns: [
+            { header: 'Act', cls: 'a', key: 'action', type: 'select', options: ['allow', 'deny'] },
+            { header: 'Src', cls: 's', key: 'srcIp', placeholder: 'any', width: '70px' },
+            { header: 'Dst', cls: 'd', key: 'dstIp', placeholder: 'any', width: '70px' },
+            { header: 'Port', cls: 'p', key: 'dstPort', placeholder: 'any', width: '40px' },
+        ]},
+    mail: { dataKey: 'mailUsers', prefix: 'mu', title: 'メールユーザー', addBtnId: 'addMailUser', addLabel: '+ ユーザー',
+        addDefault: 'user',
+        columns: [{ header: 'ユーザー名', cls: 'n', width: '120px' }] },
+    lb: { dataKey: 'lbTargets', prefix: 'lb', title: 'バックエンドサーバー', addBtnId: 'addLbTarget', addLabel: '+ サーバー',
+        addDefault: { ip: '', port: 80 },
+        columns: [
+            { header: 'IP', cls: 'ip', key: 'ip', width: '100px' },
+            { header: 'ポート', cls: 'port', key: 'port', width: '50px' },
+        ]},
+    ftp: { dataKey: 'ftpFiles', prefix: 'ftp', title: 'FTPサーバー設定', addBtnId: 'addFtpFile', addLabel: '+ ファイル',
+        addDefault: 'newfile.txt',
+        columns: [{ header: 'ファイル名', cls: 'f', width: '140px' }] },
+    radius: { dataKey: 'radiusUsers', prefix: 'rad', title: 'RADIUSユーザー', addBtnId: 'addRadUser', addLabel: '+ ユーザー',
+        addDefault: { user: '', pass: '' },
+        columns: [
+            { header: 'ユーザー', cls: 'u', key: 'user', width: '80px' },
+            { header: 'パスワード', cls: 'p', key: 'pass', width: '80px' },
+        ]},
+};
+
+// DHCP pool field definitions
+const DHCP_FIELDS = [
+    { id: 'pDhcpStart', poolKey: 'start', label: '開始IP', placeholder: '例: 192.168.1.100' },
+    { id: 'pDhcpEnd', poolKey: 'end', label: '終了IP', placeholder: '例: 192.168.1.200' },
+    { id: 'pDhcpMask', poolKey: 'mask', label: 'マスク' },
+    { id: 'pDhcpGw', poolKey: 'gateway', label: 'GW配布', placeholder: '例: 192.168.1.1' },
+    { id: 'pDhcpDns', poolKey: 'dns', label: 'DNS配布', placeholder: '例: 10.0.0.53' },
+];
+
+// ─── Properties Panel ───
+function renderProps() {
+    const el = $('propsContent'), nameEl = $('propsDevName');
+    if (!selectedDevice) {
+        el.innerHTML = '<p class="panel-placeholder">デバイスをクリックして選択</p>';
+        nameEl.textContent = '';
+        return;
+    }
+    const d = selectedDevice, info = DEV_TYPES[d.type];
+    nameEl.textContent = '- ' + d.name + (d.down ? ' [DOWN]' : '');
+
+    let h = '<table class="props-table">';
+    h += `<tr><th>名前</th><td><input id="pN" value="${esc(d.name)}" style="width:110px"></td></tr>`;
+    h += `<tr><th>タイプ</th><td>${esc(info.label)}</td></tr>`;
+    h += `<tr><th>状態</th><td style="color:${d.down ? 'var(--term-red)' : '#0a0'};font-weight:600">${d.down ? 'DOWN (故障)' : 'UP (正常)'}</td></tr>`;
+
+    // Device-specific simple fields (pc, web, proxy, etc.)
+    const settings = DEVICE_SETTINGS[d.type];
+    if (settings && !settings.title) {
+        // Inline fields (pc): append to main table
+        settings.fields.forEach(f => {
+            h += `<tr><th>${f.label}</th><td><input id="${f.id}" value="${esc(d[f.key])}" placeholder="${f.placeholder || ''}" style="width:${f.width || '140px'}"></td></tr>`;
+        });
+    }
+
+    // Interface rows
+    d.interfaces.forEach((iface, idx) => {
+        if (iface.linkId === null && info.ports > 1) return;
+        if (d.type === 'capture' && d.captureMode === 'mirror' && idx > 0) return;
+        const pl = info.ports === 1 ? 'eth0' : 'port' + idx;
+        h += `<tr><th>${pl}</th><td>`;
+        h += `<input class="if-ip" data-i="${idx}" value="${esc(iface.ip)}" placeholder="IP" style="width:100px">`;
+        h += ` / <input class="if-mask" data-i="${idx}" value="${esc(iface.mask)}" placeholder="Mask" style="width:100px">`;
+        if (iface.linkId) {
+            const lk = findLink(iface.linkId);
+            if (lk) {
+                const pid = linkPeer(lk, d.id);
+                const peer = findDev(pid);
+                if (peer) h += ` <span style="color:var(--color-text-muted)">→${esc(peer.name)}</span>`;
+                if (lk.down) h += ' <span style="color:var(--term-red);font-size:.7rem">[LINK DOWN]</span>';
+            }
+        }
+        h += '</td></tr>';
+    });
+    h += '</table>';
+
+    // Routing table (for routing devices)
+    if (info.routing) {
+        const rt = EDITABLE_TABLES._routing;
+        h += renderEditableTable(rt.title, rt.columns.map(c => ({ ...c, prefix: rt.prefix })), d.routes, rt.addBtnId, rt.addLabel);
+    }
+
+    // Device-specific settings section (with title)
+    if (settings && settings.title) {
+        h += `<div class="section-title">${settings.title}</div><table class="props-table">`;
+        settings.fields.forEach(f => {
+            const extra = f.extra || '';
+            const type = f.type || 'text';
+            h += `<tr><th>${f.label}</th><td><input id="${f.id}" type="${type}" value="${esc(String(d[f.key]))}" ${extra} placeholder="${f.placeholder || ''}" style="width:${f.width || '140px'}"></td></tr>`;
+        });
+        if (settings.select) {
+            const s = settings.select;
+            h += `<tr><th>${s.label}</th><td><select id="${s.id}">`;
+            s.options.forEach(o => { h += `<option ${d[s.key] === o ? 'selected' : ''}>${o}</option>` });
+            h += '</select></td></tr>';
+        }
+        if (settings.textarea) {
+            const ta = settings.textarea;
+            h += `<tr><th>${ta.label}</th><td><textarea id="${ta.id}" rows="2" style="width:100%;font-size:.75rem;font-family:monospace;padding:.2rem;border:1px solid var(--color-border);border-radius:3px">${esc(d[ta.key])}</textarea></td></tr>`;
+        }
+        h += '</table>';
+    }
+
+    // DHCP pool settings
+    if (d.type === 'dhcp') {
+        h += '<div class="section-title">DHCPプール設定</div><table class="props-table">';
+        DHCP_FIELDS.forEach(f => {
+            h += `<tr><th>${f.label}</th><td><input id="${f.id}" value="${esc(d.dhcpPool[f.poolKey])}" placeholder="${f.placeholder || ''}" style="width:140px"></td></tr>`;
+        });
+        h += '</table>';
+    }
+
+    // Editable tables (dns, firewall, mail, lb, ftp, radius)
+    const tblDef = EDITABLE_TABLES[d.type];
+    if (tblDef) {
+        h += renderEditableTable(tblDef.title, tblDef.columns.map(c => ({ ...c, prefix: tblDef.prefix })), d[tblDef.dataKey], tblDef.addBtnId, tblDef.addLabel);
+    }
+
+    // Capture settings
+    if (d.type === 'capture') {
+        h += '<div class="section-title">キャプチャ設定</div><table class="props-table">';
+        h += `<tr><th>モード</th><td><select id="pCapMode"><option value="inline" ${d.captureMode === 'inline' ? 'selected' : ''}>インライン (透過ブリッジ)</option><option value="mirror" ${d.captureMode === 'mirror' ? 'selected' : ''}>ミラーポート (SPAN)</option></select></td></tr>`;
+        h += '</table>';
+        h += `<div class="section-title">キャプチャログ (${d.capturedPackets.length}件) <button class="btn-sm" id="clearCapture" style="margin-left:.5rem">クリア</button></div>`;
+        if (d.capturedPackets.length === 0) {
+            h += '<p class="panel-placeholder" style="font-size:.75rem">パケットなし — 他のPCから ping / curl 等を実行してください</p>';
+        } else {
+            h += '<div class="capture-log-wrap"><table class="capture-log"><thead><tr><th>No</th><th>時刻</th><th>送信元</th><th>宛先</th><th>Proto</th><th>情報</th></tr></thead><tbody>';
+            d.capturedPackets.forEach((p, i) => {
+                h += `<tr><td>${i + 1}</td><td>${esc(p.time)}</td><td>${esc(p.srcIp)}</td><td>${esc(p.dstIp)}</td><td>${esc(p.protocol)}</td><td>${esc(p.info)}</td></tr>`;
+            });
+            h += '</tbody></table></div>';
+        }
+    }
+
+    // Switch mirror port configuration
+    if (d.type === 'l2switch' || d.type === 'l3switch') {
+        h += '<div class="section-title">ミラーポート (SPAN)</div><table class="props-table">';
+        h += '<tr><th>ミラー先</th><td><select id="pMirrorPort">';
+        h += `<option value="-1" ${d.mirrorPort === -1 ? 'selected' : ''}>無効</option>`;
+        d.interfaces.forEach((iface, idx) => {
+            if (!iface.linkId) return;
+            const lk = findLink(iface.linkId);
+            let peerName = 'port' + idx;
+            if (lk) {
+                const pid = linkPeer(lk, d.id);
+                const peer = findDev(pid);
+                if (peer) peerName = `port${idx} → ${peer.name}`;
+            }
+            h += `<option value="${idx}" ${d.mirrorPort === idx ? 'selected' : ''}>${esc(peerName)}</option>`;
+        });
+        h += '</select></td></tr></table>';
+    }
+
+    el.innerHTML = h;
+    bindPropsEvents(d, el);
+}
+
+// ─── Property Event Binding ───
+function bindTable(el, arr, prefix, fields) {
+    fields.forEach(({ cls, key, parse }) => {
+        el.querySelectorAll(`.${prefix}-${cls}`).forEach(input => {
+            input.addEventListener('change', function() {
+                const v = parse ? parse(this.value) : this.value.trim();
+                if (key && typeof arr[+this.dataset.r] === 'object') arr[+this.dataset.r][key] = v;
+                else arr[+this.dataset.r] = v;
+            });
+        });
+    });
+    el.querySelectorAll(`.${prefix}-x`).forEach(b => {
+        b.addEventListener('click', function() { arr.splice(+this.dataset.r, 1); renderProps() });
+    });
+}
+
+function bindInputs(targets) {
+    targets.forEach(([id, obj, key, opts]) => {
+        $(id)?.addEventListener('change', function() {
+            obj[key] = opts?.parse ? opts.parse(this.value) : this.value.trim();
+            if (opts?.redraw) { render(); if (opts.redraw === 'all') renderTermHeader() }
+        });
+    });
+}
+
+function bindPropsEvents(d, el) {
+    // Name
+    bindInputs([['pN', d, 'name', { redraw: 'all' }]]);
+
+    // Device-specific simple fields (auto-bind from DEVICE_SETTINGS)
+    const settings = DEVICE_SETTINGS[d.type];
+    if (settings) {
+        settings.fields.forEach(f => {
+            const opts = f.type === 'number' ? { parse: v => +v } : undefined;
+            bindInputs([[f.id, d, f.key, opts]]);
+        });
+        if (settings.select) bindInputs([[settings.select.id, d, settings.select.key]]);
+        if (settings.textarea) {
+            $(settings.textarea.id)?.addEventListener('change', function() { d[settings.textarea.key] = this.value });
+        }
+    }
+
+    // Interface IP/Mask
+    el.querySelectorAll('.if-ip').forEach(i => i.addEventListener('change', function() { d.interfaces[+this.dataset.i].ip = this.value.trim(); render() }));
+    el.querySelectorAll('.if-mask').forEach(i => i.addEventListener('change', function() { d.interfaces[+this.dataset.i].mask = this.value.trim(); render() }));
+
+    // Routing table binding
+    if (DEV_TYPES[d.type].routing) {
+        const rt = EDITABLE_TABLES._routing;
+        bindTable(el, d.routes, rt.prefix, rt.columns.map(c => ({ cls: c.cls, key: c.key })));
+    }
+
+    // Editable tables (dns, firewall, mail, lb, ftp, radius)
+    const tblDef = EDITABLE_TABLES[d.type];
+    if (tblDef) {
+        bindTable(el, d[tblDef.dataKey], tblDef.prefix, tblDef.columns.map(c => ({ cls: c.cls, key: c.key, parse: c.key === 'port' ? v => +v : undefined })));
+    }
+
+    // Add buttons (routing + device-specific table)
+    const addBtns = [];
+    if (DEV_TYPES[d.type].routing) {
+        const rt = EDITABLE_TABLES._routing;
+        addBtns.push([rt.addBtnId, d.routes, rt.addDefault]);
+    }
+    if (tblDef) addBtns.push([tblDef.addBtnId, d[tblDef.dataKey], tblDef.addDefault]);
+    addBtns.forEach(([id, arr, def]) => {
+        $(id)?.addEventListener('click', () => { arr.push(typeof def === 'object' ? { ...def } : def); renderProps() });
+    });
+
+    // DHCP pool
+    DHCP_FIELDS.forEach(f => {
+        $(f.id)?.addEventListener('change', function() { d.dhcpPool[f.poolKey] = this.value.trim() });
+    });
+
+    // Capture
+    $('pCapMode')?.addEventListener('change', function() {
+        d.captureMode = this.value;
+        if (this.value === 'mirror' && d.interfaces[1] && d.interfaces[1].linkId) {
+            removeLink(d.interfaces[1].linkId);
+        }
+        renderProps(); render();
+    });
+    $('clearCapture')?.addEventListener('click', () => { d.capturedPackets = []; renderProps() });
+
+    // Switch mirror port
+    $('pMirrorPort')?.addEventListener('change', function() { d.mirrorPort = +this.value });
+}
+
+// ─── Terminal ───
+function renderTermHeader() {
+    const h = $('terminalHost');
+    const row = $('terminalInputRow');
+    const inp = $('terminalInput');
+
+    if (terminalDev) {
+        const ip = devIp(terminalDev, '未設定');
+        h.textContent = terminalDev.name + ' (' + ip + ')';
+        row.style.display = 'flex';
+        $('terminalPrompt').textContent = terminalDev.name + '$ ';
+        setTimeout(() => inp.focus(), 50);
+    } else {
+        h.textContent = 'PCを右クリック →「ターミナルを開く」';
+        row.style.display = 'none';
+    }
+}
+
+function clearTerminal() { $('terminalOutput').innerHTML = '' }
+
+function tOut(text, cls) {
+    const out = $('terminalOutput');
+    if (cls) out.innerHTML += `<span class="${cls}">${esc(text)}</span>\n`;
+    else out.innerHTML += esc(text) + '\n';
+    out.scrollTop = out.scrollHeight;
+}
+
+const cmdHistory = [];
+let historyIdx = -1;
+let historySaved = '';
+
+$('terminalInput').addEventListener('keydown', e => {
+    const inp = e.target;
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (cmdHistory.length === 0) return;
+        if (historyIdx === -1) historySaved = inp.value;
+        if (historyIdx < cmdHistory.length - 1) { historyIdx++; inp.value = cmdHistory[historyIdx]; }
+        return;
+    }
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (historyIdx === -1) return;
+        historyIdx--;
+        inp.value = historyIdx === -1 ? historySaved : cmdHistory[historyIdx];
+        return;
+    }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const cmd = inp.value.trim();
+    inp.value = '';
+    historyIdx = -1;
+    historySaved = '';
+    if (!cmd || !terminalDev) return;
+    if (cmdHistory[0] !== cmd) cmdHistory.unshift(cmd);
+    tOut(terminalDev.name + '$ ' + cmd, 't-dim');
+    if (terminalDev.down) { tOut('Error: device is down', 't-err'); return }
+    execCmd(terminalDev, cmd);
+});
+
+// ─── Terminal Commands ───
+// { command: [handler(dev, args), usage, description] }
+// Aliases (tracert, dig, wget, ip) share handler but have no help entry
+const CMD_DEFS = {
+    ping:       [(d, a) => cmdPing(d, a),       'ping <IP|ホスト名>',       'ICMP Echo を送信'],
+    traceroute: [(d, a) => cmdTraceroute(d, a),  'traceroute <IP|ホスト名>', '経路を追跡'],
+    nslookup:   [(d, a) => cmdNslookup(d, a),    'nslookup <ドメイン>',      'DNS名前解決'],
+    curl:       [(d, a) => cmdCurl(d, a),         'curl <URL|IP>',            'HTTP リクエスト'],
+    ifconfig:   [(d) => cmdIfconfig(d),           'ifconfig',                 'インターフェース情報'],
+    arp:        [(d) => cmdArp(d),                'arp',                      'ARPテーブル表示'],
+    route:      [(d) => cmdRoute(d),              'route',                    'ルーティングテーブル表示'],
+    netstat:    [(d) => cmdNetstat(d),            'netstat',                  '接続状態を表示'],
+    dhclient:   [(d) => cmdDhclient(d),           'dhclient',                 'DHCPでIP自動取得'],
+    mail:       [(d, a) => cmdMail(d, a),         'mail <user@domain>',       'メール送信'],
+    ftp:        [(d, a) => cmdFtp(d, a),          'ftp <IP|hostname>',        'FTP接続'],
+    ntpdate:    [(d, a) => cmdNtpdate(d, a),      'ntpdate <IP|hostname>',    'NTP時刻同期'],
+    tcpdump:    [(d, a) => cmdTcpdump(d, a),      'tcpdump [capture名]',      'キャプチャログ表示'],
+    clear:      [() => clearTerminal(),           'clear',                    '画面クリア'],
+};
+const CMD_ALIASES = { tracert: 'traceroute', dig: 'nslookup', wget: 'curl', ip: 'ifconfig' };
+
+function execCmd(dev, cmdLine) {
+    const parts = cmdLine.trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase(), args = parts.slice(1);
+    if (cmd === 'help') {
+        tOut('使用可能なコマンド:', 't-info');
+        Object.values(CMD_DEFS).forEach(([, usage, desc]) => tOut(`  ${usage.padEnd(28)}${desc}`, 't-white'));
+        return;
+    }
+    const resolved = CMD_ALIASES[cmd] || cmd;
+    const def = CMD_DEFS[resolved];
+    if (def) {
+        def[0](dev, args);
+    } else {
+        tOut(`command not found: ${cmd}`, 't-err');
+        tOut('help でコマンド一覧を表示', 't-dim');
+    }
+}
+
+function cmdPing(dev, args) {
+    if (!requireArg(args, 'ping <IP|hostname>')) return;
+    const target = args[0], resolved = resolveHostVisible(dev, target);
+    if (!resolved) return;
+    const ip = resolved.ip;
+    const srcIp = dev.interfaces.find(i => i.ip)?.ip;
+    if (!srcIp) { tOut('ping: ネットワーク未設定', 't-err'); return }
+
+    tOut(`PING ${target} (${ip}) 56(84) bytes of data.`, 't-white');
+    const r = routePacket(dev, ip);
+    if (r.success) {
+        animPath(buildFullPath(resolved.dnsPath, r.path), false);
+        logPacketCapture(r.path, srcIp, ip, 'ICMP', `Echo Request → ${target}`);
+        for (let i = 0; i < 4; i++) {
+            const ms = (Math.random() * 20 + 1).toFixed(1);
+            tOut(`64 bytes from ${ip}: icmp_seq=${i + 1} ttl=${64 - r.hops} time=${ms} ms`, 't-ok');
+        }
+        tOut(`\n--- ${target} ping statistics ---`, 't-white');
+        tOut('4 packets transmitted, 4 received, 0% packet loss', 't-ok');
+    } else {
+        if (r.path.length > 1) animPath(buildFullPath(resolved.dnsPath, r.path), true);
+        tOut(`From ${srcIp}: Destination Host Unreachable`, 't-err');
+        tOut(`(${r.reason})`, 't-dim');
+    }
+}
+
+function cmdTraceroute(dev, args) {
+    if (!requireArg(args, 'traceroute <IP|hostname>')) return;
+    const target = args[0], resolved = resolveHostVisible(dev, target);
+    if (!resolved) return;
+    const ip = resolved.ip;
+
+    tOut(`traceroute to ${target} (${ip}), 30 hops max`, 't-white');
+    const r = routePacket(dev, ip);
+    if (r.success) animPath(buildFullPath(resolved.dnsPath, r.path), false);
+    else if (r.path.length > 1) animPath(buildFullPath(resolved.dnsPath, r.path), true);
+    const trSrc = devIp(dev);
+    logPacketCapture(r.path, trSrc, ip, 'ICMP', `Traceroute → ${target}`);
+
+    for (let i = 1; i < r.path.length; i++) {
+        const hop = r.path[i];
+        const hopIp = hop.interfaces.find(f => f.ip)?.ip || '*';
+        const ms1 = (Math.random() * 15 + 1).toFixed(1);
+        const ms2 = (Math.random() * 15 + 1).toFixed(1);
+        const ms3 = (Math.random() * 15 + 1).toFixed(1);
+        tOut(` ${String(i).padStart(2)} ${hop.name} (${hopIp})  ${ms1} ms  ${ms2} ms  ${ms3} ms`, r.success ? 't-ok' : 't-warn');
+    }
+    if (!r.success) tOut(` ${r.path.length}  * * * (${r.reason})`, 't-err');
+}
+
+function cmdNslookup(dev, args) {
+    if (!requireArg(args, 'nslookup <domain>')) return;
+    const domain = args[0], dnsIp = dev.dnsServer;
+    if (!dnsIp) { tOut("** server can't find DNS server: DNS未設定", 't-err'); return }
+
+    const dr = routePacket(dev, dnsIp);
+    if (!dr.success) { tOut(`;; connection timed out; no servers could be reached (${dnsIp})`, 't-err'); return }
+    const dd = findDevByIp(dnsIp);
+    if (!dd || dd.type !== 'dns' || dd.down) { tOut(`;; ${dnsIp} is not responding (DNS server down or not a DNS)`, 't-err'); return }
+    logPacketCapture(dr.path, devIp(dev), dnsIp, 'UDP', `DNS query: ${domain}`);
+
+    tOut(`Server:  ${dnsIp}`, 't-white');
+    tOut(`Address: ${dnsIp}#53\n`, 't-white');
+    const recs = dd.dnsRecords.filter(r => r.name === domain);
+    if (!recs.length) {
+        tOut(`** server can't find ${domain}: NXDOMAIN`, 't-err');
+    } else {
+        tOut('Non-authoritative answer:', 't-white');
+        recs.forEach(r => {
+            if (r.type === 'A') tOut(`Name: ${r.name}\nAddress: ${r.value}`, 't-ok');
+            else if (r.type === 'CNAME') tOut(`${r.name}\tcanonical name = ${r.value}`, 't-ok');
+            else tOut(`${r.name}\t${r.type}\t${r.value}`, 't-ok');
+        });
+    }
+}
+
+function printHttpResponse(hostname, webDev, backendIp) {
+    tOut('> GET / HTTP/1.1', 't-dim');
+    tOut(`> Host: ${hostname}\n`, 't-dim');
+    tOut('< HTTP/1.1 200 OK', 't-ok');
+    if (backendIp) tOut(`< X-Backend: ${backendIp}`, 't-dim');
+    tOut('< Content-Type: text/html\n', 't-dim');
+    tOut(webDev.webContent, 't-white');
+}
+
+function cmdCurl(dev, args) {
+    if (!requireArg(args, 'curl <URL|IP>')) return;
+    let hostname = '', targetIp = '', port = 80;
+    const um = args[0].match(/^https?:\/\/([^/:]+)(?::(\d+))?(\/.*)?$/);
+    if (um) { hostname = um[1]; port = um[2] ? +um[2] : 80 } else hostname = args[0];
+    const curlSrc = devIp(dev);
+
+    if (dev.proxyAddr) {
+        const [pip] = dev.proxyAddr.split(':');
+        const pr = routePacket(dev, pip);
+        if (!pr.success) { tOut(`curl: (7) Failed to connect to proxy ${dev.proxyAddr}`, 't-err'); return }
+        const pd = findDevByIp(pip);
+        if (!pd || pd.type !== 'proxy' || pd.down) { tOut('curl: (56) Proxy not available', 't-err'); return }
+        tOut(`* Connected to proxy ${pip}`, 't-dim');
+        let dnsPath = null;
+        if (pd.proxyTarget) { targetIp = pd.proxyTarget }
+        else { const resolved = resolveHostVisible(dev, hostname); if (!resolved) return; targetIp = resolved.ip; dnsPath = resolved.dnsPath }
+        const wr = routePacket(pd, targetIp);
+        if (!wr.success) { tOut(`curl: (7) Proxy failed to reach ${targetIp}`, 't-err'); return }
+        const proxyPath = [...pr.path, ...wr.path.slice(1)];
+        animPath(buildFullPath(dnsPath, proxyPath), false);
+        logPacketCapture(proxyPath, curlSrc, targetIp, 'TCP', `HTTP GET ${hostname} (via proxy)`);
+    } else {
+        const resolved = resolveHostVisible(dev, hostname);
+        if (!resolved) return;
+        targetIp = resolved.ip;
+        const r = routePacket(dev, targetIp);
+        if (!r.success) { tOut(`curl: (7) Failed to connect to ${targetIp}: ${r.reason}`, 't-err'); return }
+        animPath(buildFullPath(resolved.dnsPath, r.path), false);
+        logPacketCapture(r.path, curlSrc, targetIp, 'TCP', `HTTP GET ${hostname}`);
+    }
+
+    tOut(`* Connected to ${hostname} (${targetIp}) port ${port}`, 't-dim');
+    const wd = findDevByIp(targetIp);
+
+    // Load Balancer handling
+    if (wd && wd.type === 'lb' && !wd.down && wd.lbTargets.length > 0) {
+        const available = wd.lbTargets.filter(t => { const bd = findDevByIp(t.ip); return bd && !bd.down });
+        if (!available.length) { tOut('< HTTP/1.1 502 Bad Gateway (all backends down)', 't-err'); return }
+        const chosen = available[Math.floor(Math.random() * available.length)];
+        tOut(`* LB: forwarding to backend ${chosen.ip}:${chosen.port} (${wd.lbMethod})`, 't-info');
+        const br = routePacket(wd, chosen.ip);
+        if (!br.success) { tOut('< HTTP/1.1 502 Bad Gateway', 't-err'); return }
+        animPath(br.path, false);
+        logPacketCapture(br.path, curlSrc, chosen.ip, 'TCP', `HTTP GET ${hostname} (LB → ${chosen.ip})`);
+        const bd = findDevByIp(chosen.ip);
+        if (bd && bd.type === 'web' && !bd.down) printHttpResponse(hostname, bd, chosen.ip);
+        else tOut('< HTTP/1.1 502 Bad Gateway', 't-err');
+        return;
+    }
+
+    if (wd && wd.type === 'web' && !wd.down) printHttpResponse(hostname, wd);
+    else { tOut('> GET / HTTP/1.1', 't-dim'); tOut('< HTTP/1.1 Connection refused', 't-err') }
+}
+
+function cmdIfconfig(dev) {
+    dev.interfaces.forEach((f, i) => {
+        if (!f.ip && !f.linkId) return;
+        const name = dev.interfaces.length === 1 ? 'eth0' : 'eth' + i;
+        tOut(`${name}: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>`, 't-white');
+        if (f.ip) tOut(`        inet ${f.ip}  netmask ${f.mask}  prefix /${maskToPrefix(f.mask)}`, 't-ok');
+        else tOut('        (IP未設定)', 't-dim');
+        tOut(`        ether ${genMac(dev.id, i)}`, 't-dim');
+        tOut('');
+    });
+    tOut('lo: flags=73<UP,LOOPBACK,RUNNING>', 't-white');
+    tOut('        inet 127.0.0.1  netmask 255.0.0.0', 't-ok');
+}
+
+function cmdArp(dev) {
+    tOut('Address          HWtype  HWaddress           Iface', 't-white');
+    dev.interfaces.forEach((f, i) => {
+        if (!f.linkId || !f.ip) return;
+        const lk = findLink(f.linkId);
+        if (!lk || lk.down) return;
+        const pid = linkPeer(lk, dev.id);
+        const peer = findDev(pid);
+        if (!peer || peer.down) return;
+        const pp = lk.devA === dev.id ? lk.portB : lk.portA;
+        const pf = peer.interfaces[pp];
+        if (pf && pf.ip) tOut(`${pf.ip.padEnd(17)}ether   ${genMac(peer.id, pp)}   eth${i}`, 't-ok');
+        if (isBridge(peer)) {
+            eachBehindSw(peer, dev.id, (nd, pi) => {
+                const nf = nd.interfaces[pi];
+                if (nf && nf.ip && sameNet(f.ip, nf.ip, f.mask)) {
+                    tOut(`${nf.ip.padEnd(17)}ether   ${genMac(nd.id, pi)}   eth${i}`, 't-ok');
+                }
+            });
+        }
+    });
+}
+
+function cmdRoute(dev) {
+    tOut('Destination      Gateway          Netmask          Iface', 't-white');
+    dev.interfaces.forEach((f, i) => {
+        if (!f.ip) return;
+        tOut(`${intToIp(netAddr(f.ip, f.mask)).padEnd(17)}0.0.0.0          ${f.mask.padEnd(17)}eth${i}`, 't-ok');
+    });
+    if (dev.defaultGw) {
+        tOut(`${'0.0.0.0'.padEnd(17)}${dev.defaultGw.padEnd(17)}${'0.0.0.0'.padEnd(17)}eth0`, 't-ok');
+    }
+    dev.routes.forEach(r => {
+        if (r.dest && r.gateway) {
+            tOut(`${r.dest.padEnd(17)}${r.gateway.padEnd(17)}${(r.mask || '255.255.255.0').padEnd(17)}eth0`, 't-ok');
+        }
+    });
+}
+
+function cmdNetstat(dev) {
+    tOut('Proto Local Address         Foreign Address       State', 't-white');
+    const ip = devIp(dev, '0.0.0.0');
+    const ns = DEV_TYPES[dev.type].netstat;
+    if (ns) {
+        ns.forEach(l => tOut(l.replace('%s', ip).padEnd(38) + '0.0.0.0:*             LISTEN', 't-ok'));
+    } else {
+        tOut('(アクティブな接続はありません)', 't-dim');
+    }
+}
+
+function cmdDhclient(dev) {
+    tOut('DHCPDISCOVER on eth0', 't-white');
+    // Find DHCP server reachable from this device
+    let dhcpDev = null;
+    for (const dd of devices) {
+        if (dd.type !== 'dhcp' || dd.down) continue;
+        const r = routePacket(dev, dd.interfaces[0].ip);
+        if (r.success) {
+            dhcpDev = dd; animPath(r.path, false);
+            logPacketCapture(r.path, '0.0.0.0', dd.interfaces[0].ip, 'UDP', 'DHCP Discover/Offer/Ack');
+            break;
+        }
+    }
+    if (!dhcpDev) {
+        tOut('DHCPDISCOVER: no DHCP server found', 't-err'); return;
+    }
+    const pool = dhcpDev.dhcpPool;
+    if (!pool.start || !pool.end) { tOut('DHCP server has no pool configured', 't-err'); return }
+
+    // Assign next available IP from pool
+    const startInt = ipToInt(pool.start), endInt = ipToInt(pool.end);
+    const usedIps = new Set(devices.flatMap(d => d.interfaces.map(i => i.ip)).filter(Boolean));
+    let assignedIp = null;
+    for (let n = startInt; n <= endInt; n++) {
+        const candidate = intToIp(n);
+        if (!usedIps.has(candidate)) { assignedIp = candidate; break }
+    }
+    if (!assignedIp) { tOut('DHCP pool exhausted', 't-err'); return }
+
+    tOut(`DHCPOFFER from ${dhcpDev.interfaces[0].ip}`, 't-info');
+    tOut(`DHCPREQUEST for ${assignedIp}`, 't-white');
+    tOut(`DHCPACK from ${dhcpDev.interfaces[0].ip}`, 't-ok');
+
+    dev.interfaces[0].ip = assignedIp;
+    dev.interfaces[0].mask = pool.mask || '255.255.255.0';
+    if (pool.gateway) dev.defaultGw = pool.gateway;
+    if (pool.dns) dev.dnsServer = pool.dns;
+
+    tOut(`\nbound to ${assignedIp}`, 't-ok');
+    tOut(`  subnet mask: ${dev.interfaces[0].mask}`, 't-ok');
+    if (pool.gateway) tOut(`  default gw:  ${pool.gateway}`, 't-ok');
+    if (pool.dns) tOut(`  DNS server:  ${pool.dns}`, 't-ok');
+    renderProps(); render();
+}
+
+function cmdMail(dev, args) {
+    if (!requireArg(args, 'mail <user@domain>')) return;
+    const addr = args[0], atIdx = addr.indexOf('@');
+    if (atIdx === -1) { tOut('Invalid address format. Use user@domain', 't-err'); return }
+    const user = addr.slice(0, atIdx), domain = addr.slice(atIdx + 1);
+
+    // Resolve MX → A or fallback to A for the domain
+    const dnsIp = dev.dnsServer;
+    if (!dnsIp) { tOut('DNS server not configured', 't-err'); return }
+    const dd = (() => {
+        const r = routePacket(dev, dnsIp);
+        if (!r.success) return null;
+        const d = findDevByIp(dnsIp);
+        return (d && d.type === 'dns' && !d.down) ? d : null;
+    })();
+    if (!dd) { tOut(`Cannot reach DNS server ${dnsIp}`, 't-err'); return }
+
+    let mailIp = null;
+    const mx = dd.dnsRecords.find(r => r.name === domain && r.type === 'MX');
+    if (mx) {
+        const mxA = dd.dnsRecords.find(r => r.name === mx.value && r.type === 'A');
+        mailIp = mxA ? mxA.value : null;
+        tOut(`MX record: ${domain} -> ${mx.value}`, 't-dim');
+    }
+    if (!mailIp) {
+        const a = dd.dnsRecords.find(r => r.name === domain && r.type === 'A');
+        if (a) mailIp = a.value;
+    }
+    if (!mailIp) { tOut(`Cannot resolve mail server for ${domain}`, 't-err'); return }
+
+    tOut(`Connecting to ${mailIp}:25 (SMTP)...`, 't-dim');
+    const c = connectToServer(dev, mailIp, 'mail', 'mail');
+    if (!c) return;
+    logPacketCapture(c.route.path, devIp(dev), mailIp, 'TCP', `SMTP → ${addr}`);
+
+    const md = c.dev;
+    if (md.mailDomain !== domain) { tOut(`550 Relay denied for domain ${domain}`, 't-err'); return }
+    if (!md.mailUsers.includes(user)) { tOut(`550 Unknown user: ${user}`, 't-err'); return }
+
+    tOut(`220 ${md.name} SMTP ready`, 't-ok');
+    tOut(`MAIL FROM: <${dev.name}@local>`, 't-dim');
+    tOut('250 OK', 't-ok');
+    tOut(`RCPT TO: <${addr}>`, 't-dim');
+    tOut('250 OK', 't-ok');
+    tOut('DATA', 't-dim');
+    tOut('354 Start mail input', 't-ok');
+    tOut('Subject: Test mail', 't-dim');
+    tOut('.', 't-dim');
+    tOut(`250 Message accepted for delivery to ${addr}`, 't-ok');
+}
+
+function cmdFtp(dev, args) {
+    if (!requireArg(args, 'ftp <IP|hostname>')) return;
+    tOut(`Connecting to ${args[0]}:21...`, 't-dim');
+    const c = connectToServer(dev, args[0], 'ftp', 'ftp');
+    if (!c) return;
+    logPacketCapture(c.route.path, devIp(dev), c.ip, 'TCP', `FTP → ${args[0]}`);
+
+    tOut(`220 ${c.dev.name} FTP server ready`, 't-ok');
+    tOut('230 Login successful (anonymous)', 't-ok');
+    tOut('ftp> ls', 't-dim');
+    tOut(`227 Entering Passive Mode (${c.ip.replace(/\./g, ',')},200,21)`, 't-info');
+    tOut('150 Opening data connection', 't-ok');
+    c.dev.ftpFiles.forEach(f => tOut(`  ${f}`, 't-white'));
+    tOut(`226 Transfer complete. ${c.dev.ftpFiles.length} files`, 't-ok');
+    tOut('ftp> quit', 't-dim');
+    tOut('221 Goodbye', 't-ok');
+}
+
+function cmdNtpdate(dev, args) {
+    if (!requireArg(args, 'ntpdate <IP|hostname>')) return;
+    const c = connectToServer(dev, args[0], 'ntp', 'ntpdate');
+    if (!c) return;
+    logPacketCapture(c.route.path, devIp(dev), c.ip, 'UDP', `NTP → ${args[0]}`);
+
+    const offset = (Math.random() * 0.02 - 0.01).toFixed(6);
+    tOut(`server ${c.ip}, stratum ${c.dev.ntpStratum}`, 't-info');
+    tOut(`${new Date().toUTCString()}`, 't-white');
+    tOut(`adjust time server ${c.ip} offset ${offset} sec`, 't-ok');
+}
+
+function cmdTcpdump(dev, args) {
+    // Find capture devices: by name, or all reachable
+    let caps = devices.filter(d => d.type === 'capture' && !d.down);
+    if (args[0]) {
+        caps = caps.filter(d => d.name.toLowerCase().includes(args[0].toLowerCase()));
+        if (!caps.length) { tOut(`tcpdump: capture device "${args[0]}" not found`, 't-err'); return }
+    }
+    if (!caps.length) { tOut('tcpdump: no capture devices found', 't-err'); return }
+
+    caps.forEach(cap => {
+        tOut(`\n=== ${cap.name} (${cap.captureMode} mode) ===`, 't-info');
+        if (cap.capturedPackets.length === 0) {
+            tOut('(キャプチャなし)', 't-dim');
+        } else {
+            tOut('No.  Time      Source           Dest             Proto  Info', 't-white');
+            cap.capturedPackets.forEach((p, i) => {
+                tOut(` ${String(i + 1).padStart(3)}  ${p.time.padEnd(10)}${p.srcIp.padEnd(17)}${p.dstIp.padEnd(17)}${p.protocol.padEnd(7)}${p.info}`, 't-ok');
+            });
+            tOut(`\n${cap.capturedPackets.length} packets captured`, 't-dim');
+        }
+    });
+}
+
+// ─── Packet Capture Logging ───
+function logPacketCapture(path, srcIp, dstIp, protocol, info) {
+    if (!path || path.length < 2) return;
+    const ts = new Date().toLocaleTimeString();
+    const seen = new Set();
+
+    // Build check list: path devices + adjacent switches not in path
+    // (findNextHop skips L2 switches, so they may not appear in path)
+    const checkList = [...path];
+    const pathIds = new Set(path.map(d => d.id));
+    path.forEach(d => {
+        d.interfaces.forEach(f => {
+            if (!f.linkId) return;
+            const lk = findLink(f.linkId);
+            if (!lk) return;
+            const pid = linkPeer(lk, d.id);
+            if (pathIds.has(pid)) return;
+            const peer = findDev(pid);
+            if (peer && (peer.type === 'l2switch' || peer.type === 'l3switch')) checkList.push(peer);
+        });
+    });
+
+    checkList.forEach(d => {
+        // Inline capture device in the path
+        if (d.type === 'capture' && d.captureMode === 'inline' && !d.down && !seen.has(d.id)) {
+            seen.add(d.id);
+            capturePush(d, { time: ts, srcIp, dstIp, protocol, info });
+        }
+        // Switch with mirror port → copy to capture device
+        if ((d.type === 'l2switch' || d.type === 'l3switch') && d.mirrorPort >= 0 && !seen.has('m' + d.id)) {
+            seen.add('m' + d.id);
+            const mf = d.interfaces[d.mirrorPort];
+            if (!mf || !mf.linkId) return;
+            const ml = findLink(mf.linkId);
+            if (!ml) return;
+            const mid = linkPeer(ml, d.id);
+            const md = findDev(mid);
+            if (md && md.type === 'capture' && !md.down) {
+                capturePush(md, { time: ts, srcIp, dstIp, protocol, info: `[SPAN:${d.name}] ${info}` });
+            }
+        }
+    });
+    if (selectedDevice && selectedDevice.type === 'capture') renderProps();
+}
+
+// ─── DNS Resolution ───
+// Pure A/CNAME lookup: returns resolved IP or null (prefers non-down targets)
+function lookupDnsA(dd, host) {
+    const recs = dd.dnsRecords.filter(r => r.name === host && r.type === 'A');
+    if (recs.length > 0) {
+        for (const r of recs) { const td = findDevByIp(r.value); if (td && !td.down) return r.value }
+        return recs[0].value;
+    }
+    const cn = dd.dnsRecords.find(r => r.name === host && r.type === 'CNAME');
+    if (cn) {
+        const aRecs = dd.dnsRecords.filter(r => r.name === cn.value && r.type === 'A');
+        if (aRecs.length > 0) {
+            for (const r of aRecs) { const td = findDevByIp(r.value); if (td && !td.down) return r.value }
+            return aRecs[0].value;
+        }
+    }
+    return null;
+}
+
+// Visible DNS: logs capture, shows terminal output, returns { ip, dnsPath } or null
+function resolveHostVisible(dev, host) {
+    if (validIp(host)) return { ip: host, dnsPath: null };
+    const dnsIp = dev.dnsServer;
+    if (!dnsIp) { tOut('DNS server not configured', 't-err'); return null }
+    const srcIp = devIp(dev);
+
+    const dr = routePacket(dev, dnsIp);
+    if (!dr.success) { tOut(`DNS: cannot reach ${dnsIp} (${dr.reason})`, 't-err'); return null }
+    const dd = findDevByIp(dnsIp);
+    if (!dd || dd.type !== 'dns' || dd.down) { tOut(`DNS: ${dnsIp} is not responding`, 't-err'); return null }
+
+    const returnPath = [...dr.path].reverse();
+    const dnsPath = [...dr.path, ...returnPath.slice(1)];
+    logPacketCapture(dr.path, srcIp, dnsIp, 'UDP', `DNS query: ${host}`);
+    logPacketCapture(returnPath, dnsIp, srcIp, 'UDP', `DNS response: ${host}`);
+    tOut(`* DNS: ${host} → ${dnsIp}`, 't-dim');
+
+    const resolved = lookupDnsA(dd, host);
+    if (resolved) { tOut(`* DNS: ${host} → ${resolved}`, 't-dim'); return { ip: resolved, dnsPath } }
+    tOut(`DNS: ${host}: NXDOMAIN`, 't-err');
+    return null;
+}
+
+// Prepend DNS round-trip path to protocol path, forming one continuous route
+function buildFullPath(dnsPath, protocolPath) {
+    if (!dnsPath) return protocolPath;
+    return [...dnsPath, ...protocolPath.slice(1)];
+}
+
+// ─── Connect Helper (resolve + route + type-check) ───
+function connectToServer(dev, target, serverType, label) {
+    const resolved = resolveHostVisible(dev, target);
+    if (!resolved) return null;
+    const ip = resolved.ip;
+    const r = routePacket(dev, ip);
+    if (!r.success) { tOut(`${label}: ${r.reason}`, 't-err'); return null }
+    animPath(buildFullPath(resolved.dnsPath, r.path), false);
+    if (serverType) {
+        const td = findDevByIp(ip);
+        if (!td || td.type !== serverType || td.down) {
+            tOut(`${label}: ${ip} is not a ${serverType} server or is down`, 't-err'); return null;
+        }
+        return { ip, dev: td, route: r };
+    }
+    return { ip, dev: findDevByIp(ip), route: r };
+}
+
+// ─── Routing Engine ───
+function isLinkUp(lid) { const l = findLink(lid); return l && !l.down }
+
+function routePacket(srcDev, dstIp) {
+    const path = [srcDev];
+    let cur = srcDev;
+    const vis = new Set([cur.id]);
+    let hops = 0;
+
+    if (cur.interfaces.some(i => i.ip === dstIp)) return { success: true, hops: 0, path, reason: '' };
+
+    while (hops < MAX_HOPS) {
+        if (cur.down) return { success: false, hops, path, reason: `${cur.name} is DOWN` };
+
+        // Firewall check
+        if (cur.type === 'firewall') {
+            const srcIp = devIp(srcDev, '');
+            const blocked = cur.fwRules.some(r =>
+                r.action === 'deny' &&
+                (!r.srcIp || r.srcIp === 'any' || r.srcIp === srcIp) &&
+                (!r.dstIp || r.dstIp === 'any' || r.dstIp === dstIp)
+            );
+            if (blocked) return { success: false, hops, path, reason: `${cur.name}: FWで拒否` };
+        }
+
+        // Direct connected network
+        const dif = cur.interfaces.find(f => {
+            if (!f.ip || !f.linkId) return false;
+            if (!isLinkUp(f.linkId)) return false;
+            return sameNet(f.ip, dstIp, f.mask);
+        });
+
+        if (dif) {
+            const lk = findLink(dif.linkId);
+            if (!lk) return { success: false, hops, path, reason: 'リンク切断' };
+            const nextId = linkPeer(lk, cur.id);
+            const next = findDev(nextId);
+            if (!next || next.down) return { success: false, hops, path, reason: `${next?.name || '?'} is DOWN` };
+
+            if (isBridge(next)) {
+                const sr = searchSw(next, dstIp, vis);
+                if (sr) { path.push(...sr.path); return { success: true, hops: hops + sr.hops, path, reason: '' } }
+                return { success: false, hops, path, reason: '宛先ホスト到達不可' };
+            }
+
+            path.push(next);
+            if (next.interfaces.some(i => i.ip === dstIp)) return { success: true, hops: hops + 1, path, reason: '' };
+            if (DEV_TYPES[next.type].routing) { cur = next; vis.add(cur.id); hops++; continue }
+            return { success: false, hops, path, reason: '宛先ホスト到達不可' };
+        }
+
+        // Route lookup
+        let gw = null;
+        if (DEV_TYPES[cur.type].routing) {
+            let best = null, bestP = -1;
+            for (const r of cur.routes) {
+                if (!r.dest || !r.mask || !r.gateway) continue;
+                const p = maskToPrefix(r.mask);
+                const rn = netAddr(r.dest, r.mask);
+                const dn = (ipToInt(dstIp) & ipToInt(r.mask)) >>> 0;
+                if (rn === dn && p > bestP) { best = r; bestP = p }
+            }
+            if (!best) best = cur.routes.find(r => r.dest === '0.0.0.0' && r.mask === '0.0.0.0');
+            if (best) gw = best.gateway;
+        } else if (cur.defaultGw) {
+            gw = cur.defaultGw;
+        }
+
+        if (!gw) return { success: false, hops, path, reason: `${cur.name}: ルートなし → ${dstIp}` };
+        const nhResult = findNextHop(cur, gw);
+        if (!nhResult) return { success: false, hops, path, reason: `${cur.name}: GW ${gw} 到達不可` };
+        const nh = nhResult.dev;
+        if (nh.down) return { success: false, hops, path, reason: `${nh.name} is DOWN` };
+        if (vis.has(nh.id)) return { success: false, hops, path, reason: 'ルーティングループ' };
+
+        path.push(...nhResult.via, nh); vis.add(nh.id); cur = nh; hops++;
+        if (cur.interfaces.some(i => i.ip === dstIp)) return { success: true, hops, path, reason: '' };
+    }
+    return { success: false, hops, path, reason: 'TTL超過' };
+}
+
+function searchSw(sw, dstIp, vis) {
+    const sv = new Set(vis); sv.add(sw.id);
+    const q = [{ dev: sw, path: [sw], hops: 1 }];
+    while (q.length) {
+        const { dev, path: cp, hops } = q.shift();
+        for (const f of dev.interfaces) {
+            if (!f.linkId || !isLinkUp(f.linkId)) continue;
+            const lk = findLink(f.linkId);
+            if (!lk) continue;
+            const nid = linkPeer(lk, dev.id);
+            if (sv.has(nid)) continue;
+            const nd = findDev(nid);
+            if (!nd || nd.down) continue;
+            sv.add(nid);
+            if (nd.interfaces.some(i => i.ip === dstIp)) return { path: [...cp, nd], hops };
+            if (isBridge(nd)) q.push({ dev: nd, path: [...cp, nd], hops: hops + 1 });
+        }
+    }
+    return null;
+}
+
+// Returns { dev, via: [sw1, sw2, ...] } or null. via = L2 switches traversed to reach the next hop.
+function findNextHop(cur, gwIp) {
+    for (const f of cur.interfaces) {
+        if (!f.linkId || !f.ip || !isLinkUp(f.linkId)) continue;
+        const lk = findLink(f.linkId);
+        if (!lk) continue;
+        const pid = linkPeer(lk, cur.id);
+        const peer = findDev(pid);
+        if (!peer || peer.down) continue;
+        if (isBridge(peer)) {
+            const r = findViaSw(peer, gwIp, new Set([cur.id]));
+            if (r) return r;
+            continue;
+        }
+        if (peer.interfaces.some(i => i.ip === gwIp)) return { dev: peer, via: [] };
+    }
+    return null;
+}
+
+// Returns { dev, via: [sw1, sw2, ...] } or null
+function findViaSw(sw, tip, vis) {
+    vis.add(sw.id);
+    for (const f of sw.interfaces) {
+        if (!f.linkId || !isLinkUp(f.linkId)) continue;
+        const lk = findLink(f.linkId);
+        if (!lk) continue;
+        const nid = linkPeer(lk, sw.id);
+        if (vis.has(nid)) continue;
+        const nd = findDev(nid);
+        if (!nd || nd.down) continue;
+        if (nd.interfaces.some(i => i.ip === tip)) return { dev: nd, via: [sw] };
+        if (isBridge(nd)) { const r = findViaSw(nd, tip, vis); if (r) { r.via.unshift(sw); return r } }
+    }
+    return null;
+}
+
+function eachBehindSw(sw, exId, fn) {
+    const vis = new Set([exId, sw.id]), q = [sw];
+    while (q.length) {
+        const d = q.shift();
+        for (const f of d.interfaces) {
+            if (!f.linkId || !isLinkUp(f.linkId)) continue;
+            const lk = findLink(f.linkId);
+            if (!lk) continue;
+            const nid = linkPeer(lk, d.id);
+            if (vis.has(nid)) continue;
+            vis.add(nid);
+            const nd = findDev(nid);
+            if (!nd || nd.down) continue;
+            fn(nd, lk.devA === d.id ? lk.portB : lk.portA);
+            if (isBridge(nd)) q.push(nd);
+        }
+    }
+}
+
+// ─── Packet Animation ───
+function animPath(path, failed) {
+    if (path.length < 2) return;
+    const pkt = { x: path[0].x, y: path[0].y, color: failed ? '#f55' : '#0f0' };
+    animPackets.push(pkt);
+    let seg = 0;
+
+    function step() {
+        if (seg >= path.length - 1) {
+            let blink = 0;
+            const iv = setInterval(() => {
+                pkt.color = blink % 2 === 0 ? (failed ? '#f55' : '#0f0') : 'transparent';
+                render(); blink++;
+                if (blink > ANIM_BLINK_COUNT) { clearInterval(iv); animPackets = animPackets.filter(p => p !== pkt); render() }
+            }, ANIM_BLINK_MS);
+            return;
+        }
+        const from = path[seg], to = path[seg + 1], frames = ANIM_FRAMES;
+        let f = 0;
+        (function move() {
+            f++;
+            const t = f / frames;
+            pkt.x = from.x + (to.x - from.x) * t;
+            pkt.y = from.y + (to.y - from.y) * t;
+            render();
+            if (f < frames) requestAnimationFrame(move);
+            else { seg++; step() }
+        })();
+    }
+    step();
+}
+
+// ─── Preset Helpers ───
+const OPTS_ALIAS = { gw: 'defaultGw', dns: 'dnsServer', proxy: 'proxyAddr' };
+const OPTS_DIRECT = [
+    'name', 'routes', 'dnsRecords', 'webHostname', 'webContent', 'proxyTarget',
+    'fwRules', 'mailDomain', 'mailUsers', 'lbTargets', 'lbMethod', 'lbHostname',
+    'ftpFiles', 'ntpStratum', 'radiusUsers', 'captureMode', 'mirrorPort',
+];
+
+function configureDev(dev, opts) {
+    OPTS_DIRECT.forEach(k => { if (k in opts) dev[k] = opts[k] });
+    Object.entries(OPTS_ALIAS).forEach(([alias, key]) => { if (alias in opts) dev[key] = opts[alias] });
+    if (opts.ips) opts.ips.forEach((conf, i) => Object.assign(dev.interfaces[i], conf));
+    if (opts.dhcpPool) Object.assign(dev.dhcpPool, opts.dhcpPool);
+    return dev;
+}
+
+// ─── Presets ───
+const PRESETS = {
+
+simple() {
+    const pc1 = configureDev(createDev('pc', 120, 230), {
+        name: 'PC1', ips: [{ ip: '192.168.1.10' }], gw: '192.168.1.1',
+    });
+    const r1 = configureDev(createDev('router', 420, 230), {
+        name: 'Router1',
+        ips: [{ ip: '192.168.1.1' }, { ip: '192.168.2.1' }],
+    });
+    const pc2 = configureDev(createDev('pc', 720, 230), {
+        name: 'PC2', ips: [{ ip: '192.168.2.10' }], gw: '192.168.2.1',
+    });
+    devices = [pc1, r1, pc2];
+    mkLink(pc1, 0, r1, 0); mkLink(r1, 1, pc2, 0);
+},
+
+dns_web() {
+    const pc = configureDev(createDev('pc', 80, 230), {
+        name: 'Client', ips: [{ ip: '10.0.1.10' }], gw: '10.0.1.1', dns: '10.0.2.53',
+    });
+    const sw1 = configureDev(createDev('l2switch', 220, 230), { name: 'SW1' });
+    const r = configureDev(createDev('router', 400, 230), {
+        name: 'Router', ips: [{ ip: '10.0.1.1' }, { ip: '10.0.2.1' }],
+    });
+    const sw2 = configureDev(createDev('l2switch', 560, 230), { name: 'SW2' });
+    const dns = configureDev(createDev('dns', 680, 150), {
+        name: 'DNS', ips: [{ ip: '10.0.2.53' }],
+        dnsRecords: [{ name: 'www.example.com', type: 'A', value: '10.0.2.80' }],
+    });
+    const web = configureDev(createDev('web', 680, 310), {
+        name: 'WebSrv', ips: [{ ip: '10.0.2.80' }],
+        webHostname: 'www.example.com', webContent: '<h1>Welcome to Example.com</h1>',
+    });
+    devices = [pc, sw1, r, sw2, dns, web];
+    mkLink(pc, 0, sw1, 0); mkLink(sw1, 1, r, 0);
+    mkLink(r, 1, sw2, 0); mkLink(sw2, 1, dns, 0); mkLink(sw2, 2, web, 0);
+},
+
+redundant_router() {
+    const pc = configureDev(createDev('pc', 60, 230), {
+        name: 'PC1', ips: [{ ip: '10.0.1.10' }], gw: '10.0.1.1', dns: '10.0.3.53',
+    });
+    const sw1 = configureDev(createDev('l2switch', 180, 230), { name: 'SW1' });
+    const r1 = configureDev(createDev('router', 320, 230), {
+        name: 'R1-Main',
+        ips: [{ ip: '10.0.1.1' }, { ip: '172.16.1.1', mask: '255.255.255.252' }, { ip: '172.16.2.1', mask: '255.255.255.252' }],
+        routes: [
+            { dest: '10.0.3.0', mask: '255.255.255.0', gateway: '172.16.1.2' },
+            { dest: '0.0.0.0', mask: '0.0.0.0', gateway: '172.16.2.2' },
+        ],
+    });
+    const r2 = configureDev(createDev('router', 520, 160), {
+        name: 'R2-Pri',
+        ips: [{ ip: '172.16.1.2', mask: '255.255.255.252' }, { ip: '10.0.3.1' }],
+        routes: [{ dest: '10.0.1.0', mask: '255.255.255.0', gateway: '172.16.1.1' }],
+    });
+    const r3 = configureDev(createDev('router', 520, 300), {
+        name: 'R3-Bkup',
+        ips: [{ ip: '172.16.2.2', mask: '255.255.255.252' }, { ip: '10.0.3.2' }],
+        routes: [{ dest: '10.0.1.0', mask: '255.255.255.0', gateway: '172.16.2.1' }],
+    });
+    const sw2 = configureDev(createDev('l2switch', 700, 230), { name: 'SW2' });
+    const dns = configureDev(createDev('dns', 840, 160), {
+        name: 'DNS', ips: [{ ip: '10.0.3.53' }],
+        dnsRecords: [{ name: 'app.local', type: 'A', value: '10.0.3.80' }],
+    });
+    const web = configureDev(createDev('web', 840, 300), {
+        name: 'WebSrv', ips: [{ ip: '10.0.3.80' }],
+        webHostname: 'app.local', webContent: '<h1>App Server</h1><p>Primary path via R2, backup via R3.</p>',
+    });
+    devices = [pc, sw1, r1, r2, r3, sw2, dns, web];
+    mkLink(pc, 0, sw1, 0); mkLink(sw1, 1, r1, 0);
+    mkLink(r1, 1, r2, 0); mkLink(r1, 2, r3, 0);
+    mkLink(r2, 1, sw2, 0); mkLink(r3, 1, sw2, 1);
+    mkLink(sw2, 2, dns, 0); mkLink(sw2, 3, web, 0);
+},
+
+redundant_server() {
+    const pc = configureDev(createDev('pc', 60, 230), {
+        name: 'Client', ips: [{ ip: '10.0.1.10' }], gw: '10.0.1.1', dns: '10.0.2.53',
+    });
+    const r = configureDev(createDev('router', 220, 230), {
+        name: 'Router', ips: [{ ip: '10.0.1.1' }, { ip: '10.0.2.1' }],
+    });
+    const sw = configureDev(createDev('l2switch', 400, 230), { name: 'CoreSW' });
+    const bothWebRecords = [
+        { name: 'www.test.local', type: 'A', value: '10.0.2.80' },
+        { name: 'www.test.local', type: 'A', value: '10.0.2.81' },
+    ];
+    const dns1 = configureDev(createDev('dns', 570, 120), {
+        name: 'DNS-Pri', ips: [{ ip: '10.0.2.53' }], dnsRecords: [...bothWebRecords],
+    });
+    const dns2 = configureDev(createDev('dns', 570, 200), {
+        name: 'DNS-Bkup', ips: [{ ip: '10.0.2.54' }], dnsRecords: [...bothWebRecords],
+    });
+    const web1 = configureDev(createDev('web', 570, 290), {
+        name: 'Web-Pri', ips: [{ ip: '10.0.2.80' }],
+        webHostname: 'www.test.local', webContent: '<h1>Primary Web</h1><p>This is the primary server.</p>',
+    });
+    const web2 = configureDev(createDev('web', 570, 370), {
+        name: 'Web-Bkup', ips: [{ ip: '10.0.2.81' }],
+        webHostname: 'www.test.local', webContent: '<h1>Backup Web</h1><p>This is the backup server.</p>',
+    });
+    devices = [pc, r, sw, dns1, dns2, web1, web2];
+    mkLink(pc, 0, r, 0); mkLink(r, 1, sw, 0);
+    mkLink(sw, 1, dns1, 0); mkLink(sw, 2, dns2, 0);
+    mkLink(sw, 3, web1, 0); mkLink(sw, 4, web2, 0);
+},
+
+corporate() {
+    const pc1 = configureDev(createDev('pc', 60, 150), {
+        name: 'PC1', ips: [{ ip: '192.168.1.10' }],
+        gw: '192.168.1.1', dns: '172.16.0.53', proxy: '192.168.1.100:8080',
+    });
+    const pc2 = configureDev(createDev('pc', 60, 310), {
+        name: 'PC2', ips: [{ ip: '192.168.1.20' }],
+        gw: '192.168.1.1', dns: '172.16.0.53', proxy: '192.168.1.100:8080',
+    });
+    const sw1 = configureDev(createDev('l2switch', 200, 230), { name: 'IntSW' });
+    const proxy = configureDev(createDev('proxy', 200, 380), {
+        name: 'Proxy',
+        ips: [{ ip: '192.168.1.100' }, { ip: '172.16.0.100' }],
+    });
+    const r = configureDev(createDev('router', 370, 230), {
+        name: 'CoreRT', ips: [{ ip: '192.168.1.1' }, { ip: '10.0.0.1', mask: '255.255.255.252' }],
+        routes: [{ dest: '172.16.0.0', mask: '255.255.255.0', gateway: '10.0.0.2' }],
+    });
+    const fw = configureDev(createDev('firewall', 530, 230), {
+        name: 'FW', ips: [{ ip: '10.0.0.2', mask: '255.255.255.252' }, { ip: '172.16.0.1' }],
+        routes: [
+            { dest: '192.168.1.0', mask: '255.255.255.0', gateway: '10.0.0.1' },
+            { dest: '0.0.0.0', mask: '0.0.0.0', gateway: '10.0.0.1' },
+        ],
+    });
+    const sw2 = configureDev(createDev('l2switch', 700, 230), { name: 'DMZ-SW' });
+    const dns = configureDev(createDev('dns', 830, 150), {
+        name: 'DNS', ips: [{ ip: '172.16.0.53' }],
+        dnsRecords: [{ name: 'www.corp.local', type: 'A', value: '172.16.0.80' }],
+    });
+    const web = configureDev(createDev('web', 830, 310), {
+        name: 'WebSrv', ips: [{ ip: '172.16.0.80' }],
+        webHostname: 'www.corp.local', webContent: '<h1>Corporate Portal</h1>',
+    });
+    devices = [pc1, pc2, sw1, proxy, r, fw, sw2, dns, web];
+    mkLink(pc1, 0, sw1, 0); mkLink(pc2, 0, sw1, 1);
+    mkLink(sw1, 2, proxy, 0); mkLink(sw1, 3, r, 0);
+    mkLink(r, 1, fw, 0); mkLink(fw, 1, sw2, 0);
+    mkLink(sw2, 1, dns, 0); mkLink(sw2, 2, web, 0); mkLink(proxy, 1, sw2, 3);
+},
+
+datacenter() {
+    const core1 = configureDev(createDev('l3switch', 350, 60), {
+        name: 'Core1',
+        ips: [{ ip: '10.0.0.1', mask: '255.255.255.252' }, { ip: '10.0.0.5', mask: '255.255.255.252' }, { ip: '10.0.0.9', mask: '255.255.255.252' }],
+        routes: [
+            { dest: '10.1.0.0', mask: '255.255.0.0', gateway: '10.0.0.2' },
+            { dest: '10.2.0.0', mask: '255.255.0.0', gateway: '10.0.0.6' },
+        ],
+    });
+    const core2 = configureDev(createDev('l3switch', 550, 60), {
+        name: 'Core2',
+        ips: [{ ip: '10.0.0.13', mask: '255.255.255.252' }, { ip: '10.0.0.17', mask: '255.255.255.252' }, { ip: '10.0.0.10', mask: '255.255.255.252' }],
+        routes: [
+            { dest: '10.1.0.0', mask: '255.255.0.0', gateway: '10.0.0.14' },
+            { dest: '10.2.0.0', mask: '255.255.0.0', gateway: '10.0.0.18' },
+        ],
+    });
+    const dist1 = configureDev(createDev('l3switch', 250, 180), {
+        name: 'Dist1',
+        ips: [{ ip: '10.0.0.2', mask: '255.255.255.252' }, { ip: '10.0.0.14', mask: '255.255.255.252' }, { ip: '10.1.0.1' }],
+        routes: [
+            { dest: '0.0.0.0', mask: '0.0.0.0', gateway: '10.0.0.1' },
+            { dest: '10.2.0.0', mask: '255.255.0.0', gateway: '10.0.0.1' },
+        ],
+    });
+    const dist2 = configureDev(createDev('l3switch', 650, 180), {
+        name: 'Dist2',
+        ips: [{ ip: '10.0.0.6', mask: '255.255.255.252' }, { ip: '10.0.0.18', mask: '255.255.255.252' }, { ip: '10.2.0.1' }],
+        routes: [
+            { dest: '0.0.0.0', mask: '0.0.0.0', gateway: '10.0.0.5' },
+            { dest: '10.1.0.0', mask: '255.255.0.0', gateway: '10.0.0.5' },
+        ],
+    });
+    const acc1 = configureDev(createDev('l2switch', 250, 310), { name: 'Access1' });
+    const acc2 = configureDev(createDev('l2switch', 650, 310), { name: 'Access2' });
+    const dns = configureDev(createDev('dns', 150, 410), {
+        name: 'DNS', ips: [{ ip: '10.1.0.53' }],
+        dnsRecords: [{ name: 'app.dc.local', type: 'A', value: '10.2.0.80' }],
+    });
+    const web = configureDev(createDev('web', 350, 410), {
+        name: 'AppSrv', ips: [{ ip: '10.1.0.80' }],
+        webHostname: 'app.dc.local', webContent: '<h1>DC Application</h1>',
+    });
+    const web2 = configureDev(createDev('web', 550, 410), {
+        name: 'DB-Web', ips: [{ ip: '10.2.0.80' }],
+        webHostname: 'db.dc.local', webContent: '<h1>Database Portal</h1>',
+    });
+    const pc = configureDev(createDev('pc', 780, 410), {
+        name: 'Admin', ips: [{ ip: '10.2.0.10' }], gw: '10.2.0.1', dns: '10.1.0.53',
+    });
+    devices = [core1, core2, dist1, dist2, acc1, acc2, dns, web, web2, pc];
+    mkLink(core1, 0, dist1, 0); mkLink(core1, 1, dist2, 0); mkLink(core1, 2, core2, 2);
+    mkLink(core2, 0, dist1, 1); mkLink(core2, 1, dist2, 1);
+    mkLink(dist1, 2, acc1, 0); mkLink(dist2, 2, acc2, 0);
+    mkLink(acc1, 1, dns, 0); mkLink(acc1, 2, web, 0);
+    mkLink(acc2, 1, web2, 0); mkLink(acc2, 2, pc, 0);
+},
+
+mail_system() {
+    const pc = configureDev(createDev('pc', 60, 200), {
+        name: 'PC1', ips: [{ ip: '10.0.1.10' }], gw: '10.0.1.1', dns: '10.0.2.53',
+    });
+    const sw1 = configureDev(createDev('l2switch', 200, 200), { name: 'SW1' });
+    const r = configureDev(createDev('router', 380, 200), {
+        name: 'Router', ips: [{ ip: '10.0.1.1' }, { ip: '10.0.2.1' }],
+    });
+    const sw2 = configureDev(createDev('l2switch', 560, 200), { name: 'SW2' });
+    const dns = configureDev(createDev('dns', 700, 100), {
+        name: 'DNS', ips: [{ ip: '10.0.2.53' }],
+        dnsRecords: [
+            { name: 'corp.local', type: 'MX', value: 'mail.corp.local' },
+            { name: 'mail.corp.local', type: 'A', value: '10.0.2.25' },
+            { name: 'ftp.corp.local', type: 'A', value: '10.0.2.21' },
+        ],
+    });
+    const mailSrv = configureDev(createDev('mail', 700, 200), {
+        name: 'MailSrv', ips: [{ ip: '10.0.2.25' }],
+        mailDomain: 'corp.local', mailUsers: ['admin', 'user1', 'user2'],
+    });
+    const ftpSrv = configureDev(createDev('ftp', 700, 300), {
+        name: 'FTPSrv', ips: [{ ip: '10.0.2.21' }],
+        ftpFiles: ['report.pdf', 'manual.docx', 'config.zip'],
+    });
+    devices = [pc, sw1, r, sw2, dns, mailSrv, ftpSrv];
+    mkLink(pc, 0, sw1, 0); mkLink(sw1, 1, r, 0);
+    mkLink(r, 1, sw2, 0); mkLink(sw2, 1, dns, 0);
+    mkLink(sw2, 2, mailSrv, 0); mkLink(sw2, 3, ftpSrv, 0);
+},
+
+full_enterprise() {
+    // DHCP + DNS + Mail + LB + Web x2 + NTP + RADIUS + FW
+    const pc1 = configureDev(createDev('pc', 40, 160), {
+        name: 'PC1', ips: [], gw: '', dns: '',
+    });
+    const pc2 = configureDev(createDev('pc', 40, 300), {
+        name: 'PC2', ips: [{ ip: '10.0.1.20' }], gw: '10.0.1.1', dns: '10.0.2.53',
+    });
+    const sw1 = configureDev(createDev('l2switch', 170, 230), { name: 'IntSW' });
+    const dhcp = configureDev(createDev('dhcp', 170, 370), {
+        name: 'DHCP', ips: [{ ip: '10.0.1.100' }],
+        dhcpPool: { start: '10.0.1.10', end: '10.0.1.50', mask: '255.255.255.0', gateway: '10.0.1.1', dns: '10.0.2.53' },
+    });
+    const r = configureDev(createDev('router', 320, 230), {
+        name: 'CoreRT', ips: [{ ip: '10.0.1.1' }, { ip: '10.0.0.1', mask: '255.255.255.252' }],
+        routes: [{ dest: '10.0.2.0', mask: '255.255.255.0', gateway: '10.0.0.2' }],
+    });
+    const fw = configureDev(createDev('firewall', 460, 230), {
+        name: 'FW', ips: [{ ip: '10.0.0.2', mask: '255.255.255.252' }, { ip: '10.0.2.1' }],
+        routes: [
+            { dest: '10.0.1.0', mask: '255.255.255.0', gateway: '10.0.0.1' },
+            { dest: '0.0.0.0', mask: '0.0.0.0', gateway: '10.0.0.1' },
+        ],
+    });
+    const sw2 = configureDev(createDev('l2switch', 600, 230), { name: 'SrvSW' });
+    const dns = configureDev(createDev('dns', 730, 80), {
+        name: 'DNS', ips: [{ ip: '10.0.2.53' }],
+        dnsRecords: [
+            { name: 'www.corp.local', type: 'A', value: '10.0.2.100' },
+            { name: 'corp.local', type: 'MX', value: 'mail.corp.local' },
+            { name: 'mail.corp.local', type: 'A', value: '10.0.2.25' },
+            { name: 'ftp.corp.local', type: 'A', value: '10.0.2.21' },
+        ],
+    });
+    const ntp = configureDev(createDev('ntp', 730, 160), {
+        name: 'NTP', ips: [{ ip: '10.0.2.123' }], ntpStratum: 2,
+    });
+    const lb = configureDev(createDev('lb', 730, 240), {
+        name: 'LB', ips: [{ ip: '10.0.2.100' }],
+        lbHostname: 'www.corp.local', lbMethod: 'round-robin',
+        lbTargets: [{ ip: '10.0.2.81', port: 80 }, { ip: '10.0.2.82', port: 80 }],
+    });
+    const mailSrv = configureDev(createDev('mail', 730, 320), {
+        name: 'MailSrv', ips: [{ ip: '10.0.2.25' }],
+        mailDomain: 'corp.local', mailUsers: ['admin', 'user1'],
+    });
+    const ftp = configureDev(createDev('ftp', 730, 400), {
+        name: 'FTPSrv', ips: [{ ip: '10.0.2.21' }],
+    });
+    const web1 = configureDev(createDev('web', 880, 200), {
+        name: 'Web1', ips: [{ ip: '10.0.2.81' }],
+        webHostname: 'www.corp.local', webContent: '<h1>Web Server 1</h1>',
+    });
+    const web2 = configureDev(createDev('web', 880, 280), {
+        name: 'Web2', ips: [{ ip: '10.0.2.82' }],
+        webHostname: 'www.corp.local', webContent: '<h1>Web Server 2</h1>',
+    });
+    const radius = configureDev(createDev('radius', 170, 100), {
+        name: 'RADIUS', ips: [{ ip: '10.0.1.200' }],
+        radiusUsers: [{ user: 'admin', pass: 'pass123' }, { user: 'user1', pass: 'abc456' }],
+    });
+    devices = [pc1, pc2, sw1, dhcp, radius, r, fw, sw2, dns, ntp, lb, mailSrv, ftp, web1, web2];
+    mkLink(pc1, 0, sw1, 0); mkLink(pc2, 0, sw1, 1);
+    mkLink(sw1, 2, dhcp, 0); mkLink(sw1, 3, r, 0); mkLink(sw1, 4, radius, 0);
+    mkLink(r, 1, fw, 0); mkLink(fw, 1, sw2, 0);
+    mkLink(sw2, 1, dns, 0); mkLink(sw2, 2, ntp, 0); mkLink(sw2, 3, lb, 0);
+    mkLink(sw2, 4, mailSrv, 0); mkLink(sw2, 5, ftp, 0);
+    mkLink(lb, 1, web1, 0); mkLink(lb, 2, web2, 0);
+},
+
+}; // end PRESETS
+
+// ─── Preset / Clear Handlers ───
+$('presetSelect').addEventListener('change', function() {
+    const v = this.value;
+    if (!v) return;
+    const sel = this;
+    const load = () => { resetState(); PRESETS[v](); sel.value = ''; setMode('select'); renderProps(); renderTermHeader(); render() };
+    if (devices.length > 0) { netsimConfirm('現在の構成をクリアしてプリセットを読み込みますか？', load); sel.value = '' }
+    else load();
+});
+
+$('clearBtn').addEventListener('click', () => {
+    if (!devices.length) return;
+    netsimConfirm('全クリアしますか？', () => { resetState(); setMode('select'); renderProps(); renderTermHeader(); render() });
+});
+
+render();
+})();
+</script>

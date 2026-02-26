@@ -32,6 +32,8 @@ class ToolsSitemap(Sitemap):
         ("tools:port_scanner", 0.7),
         ("tools:password_strength", 0.7),
         ("tools:subnet_calculator", 0.6),
+        ("tools:speech_to_text", 0.7),
+        ("tools:network_sim", 0.7),
     ]
 
     def items(self):

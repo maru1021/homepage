@@ -115,6 +115,14 @@ def subnet_calculator(request):
     return _render(request, "tools/subnet_calculator.html", "tools/_subnet_calculator_content.html")
 
 
+def speech_to_text(request):
+    return _render(request, "tools/speech_to_text.html", "tools/_speech_to_text_content.html")
+
+
+def network_sim(request):
+    return _render(request, "tools/network_sim.html", "tools/_network_sim_content.html")
+
+
 # ---------------------
 # API エンドポイント
 # ---------------------
