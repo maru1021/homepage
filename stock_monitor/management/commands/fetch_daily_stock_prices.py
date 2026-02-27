@@ -73,15 +73,51 @@ class Command(BaseCommand):
 
         saved_count = 0
         total_records = 0
+        failed_crypto = {}
         for ticker, name in STOCKS.items():
             try:
                 if ticker not in data.columns.get_level_values(0):
+                    # yfinance で取得できなかった仮想通貨を記録
+                    if ticker in CRYPTO_COINGECKO_MAP:
+                        failed_crypto[ticker] = name
                     continue
                 records = self._save_ticker_data(data[ticker], ticker, name)
                 total_records += records
                 saved_count += 1
             except (KeyError, IndexError) as e:
                 logger.warning(f'{ticker}: {e}')
+                if ticker in CRYPTO_COINGECKO_MAP:
+                    failed_crypto[ticker] = name
+
+        # yfinance で失敗した仮想通貨を CoinGecko でフォールバック
+        if failed_crypto:
+            cg_map = {
+                t: CRYPTO_COINGECKO_MAP[t] for t in failed_crypto
+            }
+            cg_data = fetch_crypto_from_coingecko(cg_map)
+            if cg_data:
+                from django.utils import timezone
+                from stock_monitor.config import JST
+                today = timezone.now().astimezone(JST).date()
+                for ticker, name in failed_crypto.items():
+                    if ticker in cg_data:
+                        d = cg_data[ticker]
+                        DailyStockPrice.objects.update_or_create(
+                            ticker=ticker, date=today,
+                            defaults={
+                                'name': name,
+                                'open': d['price'],
+                                'high': d['high_24h'],
+                                'low': d['low_24h'],
+                                'close': d['price'],
+                                'volume': d['volume'],
+                            },
+                        )
+                        saved_count += 1
+                        total_records += 1
+                self.stdout.write(
+                    f'CoinGecko フォールバック: {len(cg_data)}/{len(failed_crypto)}銘柄'
+                )
 
         StockFetchLog.objects.create(
             tickers_count=saved_count, success=True,
