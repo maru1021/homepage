@@ -85,7 +85,9 @@ class Command(BaseCommand):
         if (now_jst.weekday() < 5
                 and now_jst.hour * 60 + now_jst.minute >= DAILY_CLOSE_MINUTES
                 and self._daily_fetched_date != today):
-            self.stdout.write('閉場後の日足データ取得を実行...')
+            # 分足取得との間隔を空ける
+            self.stdout.write('閉場後の日足データ取得を60秒後に実行...')
+            time.sleep(60)
             try:
                 call_command('fetch_daily_stock_prices', '--once')
                 self._daily_fetched_date = today
@@ -109,9 +111,10 @@ class Command(BaseCommand):
         )
 
         if data.empty:
-            self.stderr.write('データが空です（市場時間外の可能性があります）')
+            self.stderr.write('データが空です（レートリミットまたは市場時間外の可能性）')
             StockFetchLog.objects.create(
-                tickers_count=0, success=True, message='データ空（市場時間外）',
+                tickers_count=0, success=False,
+                message='データ空（レートリミットまたは市場時間外）',
             )
             return
 

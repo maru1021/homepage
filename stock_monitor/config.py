@@ -4,18 +4,18 @@ from zoneinfo import ZoneInfo
 JST = ZoneInfo('Asia/Tokyo')
 
 # データ取得設定
-FETCH_INTERVAL = 300        # 分足取得間隔（秒）
-DAILY_FETCH_DELAY = 3       # 日足初回取得時の銘柄間待機（秒）
+FETCH_INTERVAL = 1800       # 分足取得間隔（秒）= 30分
+DAILY_FETCH_DELAY = 8       # 日足初回取得時の銘柄間待機（秒）
 INTRADAY_RETENTION_DAYS = 3 # 分足データの保持日数
 DAILY_CLOSE_MINUTES = 910   # 閉場後の日足取得トリガー（15:10 = 15*60+10）
 MAX_CHART_TICKERS = 5       # チャート同時表示の最大銘柄数
 DEFAULT_DAILY_MONTHS = 6    # 長期チャートのデフォルト月数
 
 # バッチ取得設定
-BATCH_SIZE = 50             # 1回の yf.download() あたりの銘柄数
-BATCH_DELAY = 3             # バッチ間の待機秒数
-MAX_RETRIES = 3             # リトライ最大回数
-RETRY_BACKOFF_BASE = 5      # リトライ待機の基底秒数（指数バックオフ）
+BATCH_SIZE = 10             # 1回の yf.download() あたりの銘柄数
+BATCH_DELAY = 8             # バッチ間の待機秒数
+MAX_RETRIES = 4             # リトライ最大回数
+RETRY_BACKOFF_BASE = 30     # リトライ待機の基底秒数（指数バックオフ）
 
 # ========== カテゴリ定義 ==========
 

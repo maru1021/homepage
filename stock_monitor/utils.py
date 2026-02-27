@@ -67,8 +67,17 @@ def batch_download(tickers_list, **yf_kwargs):
                             [batch, data.columns],
                         )
                     all_data.append(data)
-                success = True
-                break
+                    success = True
+                    break
+                # yfinance はレートリミット時に例外を投げず空データを返す
+                wait = RETRY_BACKOFF_BASE * (2 ** attempt)
+                logger.warning(
+                    'Batch %d/%d: empty data (likely rate limited), '
+                    'retry in %ds... (attempt %d/%d)',
+                    batch_idx + 1, len(batches), wait,
+                    attempt + 1, MAX_RETRIES,
+                )
+                time.sleep(wait)
             except Exception as e:
                 err_str = str(e)
                 if '429' in err_str or 'Too Many Requests' in err_str:
