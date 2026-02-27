@@ -62,64 +62,71 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('日足データ取得完了'))
 
     def _fetch_bulk_update(self):
-        """2回目以降: 全銘柄をバッチ分割で直近5日分取得"""
-        self.stdout.write('更新モード: 直近5日分をバッチ取得')
+        """2回目以降: 仮想通貨は CoinGecko、他は1銘柄ずつ yfinance で取得"""
+        from django.utils import timezone
+        from stock_monitor.config import (
+            CATEGORY_CRYPTO, JST, STOCKS_BY_CATEGORY,
+        )
 
-        data = batch_download(list(STOCKS.keys()), period='5d', interval='1d')
-
-        if data.empty:
-            self.stderr.write('データ空')
-            return
+        self.stdout.write('更新モード: 直近5日分を取得')
 
         saved_count = 0
         total_records = 0
-        failed_crypto = {}
-        for ticker, name in STOCKS.items():
+
+        # --- 仮想通貨: CoinGecko から一括取得 ---
+        crypto_tickers = STOCKS_BY_CATEGORY.get(CATEGORY_CRYPTO, {})
+        cg_data = fetch_crypto_from_coingecko(CRYPTO_COINGECKO_MAP)
+        if cg_data:
+            today = timezone.now().astimezone(JST).date()
+            for ticker, name in crypto_tickers.items():
+                if ticker in cg_data:
+                    d = cg_data[ticker]
+                    DailyStockPrice.objects.update_or_create(
+                        ticker=ticker, date=today,
+                        defaults={
+                            'name': name,
+                            'open': d['price'],
+                            'high': d['high_24h'],
+                            'low': d['low_24h'],
+                            'close': d['price'],
+                            'volume': d['volume'],
+                        },
+                    )
+                    saved_count += 1
+                    total_records += 1
+            self.stdout.write(f'  CoinGecko: {len(cg_data)}銘柄取得')
+
+        # --- その他: yfinance で1銘柄ずつ取得 ---
+        yf_stocks = {
+            t: n for t, n in STOCKS.items() if t not in crypto_tickers
+        }
+        items = list(yf_stocks.items())
+        self.stdout.write(f'  yfinance: {len(items)}銘柄を1つずつ取得')
+
+        for i, (ticker, name) in enumerate(items):
             try:
-                if ticker not in data.columns.get_level_values(0):
-                    if ticker in CRYPTO_COINGECKO_MAP:
-                        failed_crypto[ticker] = name
-                    continue
-                records = self._save_ticker_data(data[ticker], ticker, name)
-                if records == 0 and ticker in CRYPTO_COINGECKO_MAP:
-                    failed_crypto[ticker] = name
-                    continue
+                data = yf.download(
+                    ticker, period='5d', interval='1d',
+                    progress=False, threads=False,
+                )
+            except Exception as e:
+                logger.warning(f'{ticker} ダウンロードエラー: {e}')
+                time.sleep(DAILY_FETCH_DELAY)
+                continue
+
+            if data.empty:
+                time.sleep(DAILY_FETCH_DELAY)
+                continue
+
+            try:
+                records = self._save_ticker_data(data, ticker, name)
                 total_records += records
                 saved_count += 1
-            except (KeyError, IndexError) as e:
-                logger.warning(f'{ticker}: {e}')
-                if ticker in CRYPTO_COINGECKO_MAP:
-                    failed_crypto[ticker] = name
+            except Exception as e:
+                logger.warning(f'{ticker} 保存エラー: {e}')
 
-        # yfinance で失敗した仮想通貨を CoinGecko でフォールバック
-        if failed_crypto:
-            cg_map = {
-                t: CRYPTO_COINGECKO_MAP[t] for t in failed_crypto
-            }
-            cg_data = fetch_crypto_from_coingecko(cg_map)
-            if cg_data:
-                from django.utils import timezone
-                from stock_monitor.config import JST
-                today = timezone.now().astimezone(JST).date()
-                for ticker, name in failed_crypto.items():
-                    if ticker in cg_data:
-                        d = cg_data[ticker]
-                        DailyStockPrice.objects.update_or_create(
-                            ticker=ticker, date=today,
-                            defaults={
-                                'name': name,
-                                'open': d['price'],
-                                'high': d['high_24h'],
-                                'low': d['low_24h'],
-                                'close': d['price'],
-                                'volume': d['volume'],
-                            },
-                        )
-                        saved_count += 1
-                        total_records += 1
-                self.stdout.write(
-                    f'CoinGecko フォールバック: {len(cg_data)}/{len(failed_crypto)}銘柄'
-                )
+            if i < len(items) - 1:
+                time.sleep(DAILY_FETCH_DELAY)
 
         StockFetchLog.objects.create(
             tickers_count=saved_count, success=True,
