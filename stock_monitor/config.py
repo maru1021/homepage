@@ -7,6 +7,7 @@ JST = ZoneInfo('Asia/Tokyo')
 FETCH_INTERVAL = 1800       # 分足取得間隔（秒）= 30分
 DAILY_FETCH_DELAY = 8       # 日足初回取得時の銘柄間待機（秒）
 INTRADAY_RETENTION_DAYS = 3 # 分足データの保持日数
+INTRADAY_OVERLAP_MINUTES = 5  # 重複許容バッファ（直近N分は再保存）
 DAILY_CLOSE_MINUTES = 910   # 閉場後の日足取得トリガー（15:10 = 15*60+10）
 MAX_CHART_TICKERS = 5       # チャート同時表示の最大銘柄数
 DEFAULT_DAILY_MONTHS = 6    # 長期チャートのデフォルト月数

@@ -14,9 +14,12 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from django.db.models import Max
+
 from stock_monitor.config import (
     CATEGORY_LABELS, DAILY_CLOSE_MINUTES, FETCH_INTERVAL,
-    INTRADAY_RETENTION_DAYS, JST, MARKET_OVERVIEW_BY_CATEGORY, STOCKS,
+    INTRADAY_RETENTION_DAYS, INTRADAY_OVERLAP_MINUTES, JST,
+    MARKET_OVERVIEW_BY_CATEGORY, STOCKS,
     STOCKS_BY_CATEGORY, get_active_categories, is_market_open,
 )
 from stock_monitor.models import DailyStockPrice, StockFetchLog, StockPrice
@@ -118,19 +121,38 @@ class Command(BaseCommand):
             )
             return
 
+        # 銘柄ごとのDB最新タイムスタンプを一括取得
+        cutoff_map = {}
+        latest_by_ticker = (
+            StockPrice.objects
+            .filter(ticker__in=all_tickers.keys())
+            .values('ticker')
+            .annotate(latest=Max('timestamp'))
+        )
+        overlap = timezone.timedelta(minutes=INTRADAY_OVERLAP_MINUTES)
+        for row in latest_by_ticker:
+            cutoff_map[row['ticker']] = row['latest'] - overlap
+
         saved_count = 0
+        new_records = 0
         for ticker, name in all_tickers.items():
             try:
                 if ticker not in data.columns.get_level_values(0):
                     continue
 
                 o, h, l, c, v, valid_idx = parse_ohlcv(data[ticker])
+                cutoff_ts = cutoff_map.get(ticker)
                 for ts in valid_idx:
+                    ts_dt = ts.to_pydatetime()
+                    # カットオフ以前のデータはスキップ（既に保存済み）
+                    if cutoff_ts and ts_dt < cutoff_ts:
+                        continue
                     StockPrice.objects.update_or_create(
                         ticker=ticker,
-                        timestamp=ts.to_pydatetime(),
+                        timestamp=ts_dt,
                         defaults=build_ohlcv_defaults(name, o, h, l, c, v, ts),
                     )
+                    new_records += 1
                 saved_count += 1
             except (KeyError, IndexError) as e:
                 logger.warning(f'{ticker} のデータ解析エラー: {e}')
@@ -142,7 +164,7 @@ class Command(BaseCommand):
 
         StockFetchLog.objects.create(
             tickers_count=saved_count, success=True,
-            message=f'{saved_count}銘柄保存, {deleted}件削除',
+            message=f'{saved_count}銘柄, {new_records}件保存, {deleted}件削除',
         )
         # ログも古いものを削除（100件以上残っている場合）
         old_log_ids = list(
@@ -153,5 +175,5 @@ class Command(BaseCommand):
             StockFetchLog.objects.filter(id__in=old_log_ids).delete()
 
         self.stdout.write(self.style.SUCCESS(
-            f'[{timezone.now():%H:%M:%S}] {saved_count}銘柄を保存しました'
+            f'[{timezone.now():%H:%M:%S}] {saved_count}銘柄, {new_records}件を保存しました'
         ))
