@@ -77,11 +77,13 @@ class Command(BaseCommand):
         for ticker, name in STOCKS.items():
             try:
                 if ticker not in data.columns.get_level_values(0):
-                    # yfinance で取得できなかった仮想通貨を記録
                     if ticker in CRYPTO_COINGECKO_MAP:
                         failed_crypto[ticker] = name
                     continue
                 records = self._save_ticker_data(data[ticker], ticker, name)
+                if records == 0 and ticker in CRYPTO_COINGECKO_MAP:
+                    failed_crypto[ticker] = name
+                    continue
                 total_records += records
                 saved_count += 1
             except (KeyError, IndexError) as e:
