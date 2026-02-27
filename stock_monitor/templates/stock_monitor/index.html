@@ -10,7 +10,6 @@
         <h1>株価リアルタイムモニター</h1>
         <div class="stock-status">
             <span id="marketStatus" class="market-badge"></span>
-            <span id="refreshTimer" class="refresh-timer"></span>
             <span id="fetchStatus" class="fetch-status"></span>
         </div>
     </div>
@@ -96,7 +95,6 @@
 }
 .market-open { background: #0d6832; color: #fff; }
 .market-closed { background: #6c757d; color: #fff; }
-.refresh-timer { color: #888; }
 .fetch-status { color: #888; }
 .stock-info { color: #888; font-size: 0.85rem; margin-bottom: 1rem; }
 
@@ -614,20 +612,14 @@
     }
 
     function startTimer() {
-        const timerEl = document.getElementById('refreshTimer');
         setInterval(function() {
-            if (!isMarketOpen()) {
-                timerEl.textContent = '';
-                return;
-            }
+            if (!isMarketOpen()) return;
             countdown--;
             if (countdown <= 0) {
                 fetchPrices();
                 fetchMarketOverview();
                 if (getSelectedTickers().length > 0) fetchIntradayData();
             }
-            const c = Math.max(countdown, 0);
-            timerEl.textContent = '次の更新: ' + Math.floor(c/60) + ':' + String(c%60).padStart(2,'0');
         }, 1000);
     }
 
