@@ -1,0 +1,93 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; HTTPステータスコード一覧</div>
+    <h1>HTTPステータスコード一覧</h1>
+    <p class="tool-desc">HTTPステータスコードを検索して意味と使用例を確認できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_http_status.html" %}</template>
+
+    <div id="statusList"></div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.hs-group { margin-bottom: 1.5rem; }
+.hs-group-title { font-size: 1rem; font-weight: 700; padding: 0.5rem 0; border-bottom: 2px solid var(--color-border); margin-bottom: 0.5rem; }
+.hs-group-1xx .hs-group-title { color: #6366f1; }
+.hs-group-2xx .hs-group-title { color: #22c55e; }
+.hs-group-3xx .hs-group-title { color: #3b82f6; }
+.hs-group-4xx .hs-group-title { color: #f59e0b; }
+.hs-group-5xx .hs-group-title { color: #ef4444; }
+.hs-item { padding: 0.7rem 0.8rem; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); margin-bottom: 0.4rem; background: var(--color-bg-white); cursor: pointer; transition: border-color 0.15s; }
+.hs-item:hover { border-color: var(--color-primary); }
+.hs-item-header { display: flex; gap: 0.5rem; align-items: center; }
+.hs-code { font-weight: 700; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.95rem; min-width: 36px; }
+.hs-name { font-weight: 600; font-size: 0.9rem; }
+.hs-desc { display: none; margin-top: 0.5rem; font-size: 0.85rem; color: var(--color-text-light); line-height: 1.6; padding-top: 0.4rem; border-top: 1px solid var(--color-border-light); }
+.hs-item.open .hs-desc { display: block; }
+.hs-hidden { display: none; }
+</style>
+<script>
+(function() {
+    const CODES = [
+        [100,'Continue','クライアントはリクエストを続行してよい。サーバーが初期リクエストヘッダーを受け入れたことを示す。'],
+        [101,'Switching Protocols','サーバーがプロトコルの切り替えに同意した（WebSocket接続時など）。'],
+        [200,'OK','リクエスト成功。GETではリソースのレスポンス、POSTでは処理結果が返される。'],
+        [201,'Created','リクエスト成功で新しいリソースが作成された。REST APIのPOST成功時に使用。'],
+        [204,'No Content','リクエスト成功だがレスポンスボディなし。DELETEの成功時などに使用。'],
+        [301,'Moved Permanently','リソースが恒久的に新しいURLに移動した。SEOではリダイレクト時に重要。'],
+        [302,'Found','リソースが一時的に別のURLにある。一時的なリダイレクトに使用。'],
+        [304,'Not Modified','リソースが変更されていない。キャッシュの有効活用に使われる。'],
+        [307,'Temporary Redirect','一時的リダイレクト。HTTPメソッドを維持する点が302と異なる。'],
+        [308,'Permanent Redirect','恒久的リダイレクト。HTTPメソッドを維持する点が301と異なる。'],
+        [400,'Bad Request','リクエストの構文が不正。バリデーションエラー時などに返される。'],
+        [401,'Unauthorized','認証が必要。ログインしていない、またはトークンが無効な場合。'],
+        [403,'Forbidden','アクセス権限なし。認証済みだが、そのリソースへのアクセスが許可されていない。'],
+        [404,'Not Found','リソースが見つからない。URLの誤りや削除されたページ。最も有名なエラーコード。'],
+        [405,'Method Not Allowed','使用されたHTTPメソッドが許可されていない（例：GETのみのエンドポイントにPOST）。'],
+        [408,'Request Timeout','サーバーがリクエストの完了を待つ時間を超過した。'],
+        [409,'Conflict','リクエストがリソースの現在の状態と矛盾する。同時更新の競合時など。'],
+        [410,'Gone','リソースが恒久的に削除された。404と異なり、以前は存在していたことを明示。'],
+        [413,'Payload Too Large','リクエストボディがサーバーの許容サイズを超過。ファイルアップロード制限など。'],
+        [415,'Unsupported Media Type','リクエストのContent-Typeがサーバーでサポートされていない。'],
+        [422,'Unprocessable Entity','構文は正しいがセマンティックエラー。バリデーション失敗時にREST APIで使用。'],
+        [429,'Too Many Requests','レート制限超過。API呼び出し頻度が高すぎる場合。'],
+        [500,'Internal Server Error','サーバー内部エラー。サーバー側の予期しないエラー全般。'],
+        [502,'Bad Gateway','ゲートウェイ/プロキシがアップストリームサーバーから無効なレスポンスを受信。'],
+        [503,'Service Unavailable','サーバーが一時的に利用不可。メンテナンス中やサーバー過負荷時。'],
+        [504,'Gateway Timeout','ゲートウェイ/プロキシがアップストリームサーバーからの応答を待機中にタイムアウト。'],
+    ];
+
+    const GROUPS = { '1xx': '1xx - 情報レスポンス', '2xx': '2xx - 成功', '3xx': '3xx - リダイレクト', '4xx': '4xx - クライアントエラー', '5xx': '5xx - サーバーエラー' };
+    const container = document.getElementById('statusList');
+
+    function render(filter) {
+        container.innerHTML = '';
+        const grouped = {};
+        CODES.forEach(([code, name, desc]) => {
+            const key = Math.floor(code / 100) + 'xx';
+            if (!grouped[key]) grouped[key] = [];
+            const text = `${code} ${name} ${desc}`.toLowerCase();
+            const show = !filter || text.includes(filter.toLowerCase());
+            grouped[key].push({ code, name, desc, show });
+        });
+
+        Object.entries(GROUPS).forEach(([key, title]) => {
+            const items = grouped[key];
+            if (!items) return;
+            const visible = items.filter(i => i.show);
+            if (visible.length === 0) return;
+            const div = document.createElement('div');
+            div.className = `hs-group hs-group-${key}`;
+            div.innerHTML = `<div class="hs-group-title">${title}</div>`;
+            items.forEach(i => {
+                const item = document.createElement('div');
+                item.className = 'hs-item' + (i.show ? '' : ' hs-hidden');
+                item.innerHTML = `<div class="hs-item-header"><span class="hs-code">${i.code}</span><span class="hs-name">${i.name}</span></div><div class="hs-desc">${i.desc}</div>`;
+                item.addEventListener('click', () => item.classList.toggle('open'));
+                div.appendChild(item);
+            });
+            container.appendChild(div);
+        });
+    }
+
+    render('');
+})();
+</script>

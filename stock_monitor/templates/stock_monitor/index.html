@@ -16,6 +16,11 @@
 
     <div class="category-tabs" id="categoryTabs"></div>
 
+    <div class="view-mode-toggle" id="viewModeToggle">
+        <button class="view-mode-btn active" data-mode="prices">値動き</button>
+        <button class="view-mode-btn" data-mode="scores">スコア分析</button>
+    </div>
+
     <div class="stock-info">
         <p id="stockInfoText"><span id="totalTracked">-</span> 銘柄を監視中</p>
     </div>
@@ -48,6 +53,38 @@
             <div class="stock-all-toggle">
                 <button id="toggleAllStocks" class="btn-toggle-all">もっと表示 ▼</button>
             </div>
+        </div>
+    </div>
+
+    <div class="scores-section" id="scoresSection" style="display:none;">
+        <div class="scores-controls">
+            <select id="scoreSortBy">
+                <option value="combined">総合スコア順</option>
+                <option value="short_term">短期スコア順</option>
+                <option value="long_term">長期スコア順</option>
+            </select>
+        </div>
+        <div class="scores-table-wrapper">
+            <table class="stock-table scores-table">
+                <thead>
+                    <tr>
+                        <th class="col-rank">#</th>
+                        <th class="col-name">銘柄</th>
+                        <th class="col-score">総合</th>
+                        <th class="col-score">短期</th>
+                        <th class="col-score">長期</th>
+                        <th class="col-signals">シグナル</th>
+                    </tr>
+                </thead>
+                <tbody id="scoresBody">
+                    <tr>
+                        <td colspan="6" class="loading-cell">
+                            <div class="loading-spinner"></div>
+                            銘柄を選択してスコア分析タブを開いてください
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -211,6 +248,49 @@
 }
 .btn-toggle-all:hover { background: #2a2a3e; }
 
+/* ビューモード切替 */
+.view-mode-toggle {
+    display: flex; gap: 0; border: 1px solid #333;
+    border-radius: 6px; overflow: hidden; margin-bottom: 1rem; width: fit-content;
+}
+.view-mode-btn {
+    background: #1a1a2e; color: #888; border: none;
+    padding: 0.5rem 1.2rem; cursor: pointer; font-size: 0.85rem;
+    border-right: 1px solid #333; transition: background 0.2s;
+}
+.view-mode-btn:last-child { border-right: none; }
+.view-mode-btn.active { background: #e65100; color: #fff; }
+.view-mode-btn:hover:not(.active) { background: #2a2a3e; }
+
+/* スコア分析 */
+.scores-section { margin-bottom: 1rem; }
+.scores-controls {
+    display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center;
+}
+.scores-controls select {
+    background: #1a1a2e; color: #eee; border: 1px solid #333;
+    padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem;
+}
+.scores-table .col-score { width: 70px; text-align: center; }
+.scores-table .col-signals { text-align: left; }
+.scores-table th.col-score { text-align: center; }
+.scores-table th.col-signals { text-align: left; }
+.score-badge {
+    display: inline-block; padding: 0.15rem 0.5rem;
+    border-radius: 10px; font-weight: 600; font-size: 0.8rem;
+    min-width: 40px; text-align: center;
+}
+.score-high { background: rgba(0,200,83,0.2); color: #00c853; }
+.score-mid { background: rgba(255,212,59,0.2); color: #ffd43b; }
+.score-low { background: rgba(255,23,68,0.2); color: #ff1744; }
+.signal-tag {
+    display: inline-block; font-size: 0.7rem; padding: 0.1rem 0.4rem;
+    border-radius: 3px; margin: 0.1rem; background: #2a2a3e; color: #aaa;
+}
+.signal-bullish { background: rgba(0,200,83,0.15); color: #00c853; }
+.signal-bearish { background: rgba(255,23,68,0.15); color: #ff1744; }
+.signal-neutral { background: rgba(74,158,255,0.15); color: #4a9eff; }
+
 .chart-section { margin-top: 2rem; border-top: 1px solid #333; padding-top: 1.5rem; }
 .chart-header {
     display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;
@@ -349,6 +429,7 @@
     const API_STOCKS = "{% url 'stock_monitor:api_stock_list' %}";
     const API_MARKET_OVERVIEW = "{% url 'stock_monitor:api_market_overview' %}";
     const API_CATEGORIES = "{% url 'stock_monitor:api_categories' %}";
+    const API_SCORES = "{% url 'stock_monitor:api_stock_scores' %}";
     const CHART_COLORS = ['#4a9eff','#ff6b6b','#51cf66','#ffd43b','#cc5de8'];
 
     let countdown = REFRESH_SEC;
@@ -364,6 +445,8 @@
     const DEFAULT_DAILY_PERIOD = 6;
     let currentCategory = 'jp_stock';
     let categoryList = [];
+    let currentViewMode = 'prices';
+    let scoresCache = {};
 
     function getDailyPeriod(ticker) {
         return dailyPeriods[ticker] !== undefined ? dailyPeriods[ticker] : DEFAULT_DAILY_PERIOD;
@@ -454,8 +537,12 @@
         prevPrices = {};
         document.getElementById('toggleAllStocks').textContent = 'もっと表示 ▼';
 
-        fetchPrices();
-        fetchMarketOverview();
+        if (currentViewMode === 'scores') {
+            fetchScores();
+        } else {
+            fetchPrices();
+            fetchMarketOverview();
+        }
         fetchStockListForCategory();
     }
 
@@ -1135,6 +1222,81 @@
         );
         document.getElementById('chartStatus').textContent =
             '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
+    }
+
+    // ========== ビューモード切替 & スコア分析 ==========
+    document.querySelectorAll('.view-mode-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (currentViewMode === this.dataset.mode) return;
+            currentViewMode = this.dataset.mode;
+            document.querySelectorAll('.view-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+
+            var priceSection = document.querySelector('.market-top-row');
+            var scoreSection = document.getElementById('scoresSection');
+            var toggleBtn = document.querySelector('.stock-all-toggle');
+            if (currentViewMode === 'scores') {
+                priceSection.style.display = 'none';
+                if (toggleBtn) toggleBtn.style.display = 'none';
+                scoreSection.style.display = 'block';
+                fetchScores();
+            } else {
+                priceSection.style.display = '';
+                if (toggleBtn) toggleBtn.style.display = '';
+                scoreSection.style.display = 'none';
+            }
+        });
+    });
+
+    document.getElementById('scoreSortBy').addEventListener('change', function() {
+        fetchScores();
+    });
+
+    function fetchScores() {
+        var sortBy = document.getElementById('scoreSortBy').value;
+        var tbody = document.getElementById('scoresBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell"><div class="loading-spinner"></div>スコア計算中...</td></tr>';
+
+        fetch(API_SCORES + '?category=' + currentCategory + '&sort=' + sortBy)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                scoresCache[currentCategory] = data;
+                renderScores(data.scores);
+            })
+            .catch(function(e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">スコア取得エラー</td></tr>';
+            });
+    }
+
+    function scoreClass(score) {
+        if (score >= 70) return 'score-high';
+        if (score >= 40) return 'score-mid';
+        return 'score-low';
+    }
+
+    function renderScores(scores) {
+        var tbody = document.getElementById('scoresBody');
+        if (!scores || scores.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">データがありません</td></tr>';
+            return;
+        }
+        var html = '';
+        scores.forEach(function(s, i) {
+            html += '<tr>';
+            html += '<td class="col-rank">' + (i + 1) + '</td>';
+            html += '<td class="col-name">' + s.name + '<span class="ticker-code">' + s.ticker.replace('.T','') + '</span></td>';
+            html += '<td class="col-score"><span class="score-badge ' + scoreClass(s.combined_score) + '">' + s.combined_score.toFixed(1) + '</span></td>';
+            html += '<td class="col-score"><span class="score-badge ' + scoreClass(s.short_term_score) + '">' + s.short_term_score.toFixed(1) + '</span></td>';
+            html += '<td class="col-score"><span class="score-badge ' + scoreClass(s.long_term_score) + '">' + s.long_term_score.toFixed(1) + '</span></td>';
+            html += '<td class="col-signals">';
+            (s.signals || []).forEach(function(sig) {
+                var cls = sig.type === 'bullish' ? 'signal-bullish' : sig.type === 'bearish' ? 'signal-bearish' : 'signal-neutral';
+                html += '<span class="signal-tag ' + cls + '">' + sig.text + '</span>';
+            });
+            html += '</td></tr>';
+        });
+        tbody.innerHTML = html;
     }
 
     // ========== 初期化 ==========

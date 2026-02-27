@@ -1,0 +1,173 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ローン返済シミュレーター</div>
+    <h1>ローン返済シミュレーター</h1>
+    <p class="tool-desc">借入額・金利・期間を入力して毎月の返済額と返済計画を確認できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_loan_calculator.html" %}</template>
+
+    <div class="ci-form">
+        <div class="ci-row">
+            <label>借入額 <input type="number" id="principal" value="30000000" min="0" step="100000"> 円</label>
+            <label>年利 <input type="number" id="rate" value="1.5" min="0" max="100" step="0.01"> %</label>
+        </div>
+        <div class="ci-row">
+            <label>返済期間 <input type="number" id="years" value="35" min="1" max="50"> 年</label>
+            <label>返済方式
+                <select id="method">
+                    <option value="equal_payment">元利均等</option>
+                    <option value="equal_principal">元金均等</option>
+                </select>
+            </label>
+        </div>
+        <button id="calcBtn" type="button">計算する</button>
+    </div>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="ci-summary" id="summary"></div>
+        <div style="position:relative; height:350px;"><canvas id="chart"></canvas></div>
+        <div class="ci-table-wrap">
+            <table class="tool-table" id="detailTable">
+                <thead><tr><th>年</th><th>返済額/年</th><th>元金分</th><th>利息分</th><th>残高</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ci-form { background: var(--color-bg-white); padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin-bottom: 1.5rem; }
+.ci-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.ci-row label { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.ci-row input, .ci-row select { width: 120px; padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: right; }
+.ci-row select { text-align: left; }
+.ci-form button { width: 100%; padding: 0.7rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 1rem; cursor: pointer; }
+.ci-form button:hover { opacity: 0.85; }
+.ci-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.ci-summary .ci-card { background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; text-align: center; }
+.ci-card .ci-card-label { font-size: 0.8rem; color: var(--color-text-muted); }
+.ci-card .ci-card-value { font-size: 1.3rem; font-weight: bold; color: var(--color-primary); margin-top: 0.3rem; }
+.ci-table-wrap { max-height: 400px; overflow-y: auto; margin-top: 1rem; }
+</style>
+{% load static %}
+<script src="{% static 'vendor/chartjs/chart.min.js' %}"></script>
+<script>
+(function() {
+    function fmt(n) { return Math.round(n).toLocaleString('ja-JP'); }
+    let chartInstance = null;
+
+    document.getElementById('calcBtn').addEventListener('click', function() {
+        const P = parseFloat(document.getElementById('principal').value) || 0;
+        const r = (parseFloat(document.getElementById('rate').value) || 0) / 100;
+        const Y = parseInt(document.getElementById('years').value) || 1;
+        const method = document.getElementById('method').value;
+        const mr = r / 12;
+        const months = Y * 12;
+
+        let data = [];
+        let totalInterest = 0, totalPayment = 0, balance = P, monthlyFirst = 0;
+
+        if (method === 'equal_payment') {
+            const mp = mr > 0 ? P * mr * Math.pow(1 + mr, months) / (Math.pow(1 + mr, months) - 1) : P / months;
+            monthlyFirst = mp;
+            for (let y = 1; y <= Y; y++) {
+                let yPrincipal = 0, yInterest = 0;
+                for (let m = 0; m < 12; m++) {
+                    const interest = balance * mr;
+                    const principal = mp - interest;
+                    yInterest += interest;
+                    yPrincipal += principal;
+                    balance -= principal;
+                }
+                totalInterest += yInterest;
+                totalPayment += yPrincipal + yInterest;
+                data.push({ year: y, payment: yPrincipal + yInterest, principal: yPrincipal, interest: yInterest, balance: Math.max(balance, 0) });
+            }
+        } else {
+            const mpPrincipal = P / months;
+            monthlyFirst = mpPrincipal + P * mr;
+            for (let y = 1; y <= Y; y++) {
+                let yPrincipal = 0, yInterest = 0;
+                for (let m = 0; m < 12; m++) {
+                    const interest = balance * mr;
+                    yInterest += interest;
+                    yPrincipal += mpPrincipal;
+                    balance -= mpPrincipal;
+                }
+                totalInterest += yInterest;
+                totalPayment += yPrincipal + yInterest;
+                data.push({ year: y, payment: yPrincipal + yInterest, principal: yPrincipal, interest: yInterest, balance: Math.max(balance, 0) });
+            }
+        }
+
+        const summary = document.getElementById('summary');
+        summary.innerHTML = `
+            <div class="ci-card"><div class="ci-card-label">毎月返済額（初回）</div><div class="ci-card-value">${fmt(monthlyFirst)} 円</div></div>
+            <div class="ci-card"><div class="ci-card-label">返済総額</div><div class="ci-card-value">${fmt(totalPayment)} 円</div></div>
+            <div class="ci-card"><div class="ci-card-label">利息総額</div><div class="ci-card-value">${fmt(totalInterest)} 円</div></div>
+        `;
+
+        const tbody = document.querySelector('#detailTable tbody');
+        tbody.innerHTML = '';
+        data.forEach(d => {
+            tbody.innerHTML += `<tr><td>${d.year}年目</td><td>${fmt(d.payment)} 円</td><td>${fmt(d.principal)} 円</td><td>${fmt(d.interest)} 円</td><td>${fmt(d.balance)} 円</td></tr>`;
+        });
+
+        drawChart(data);
+        document.getElementById('resultPanel').style.display = '';
+    });
+
+    function drawChart(data) {
+        if (chartInstance) chartInstance.destroy();
+        const ctx = document.getElementById('chart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.year + '年目'),
+                datasets: [
+                    {
+                        label: '元金',
+                        data: data.map(d => Math.round(d.principal)),
+                        backgroundColor: 'rgba(59,130,246,0.8)',
+                        order: 2,
+                    },
+                    {
+                        label: '利息',
+                        data: data.map(d => Math.round(d.interest)),
+                        backgroundColor: 'rgba(239,68,68,0.6)',
+                        order: 1,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ja-JP') + ' 円';
+                            },
+                            afterBody: function(items) {
+                                const idx = items[0].dataIndex;
+                                const d = data[idx];
+                                return ['返済額合計: ' + fmt(d.payment) + ' 円', '残高: ' + fmt(d.balance) + ' 円'];
+                            },
+                        },
+                    },
+                    legend: { position: 'top' },
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: {
+                        stacked: true,
+                        ticks: {
+                            callback: function(v) { return v.toLocaleString('ja-JP'); },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    document.getElementById('calcBtn').click();
+})();
+</script>

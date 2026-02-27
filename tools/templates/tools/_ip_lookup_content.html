@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; IPアドレスからの住所検索</div>
     <h1>IPアドレスからの住所検索</h1>
     <p class="tool-desc">IPアドレスを入力すると、おおよその地域・ISP情報を表示します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_ip_lookup.html" %}</template>
 
     <div class="tool-form">
         <input type="text" id="ipInput" placeholder="例: 8.8.8.8" autocomplete="off" spellcheck="false">

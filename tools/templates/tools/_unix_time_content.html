@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Unix時間変換</div>
     <h1>Unix時間変換</h1>
     <p class="tool-desc">Unixタイムスタンプ（エポック秒）と人間が読める日時を相互変換します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_unix_time.html" %}</template>
 
     <div class="ut-now">
         <span>現在のUnix時間:</span>

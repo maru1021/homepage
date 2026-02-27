@@ -1,0 +1,113 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 画像フォーマット変換</div>
+    <h1>画像フォーマット変換</h1>
+    <p class="tool-desc">画像をPNG/JPEG/WebPに変換します。ブラウザ内処理でサーバーにアップロードしません。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_image_converter.html" %}</template>
+
+    <div class="ic-drop" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+        <p>画像をドラッグ&ドロップ または <button type="button" class="ic-select-btn" id="selectBtn">ファイルを選択</button></p>
+    </div>
+
+    <div id="editorPanel" style="display:none;">
+        <div class="ic-info" id="origInfo"></div>
+        <div class="ic-controls">
+            <label>変換先:
+                <select id="formatSelect">
+                    <option value="image/png">PNG</option>
+                    <option value="image/jpeg">JPEG</option>
+                    <option value="image/webp">WebP</option>
+                </select>
+            </label>
+            <label id="qualityLabel">品質: <input type="range" id="qualityRange" min="10" max="100" value="90"> <span id="qualityVal">90%</span></label>
+        </div>
+        <div class="tool-actions">
+            <button id="convertBtn" type="button">変換</button>
+            <button id="downloadBtn" type="button" class="btn-secondary" style="display:none;">ダウンロード</button>
+            <button id="resetBtn" type="button" class="btn-secondary">リセット</button>
+        </div>
+        <div id="resultInfo" class="ic-info" style="display:none;"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ic-drop { border: 2px dashed var(--color-border); border-radius: var(--radius-lg); padding: 3rem 2rem; text-align: center; color: var(--color-text-muted); cursor: pointer; transition: border-color 0.2s; }
+.ic-drop:hover,.ic-drop.dragover { border-color: var(--color-primary); background: var(--color-bg-subtle); }
+.ic-select-btn { background: var(--color-primary); color: #fff; border: none; padding: 0.4rem 1rem; border-radius: var(--radius-md); cursor: pointer; }
+.ic-info { font-size: 0.85rem; color: var(--color-text-muted); margin: 0.5rem 0; padding: 0.5rem; background: var(--color-bg-subtle); border-radius: var(--radius-md); }
+.ic-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 1rem 0; }
+.ic-controls label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+.ic-controls select { padding: 0.3rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+</style>
+<script>
+(function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const editorPanel = document.getElementById('editorPanel');
+    const qualityRange = document.getElementById('qualityRange');
+    const qualityVal = document.getElementById('qualityVal');
+    const formatSelect = document.getElementById('formatSelect');
+    let origImg = null, origSize = 0, origName = '';
+
+    document.getElementById('selectBtn').addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', (e) => { if (!e.target.closest('.ic-select-btn')) fileInput.click(); });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+
+    qualityRange.addEventListener('input', () => qualityVal.textContent = qualityRange.value + '%');
+    formatSelect.addEventListener('change', () => {
+        document.getElementById('qualityLabel').style.display = formatSelect.value === 'image/png' ? 'none' : '';
+    });
+
+    function fmtBytes(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(2) + ' MB'; }
+
+    function loadFile(file) {
+        origSize = file.size; origName = file.name.replace(/\.[^.]+$/, '');
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            origImg = new Image();
+            origImg.onload = function() {
+                document.getElementById('origInfo').textContent = `元画像: ${origImg.width} x ${origImg.height} px / ${fmtBytes(origSize)} / ${file.type}`;
+                editorPanel.style.display = '';
+                dropZone.style.display = 'none';
+                document.getElementById('resultInfo').style.display = 'none';
+                document.getElementById('downloadBtn').style.display = 'none';
+            };
+            origImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    document.getElementById('convertBtn').addEventListener('click', function() {
+        if (!origImg) return;
+        const fmt = formatSelect.value;
+        const q = parseInt(qualityRange.value) / 100;
+        const canvas = document.createElement('canvas');
+        canvas.width = origImg.width; canvas.height = origImg.height;
+        canvas.getContext('2d').drawImage(origImg, 0, 0);
+        canvas.toBlob(function(blob) {
+            const resultInfo = document.getElementById('resultInfo');
+            resultInfo.innerHTML = `変換後: ${fmtBytes(blob.size)} / ${fmt}`;
+            resultInfo.style.display = '';
+            const dlBtn = document.getElementById('downloadBtn');
+            dlBtn.style.display = '';
+            dlBtn.onclick = function() {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = origName + '.' + fmt.split('/')[1];
+                a.click();
+            };
+        }, fmt, fmt === 'image/png' ? undefined : q);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        origImg = null; editorPanel.style.display = 'none'; dropZone.style.display = ''; fileInput.value = '';
+    });
+})();
+</script>

@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; QRコード生成</div>
     <h1>QRコード生成</h1>
     <p class="tool-desc">URLやテキストを入力してQRコードを生成します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_qr_code.html" %}</template>
 
     <div class="tool-form">
         <input type="text" id="qrInput" placeholder="URLまたはテキストを入力" autocomplete="off">

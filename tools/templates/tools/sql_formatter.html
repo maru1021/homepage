@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}SQLフォーマッター - 無料オンラインツール{% endblock %}
+{% block meta_description %}SQLクエリを見やすく整形・圧縮できる無料オンラインツール。主要な構文をハイライト表示。{% endblock %}
+{% block og_title %}SQLフォーマッター - 無料オンラインツール{% endblock %}
+{% block og_description %}SQLクエリを整形・圧縮できる無料ツール{% endblock %}
+{% block twitter_title %}SQLフォーマッター - 無料オンラインツール{% endblock %}
+{% block twitter_description %}SQLクエリを整形・圧縮できる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "SQLフォーマッター",
+  "description": "SQLクエリを見やすく整形・圧縮できる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:sql_formatter' %}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "SQLフォーマッター" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_sql_formatter_content.html" %}
+{% endblock %}

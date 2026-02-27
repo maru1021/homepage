@@ -1,0 +1,145 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 複利計算シミュレーター</div>
+    <h1>複利計算シミュレーター</h1>
+    <p class="tool-desc">初期投資額・毎月の積立額・利率・期間を入力して将来の資産をシミュレーションします。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_compound_interest.html" %}</template>
+
+    <div class="ci-form">
+        <div class="ci-row">
+            <label>初期投資額 <input type="number" id="initial" value="1000000" min="0" step="10000"> 円</label>
+            <label>毎月の積立額 <input type="number" id="monthly" value="30000" min="0" step="1000"> 円</label>
+        </div>
+        <div class="ci-row">
+            <label>年利 <input type="number" id="rate" value="5" min="0" max="100" step="0.1"> %</label>
+            <label>運用期間 <input type="number" id="years" value="20" min="1" max="100"> 年</label>
+        </div>
+        <button id="calcBtn" type="button">計算する</button>
+    </div>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="ci-summary" id="summary"></div>
+        <div style="position:relative; height:350px;"><canvas id="chart"></canvas></div>
+        <div class="ci-table-wrap">
+            <table class="tool-table" id="detailTable">
+                <thead><tr><th>年</th><th>元本合計</th><th>運用益</th><th>総資産</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ci-form { background: var(--color-bg-white); padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin-bottom: 1.5rem; }
+.ci-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.ci-row label { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.ci-row input { width: 120px; padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: right; }
+.ci-form button { width: 100%; padding: 0.7rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 1rem; cursor: pointer; }
+.ci-form button:hover { opacity: 0.85; }
+.ci-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.ci-summary .ci-card { background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; text-align: center; }
+.ci-card .ci-card-label { font-size: 0.8rem; color: var(--color-text-muted); }
+.ci-card .ci-card-value { font-size: 1.3rem; font-weight: bold; color: var(--color-primary); margin-top: 0.3rem; }
+.ci-table-wrap { max-height: 400px; overflow-y: auto; margin-top: 1rem; }
+.ci-table-wrap { max-height: 400px; overflow-y: auto; margin-top: 1rem; }
+</style>
+{% load static %}
+<script src="{% static 'vendor/chartjs/chart.min.js' %}"></script>
+<script>
+(function() {
+    function fmt(n) { return Math.round(n).toLocaleString('ja-JP'); }
+    let chartInstance = null;
+
+    document.getElementById('calcBtn').addEventListener('click', function() {
+        const P = parseFloat(document.getElementById('initial').value) || 0;
+        const M = parseFloat(document.getElementById('monthly').value) || 0;
+        const r = (parseFloat(document.getElementById('rate').value) || 0) / 100;
+        const Y = parseInt(document.getElementById('years').value) || 1;
+        const mr = r / 12;
+
+        const data = [];
+        let total = P;
+        for (let y = 0; y <= Y; y++) {
+            const principal = P + M * 12 * y;
+            data.push({ year: y, principal: principal, total: total, gain: total - principal });
+            if (y < Y) {
+                for (let m = 0; m < 12; m++) {
+                    total = total * (1 + mr) + M;
+                }
+            }
+        }
+
+        const last = data[data.length - 1];
+        const summary = document.getElementById('summary');
+        summary.innerHTML = `
+            <div class="ci-card"><div class="ci-card-label">総資産</div><div class="ci-card-value">${fmt(last.total)} 円</div></div>
+            <div class="ci-card"><div class="ci-card-label">元本合計</div><div class="ci-card-value">${fmt(last.principal)} 円</div></div>
+            <div class="ci-card"><div class="ci-card-label">運用益</div><div class="ci-card-value">${fmt(last.gain)} 円</div></div>
+            <div class="ci-card"><div class="ci-card-label">利益率</div><div class="ci-card-value">${last.principal > 0 ? (last.gain / last.principal * 100).toFixed(1) : 0}%</div></div>
+        `;
+
+        const tbody = document.querySelector('#detailTable tbody');
+        tbody.innerHTML = '';
+        data.forEach(d => {
+            tbody.innerHTML += `<tr><td>${d.year}年</td><td>${fmt(d.principal)} 円</td><td>${fmt(d.gain)} 円</td><td>${fmt(d.total)} 円</td></tr>`;
+        });
+
+        drawChart(data);
+        document.getElementById('resultPanel').style.display = '';
+    });
+
+    function drawChart(data) {
+        if (chartInstance) chartInstance.destroy();
+        const ctx = document.getElementById('chart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.year + '年'),
+                datasets: [
+                    {
+                        label: '元本',
+                        data: data.map(d => Math.round(d.principal)),
+                        backgroundColor: 'rgba(59,130,246,0.9)',
+                        order: 2,
+                    },
+                    {
+                        label: '運用益',
+                        data: data.map(d => Math.round(d.gain)),
+                        backgroundColor: 'rgba(59,130,246,0.4)',
+                        order: 1,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ja-JP') + ' 円';
+                            },
+                            afterBody: function(items) {
+                                const idx = items[0].dataIndex;
+                                const d = data[idx];
+                                return '総資産: ' + fmt(d.total) + ' 円';
+                            },
+                        },
+                    },
+                    legend: { position: 'top' },
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: {
+                        stacked: true,
+                        ticks: {
+                            callback: function(v) { return v.toLocaleString('ja-JP'); },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    document.getElementById('calcBtn').click();
+})();
+</script>

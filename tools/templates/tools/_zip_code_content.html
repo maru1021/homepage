@@ -1,0 +1,163 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 郵便番号検索</div>
+    <h1>郵便番号検索</h1>
+    <p class="tool-desc">郵便番号から住所、または住所から郵便番号を検索できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_zip_code.html" %}</template>
+
+    <div class="zip-tabs">
+        <button type="button" class="zip-tab active" data-mode="zip">郵便番号 → 住所</button>
+        <button type="button" class="zip-tab" data-mode="addr">住所 → 郵便番号</button>
+    </div>
+
+    <div id="zipMode" class="zip-mode">
+        <div class="tool-form">
+            <input type="text" id="zipInput" placeholder="例: 1000001" maxlength="8" autocomplete="off" spellcheck="false">
+            <button id="zipBtn" type="button">検索</button>
+        </div>
+    </div>
+
+    <div id="addrMode" class="zip-mode" style="display:none">
+        <div class="tool-form">
+            <input type="text" id="addrInput" placeholder="例: 渋谷、博多区、札幌市中央区" autocomplete="off" spellcheck="false">
+            <button id="addrBtn" type="button">検索</button>
+        </div>
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">検索中...</div>
+
+    <div id="zipResult" style="display:none">
+        <table class="tool-table">
+            <tbody>
+                <tr><th>郵便番号</th><td id="r-zipcode"></td></tr>
+                <tr><th>都道府県</th><td id="r-pref"></td></tr>
+                <tr><th>市区町村</th><td id="r-city"></td></tr>
+                <tr><th>町域</th><td id="r-town"></td></tr>
+                <tr><th>住所（全体）</th><td id="r-full"></td></tr>
+            </tbody>
+        </table>
+        <div style="margin-top:0.8rem; text-align:right;">
+            <button type="button" class="copy-btn" id="copyAddrBtn">住所をコピー</button>
+        </div>
+    </div>
+
+    <div id="addrResult" style="display:none">
+        <table class="tool-table">
+            <thead><tr><th>郵便番号</th><th>都道府県</th><th>市区町村</th><th>町域</th></tr></thead>
+            <tbody id="addrResultBody"></tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.zip-tabs {
+    display: flex; margin-bottom: 1rem;
+    border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;
+}
+.zip-tab {
+    flex: 1; padding: 0.5rem; border: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600;
+    background: var(--color-bg-white); color: var(--color-text-muted);
+    transition: all 0.15s;
+}
+.zip-tab.active { background: var(--color-primary); color: #fff; }
+.copy-btn {
+    background: var(--color-primary); color: #fff; border: none;
+    padding: 0.4rem 1rem; border-radius: var(--radius-md);
+    cursor: pointer; font-size: 0.85rem;
+}
+.copy-btn:hover { opacity: 0.85; }
+#addrResult .tool-table th, #addrResult .tool-table td { font-size: 0.85rem; padding: 0.5rem; }
+.addr-row { cursor: pointer; transition: background 0.1s; }
+.addr-row:hover { background: rgba(108,92,231,0.06); }
+.addr-row .postal-code { color: var(--color-primary); font-weight: 600; }
+</style>
+<script>
+(function() {
+    /* ── ヘルパー ── */
+    function $(id) { return document.getElementById(id); }
+    function show(id) { $(id).style.display = 'block'; }
+    function hide(id) { $(id).style.display = 'none'; }
+    function setText(id, v) { $(id).textContent = v; }
+    function resetUI() { hide('error'); hide('loading'); hide('zipResult'); hide('addrResult'); }
+    function showError(msg) { setText('error', msg); show('error'); }
+    function formatPostal(code) { return code.slice(0, 3) + '-' + code.slice(3); }
+
+    function bindSearch(inputId, btnId, handler) {
+        $(btnId).addEventListener('click', handler);
+        $(inputId).addEventListener('keydown', function(e) { if (e.key === 'Enter') handler(); });
+    }
+
+    async function withLoading(btnId, fn) {
+        resetUI(); show('loading');
+        $(btnId).disabled = true;
+        try { await fn(); }
+        catch (e) { showError('通信エラーが発生しました'); }
+        finally { hide('loading'); $(btnId).disabled = false; }
+    }
+
+    /* ── モード切替 ── */
+    document.querySelectorAll('.zip-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.zip-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            resetUI();
+            var isZip = tab.dataset.mode === 'zip';
+            isZip ? (show('zipMode'), hide('addrMode')) : (hide('zipMode'), show('addrMode'));
+        });
+    });
+
+    /* ── 郵便番号 → 住所 ── */
+    bindSearch('zipInput', 'zipBtn', function() {
+        var raw = $('zipInput').value.replace(/[^0-9]/g, '');
+        if (raw.length !== 7) { showError('7桁の郵便番号を入力してください'); return; }
+        withLoading('zipBtn', async function() {
+            var resp = await fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + raw);
+            var data = await resp.json();
+            if (data.status !== 200 || !data.results) {
+                showError(data.message || '該当する住所が見つかりませんでした'); return;
+            }
+            var r = data.results[0];
+            setText('r-zipcode', formatPostal(r.zipcode));
+            setText('r-pref', r.address1);
+            setText('r-city', r.address2);
+            setText('r-town', r.address3);
+            setText('r-full', r.address1 + r.address2 + r.address3);
+            show('zipResult');
+        });
+    });
+
+    $('copyAddrBtn').addEventListener('click', function() { toolCopy($('r-full').textContent); });
+
+    /* ── 住所 → 郵便番号 ── */
+    bindSearch('addrInput', 'addrBtn', function() {
+        var keyword = $('addrInput').value.trim();
+        if (!keyword) { showError('住所キーワードを入力してください'); return; }
+        withLoading('addrBtn', async function() {
+            var resp = await fetch('https://geoapi.heartrails.com/api/json?method=suggest&keyword='
+                + encodeURIComponent(keyword) + '&matching=like');
+            var data = await resp.json();
+            var locations = data.response && data.response.location;
+            if (!locations || !locations.length) {
+                showError('該当する住所が見つかりませんでした'); return;
+            }
+            var body = $('addrResultBody');
+            body.innerHTML = '';
+            locations.forEach(function(loc) {
+                var formatted = formatPostal(loc.postal);
+                var tr = document.createElement('tr');
+                tr.className = 'addr-row';
+                tr.innerHTML = '<td class="postal-code">' + formatted + '</td>'
+                    + '<td>' + loc.prefecture + '</td>'
+                    + '<td>' + loc.city + '</td>'
+                    + '<td>' + loc.town + '</td>';
+                tr.addEventListener('click', function() {
+                    toolCopy(formatted, '\u3012' + formatted + ' をコピーしました');
+                });
+                body.appendChild(tr);
+            });
+            show('addrResult');
+        });
+    });
+})();
+</script>

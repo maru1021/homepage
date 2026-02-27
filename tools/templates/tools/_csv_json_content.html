@@ -1,0 +1,126 @@
+<div class="tool-page" style="max-width:900px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; CSV ↔ JSON 変換</div>
+    <h1>CSV ↔ JSON 変換</h1>
+    <p class="tool-desc">CSVとJSONを相互に変換できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_csv_json.html" %}</template>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div class="cj-container">
+        <div class="cj-pane">
+            <div class="cj-pane-header">
+                <span class="cj-label">CSV</span>
+                <button id="csvCopyBtn" type="button" class="btn-sm">コピー</button>
+            </div>
+            <textarea id="csvInput" class="tool-textarea" rows="16" placeholder="name,age,city&#10;太郎,25,東京&#10;花子,30,大阪">name,age,city
+太郎,25,東京
+花子,30,大阪
+次郎,28,名古屋</textarea>
+        </div>
+        <div class="cj-arrows">
+            <button id="csvToJsonBtn" type="button" title="CSV → JSON">→</button>
+            <button id="jsonToCsvBtn" type="button" title="JSON → CSV">←</button>
+        </div>
+        <div class="cj-pane">
+            <div class="cj-pane-header">
+                <span class="cj-label">JSON</span>
+                <button id="jsonCopyBtn" type="button" class="btn-sm">コピー</button>
+            </div>
+            <textarea id="jsonInput" class="tool-textarea" rows="16" placeholder='[{"name":"太郎","age":25}]'></textarea>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.cj-container { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: start; }
+.cj-pane-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
+.cj-label { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; }
+.cj-arrows { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 2rem; }
+.cj-arrows button { padding: 0.6rem 1rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 1.2rem; font-weight: bold; }
+.cj-arrows button:hover { opacity: 0.85; }
+.btn-sm { padding: 0.2rem 0.6rem; font-size: 0.8rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
+.btn-sm:hover { background: var(--color-bg-hover); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+@media (max-width: 700px) {
+    .cj-container { grid-template-columns: 1fr; }
+    .cj-arrows { flex-direction: row; justify-content: center; }
+    .cj-arrows button:nth-child(1)::after { content: ' CSV→JSON'; font-size: 0.7rem; }
+    .cj-arrows button:nth-child(2)::after { content: ' JSON→CSV'; font-size: 0.7rem; }
+}
+</style>
+<script>
+(function() {
+    const csvInput = document.getElementById('csvInput');
+    const jsonInput = document.getElementById('jsonInput');
+    const errorEl = document.getElementById('error');
+
+    function showError(msg) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+    function hideError() { errorEl.style.display = 'none'; }
+
+    function parseCSV(text) {
+        const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) throw new Error('CSVにはヘッダー行とデータ行が必要です');
+        const headers = parseCsvLine(lines[0]);
+        return lines.slice(1).map(line => {
+            const vals = parseCsvLine(line);
+            const obj = {};
+            headers.forEach((h, i) => {
+                let v = vals[i] || '';
+                if (v !== '' && !isNaN(v) && v.trim() !== '') v = Number(v);
+                obj[h] = v;
+            });
+            return obj;
+        });
+    }
+
+    function parseCsvLine(line) {
+        const result = [];
+        let current = '', inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (inQuote) {
+                if (c === '"' && line[i+1] === '"') { current += '"'; i++; }
+                else if (c === '"') inQuote = false;
+                else current += c;
+            } else {
+                if (c === '"') inQuote = true;
+                else if (c === ',') { result.push(current); current = ''; }
+                else current += c;
+            }
+        }
+        result.push(current);
+        return result;
+    }
+
+    function jsonToCSV(arr) {
+        if (!Array.isArray(arr) || arr.length === 0) throw new Error('空でない配列が必要です');
+        const headers = Object.keys(arr[0]);
+        const csvEscape = v => {
+            const s = String(v == null ? '' : v);
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+        };
+        const lines = [headers.join(',')];
+        arr.forEach(obj => lines.push(headers.map(h => csvEscape(obj[h])).join(',')));
+        return lines.join('\n');
+    }
+
+    document.getElementById('csvToJsonBtn').addEventListener('click', () => {
+        hideError();
+        try {
+            const data = parseCSV(csvInput.value);
+            jsonInput.value = JSON.stringify(data, null, 2);
+        } catch (e) { showError('CSV変換エラー: ' + e.message); }
+    });
+
+    document.getElementById('jsonToCsvBtn').addEventListener('click', () => {
+        hideError();
+        try {
+            const data = JSON.parse(jsonInput.value);
+            csvInput.value = jsonToCSV(data);
+        } catch (e) { showError('JSON変換エラー: ' + e.message); }
+    });
+
+    document.getElementById('csvCopyBtn').addEventListener('click', () => toolCopy(csvInput.value));
+    document.getElementById('jsonCopyBtn').addEventListener('click', () => toolCopy(jsonInput.value));
+})();
+</script>

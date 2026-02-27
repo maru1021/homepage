@@ -262,3 +262,30 @@ def api_categories(request):
         for k, v in CATEGORY_LABELS.items()
     ]
     return JsonResponse({'categories': categories})
+
+
+def api_stock_scores(request):
+    """カテゴリ内の銘柄スコアリング結果を返却"""
+    from .analysis import score_category
+
+    category = _parse_category(request)
+    sort_by = request.GET.get('sort', 'combined')
+    limit = int(request.GET.get('limit', '0'))
+
+    results = score_category(category)
+
+    sort_key = {
+        'short_term': 'short_term_score',
+        'long_term': 'long_term_score',
+    }.get(sort_by, 'combined_score')
+
+    results.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+
+    if limit > 0:
+        results = results[:limit]
+
+    return JsonResponse({
+        'category': category,
+        'scores': results,
+        'count': len(results),
+    })

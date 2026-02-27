@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}タイピング速度テスト - 無料オンラインツール{% endblock %}
+{% block meta_description %}英語のタイピング速度を測定できる無料ツール。WPMと正確性をリアルタイム表示。{% endblock %}
+{% block og_title %}タイピング速度テスト - 無料オンラインツール{% endblock %}
+{% block og_description %}タイピング速度を測定できる無料ツール{% endblock %}
+{% block twitter_title %}タイピング速度テスト - 無料オンラインツール{% endblock %}
+{% block twitter_description %}タイピング速度を測定できる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "タイピング速度テスト",
+  "description": "タイピング速度を測定できる無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:typing_test' %}",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "タイピング速度テスト" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_typing_test_content.html" %}
+{% endblock %}

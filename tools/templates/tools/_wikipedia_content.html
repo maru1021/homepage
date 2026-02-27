@@ -1,0 +1,160 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Wikipedia検索</div>
+    <h1>Wikipedia検索</h1>
+    <p class="tool-desc">キーワードを入力すると、Wikipediaの記事要約を表示します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_wikipedia.html" %}</template>
+
+    <div class="tool-form">
+        <input type="text" id="wikiInput" placeholder="例: 東京タワー" autocomplete="off" spellcheck="false">
+        <button id="searchBtn" type="button">検索</button>
+    </div>
+
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">検索中...</div>
+
+    <div id="result" class="wiki-result" style="display:none">
+        <div class="wiki-article">
+            <div class="wiki-header">
+                <img id="wikiThumb" class="wiki-thumb" style="display:none" alt="">
+                <div>
+                    <h2 id="wikiTitle"></h2>
+                    <a id="wikiLink" href="#" target="_blank" rel="noopener noreferrer" class="wiki-link">Wikipediaで全文を読む →</a>
+                </div>
+            </div>
+            <p id="wikiExtract" class="wiki-extract"></p>
+        </div>
+
+        <div id="suggestions" class="wiki-suggestions" style="display:none">
+            <h3>関連する記事</h3>
+            <div id="suggestionList" class="wiki-suggestion-list"></div>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.wiki-result { margin-top: 1rem; }
+.wiki-article {
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+.wiki-header {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+.wiki-thumb {
+    width: 120px;
+    height: auto;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.wiki-header h2 {
+    font-size: 1.3rem;
+    color: var(--color-dark);
+    margin-bottom: 0.3rem;
+}
+.wiki-link {
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+.wiki-link:hover { text-decoration: underline; }
+.wiki-extract {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+.wiki-suggestions {
+    margin-top: 1rem;
+}
+.wiki-suggestions h3 {
+    font-size: 0.95rem;
+    color: var(--color-text-light);
+    margin-bottom: 0.5rem;
+}
+.wiki-suggestion-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.wiki-suggestion-btn {
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--color-primary);
+}
+.wiki-suggestion-btn:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-primary);
+}
+@media (max-width: 500px) {
+    .wiki-header { flex-direction: column; align-items: center; text-align: center; }
+    .wiki-thumb { width: 100px; }
+}
+</style>
+<script>
+(function() {
+    const input = document.getElementById('wikiInput');
+    const btn = document.getElementById('searchBtn');
+    const errorEl = document.getElementById('error');
+    const loadingEl = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+
+    async function search(query) {
+        if (!query) query = input.value.trim();
+        if (!query) return;
+        input.value = query;
+        errorEl.style.display = 'none';
+        resultEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+        btn.disabled = true;
+        try {
+            const resp = await fetch('/tools/api/wikipedia/?q=' + encodeURIComponent(query));
+            const data = await resp.json();
+            if (!resp.ok) { errorEl.textContent = data.error || '検索に失敗しました'; errorEl.style.display = 'block'; return; }
+
+            document.getElementById('wikiTitle').textContent = data.title;
+            document.getElementById('wikiExtract').textContent = data.extract;
+            document.getElementById('wikiLink').href = data.url;
+
+            const thumb = document.getElementById('wikiThumb');
+            if (data.thumbnail) {
+                thumb.src = data.thumbnail;
+                thumb.style.display = 'block';
+            } else {
+                thumb.style.display = 'none';
+            }
+
+            const sugEl = document.getElementById('suggestions');
+            const sugList = document.getElementById('suggestionList');
+            if (data.suggestions && data.suggestions.length > 0) {
+                sugList.innerHTML = '';
+                for (const s of data.suggestions) {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'wiki-suggestion-btn';
+                    b.textContent = s;
+                    b.addEventListener('click', () => search(s));
+                    sugList.appendChild(b);
+                }
+                sugEl.style.display = 'block';
+            } else {
+                sugEl.style.display = 'none';
+            }
+
+            resultEl.style.display = 'block';
+        } catch { errorEl.textContent = '通信エラーが発生しました'; errorEl.style.display = 'block'; }
+        finally { loadingEl.style.display = 'none'; btn.disabled = false; }
+    }
+
+    btn.addEventListener('click', () => search());
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+})();
+</script>

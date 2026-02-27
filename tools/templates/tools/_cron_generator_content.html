@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Cron式ジェネレータ</div>
     <h1>Cron式ジェネレータ</h1>
     <p class="tool-desc">GUIでcron式を組み立てます。各フィールドを設定すると、cron式がリアルタイムで生成されます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_cron_generator.html" %}</template>
 
     <div class="cron-output">
         <code id="cronExpr">* * * * *</code>
@@ -115,7 +116,7 @@
     });
 
     document.getElementById('copyBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(cronExpr.textContent);
+        toolCopy(cronExpr.textContent);
     });
 
     document.querySelectorAll('[data-cron]').forEach(btn => {

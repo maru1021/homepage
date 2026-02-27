@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ネットワークシミュレーター</div>
     <h1>ネットワークシミュレーター</h1>
     <p class="tool-desc">デバイスを配置・接続し、ターミナルからコマンドを実行。右クリックで故障を設定して冗長構成の動作を確認できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_network_sim.html" %}</template>
 
     <div class="netsim-toolbar">
         <div class="netsim-palette" id="netsimPalette"></div>

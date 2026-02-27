@@ -1,0 +1,99 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; SQLフォーマッター</div>
+    <h1>SQLフォーマッター</h1>
+    <p class="tool-desc">SQLクエリを貼り付けて整形・圧縮できます。キーワードのハイライト表示付き。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_sql_formatter.html" %}</template>
+
+    <div class="tool-actions">
+        <button id="formatBtn" type="button">整形</button>
+        <button id="minifyBtn" type="button" class="btn-secondary">圧縮</button>
+        <button id="upperBtn" type="button" class="btn-secondary">キーワード大文字化</button>
+        <button id="copyBtn" type="button" class="btn-secondary">コピー</button>
+        <button id="clearBtn" type="button" class="btn-secondary">クリア</button>
+    </div>
+    <textarea id="sqlInput" class="tool-textarea" rows="14" placeholder="SELECT * FROM users WHERE id = 1;">SELECT u.id, u.name, u.email, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id WHERE u.active = 1 AND o.created_at > '2024-01-01' ORDER BY o.total DESC LIMIT 10;</textarea>
+    <div id="sqlHighlight" class="sql-highlight" style="display:none;"></div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.btn-secondary:hover { background: var(--color-bg-hover); }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.sql-highlight { padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: #1e1e2e; color: #cdd6f4; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; white-space: pre-wrap; line-height: 1.6; margin-top: 0.5rem; overflow-x: auto; }
+.sql-highlight .kw { color: #cba6f7; font-weight: bold; }
+.sql-highlight .fn { color: #89b4fa; }
+.sql-highlight .str { color: #a6e3a1; }
+.sql-highlight .num { color: #fab387; }
+.sql-highlight .cmt { color: #6c7086; font-style: italic; }
+</style>
+<script>
+(function() {
+    const input = document.getElementById('sqlInput');
+    const highlight = document.getElementById('sqlHighlight');
+    const KEYWORDS = ['SELECT','FROM','WHERE','AND','OR','NOT','IN','ON','AS','JOIN','INNER','LEFT','RIGHT','OUTER','CROSS','FULL','INSERT','INTO','VALUES','UPDATE','SET','DELETE','CREATE','TABLE','ALTER','DROP','INDEX','GROUP','BY','ORDER','HAVING','LIMIT','OFFSET','UNION','ALL','DISTINCT','BETWEEN','LIKE','IS','NULL','EXISTS','CASE','WHEN','THEN','ELSE','END','ASC','DESC','COUNT','SUM','AVG','MIN','MAX','WITH','RECURSIVE'];
+    const KW_SET = new Set(KEYWORDS);
+    const MAJOR = new Set(['SELECT','FROM','WHERE','JOIN','INNER JOIN','LEFT JOIN','RIGHT JOIN','FULL JOIN','CROSS JOIN','ON','AND','OR','GROUP BY','ORDER BY','HAVING','LIMIT','OFFSET','UNION','INSERT INTO','VALUES','UPDATE','SET','DELETE FROM','CREATE TABLE','ALTER TABLE','DROP TABLE','WITH']);
+
+    function formatSQL(sql) {
+        // Normalize whitespace
+        let s = sql.replace(/\s+/g, ' ').trim();
+        // Add newlines before major keywords
+        MAJOR.forEach(kw => {
+            const re = new RegExp('\\b(' + kw.replace(/ /g, '\\s+') + ')\\b', 'gi');
+            s = s.replace(re, '\n$1');
+        });
+        // Indent non-major lines
+        let lines = s.split('\n').filter(l => l.trim());
+        let result = [];
+        for (let line of lines) {
+            let trimmed = line.trim();
+            let upper = trimmed.toUpperCase();
+            let isMajor = false;
+            for (let kw of MAJOR) { if (upper.startsWith(kw)) { isMajor = true; break; } }
+            result.push(isMajor ? trimmed : '    ' + trimmed);
+        }
+        return result.join('\n');
+    }
+
+    function minifySQL(sql) {
+        return sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function uppercaseKeywords(sql) {
+        return sql.replace(/\b\w+\b/g, function(w) {
+            return KW_SET.has(w.toUpperCase()) ? w.toUpperCase() : w;
+        });
+    }
+
+    function highlightSQL(sql) {
+        let h = sql.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        // comments
+        h = h.replace(/(--.*$)/gm, '<span class="cmt">$1</span>');
+        // strings
+        h = h.replace(/('(?:[^'\\]|\\.)*')/g, '<span class="str">$1</span>');
+        // numbers
+        h = h.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
+        // keywords
+        const kwRe = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b', 'gi');
+        h = h.replace(kwRe, function(m) { return '<span class="kw">' + m + '</span>'; });
+        return h;
+    }
+
+    function showHighlight() {
+        highlight.innerHTML = highlightSQL(input.value);
+        highlight.style.display = input.value.trim() ? '' : 'none';
+    }
+
+    document.getElementById('formatBtn').addEventListener('click', () => { input.value = formatSQL(input.value); showHighlight(); });
+    document.getElementById('minifyBtn').addEventListener('click', () => { input.value = minifySQL(input.value); showHighlight(); });
+    document.getElementById('upperBtn').addEventListener('click', () => { input.value = uppercaseKeywords(input.value); showHighlight(); });
+    document.getElementById('copyBtn').addEventListener('click', () => toolCopy(input.value));
+    document.getElementById('clearBtn').addEventListener('click', () => { input.value = ''; highlight.style.display = 'none'; });
+    input.addEventListener('input', showHighlight);
+    showHighlight();
+})();
+</script>

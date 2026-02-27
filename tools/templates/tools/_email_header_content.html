@@ -1,0 +1,139 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; メールヘッダー解析</div>
+    <h1>メールヘッダー解析</h1>
+    <p class="tool-desc">メールのヘッダーを貼り付けて送信経路やSPF/DKIM情報を解析します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_email_header.html" %}</template>
+
+    <div class="tool-actions">
+        <button id="analyzeBtn" type="button">解析する</button>
+        <button id="clearBtn" type="button" class="btn-secondary">クリア</button>
+    </div>
+    <textarea id="headerInput" class="tool-textarea" rows="12" placeholder="メールヘッダーをここに貼り付けてください..."></textarea>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="eh-section">
+            <h2>基本情報</h2>
+            <table class="tool-table" id="basicTable"><tbody></tbody></table>
+        </div>
+        <div class="eh-section">
+            <h2>認証結果</h2>
+            <div id="authResults"></div>
+        </div>
+        <div class="eh-section">
+            <h2>送信経路（Received ヘッダー）</h2>
+            <div id="routeResults"></div>
+        </div>
+        <div class="eh-section">
+            <h2>全ヘッダー</h2>
+            <table class="tool-table" id="allHeaders"><tbody></tbody></table>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono','Fira Code',monospace; font-size: 12px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.eh-section { margin-top: 1.5rem; }
+.eh-section h2 { font-size: 1rem; margin-bottom: 0.5rem; color: var(--color-dark); }
+.eh-auth { padding: 0.5rem 0.8rem; border-radius: var(--radius-md); margin-bottom: 0.4rem; font-size: 0.9rem; }
+.eh-auth-pass { background: #dcfce7; color: #166534; }
+.eh-auth-fail { background: #fecaca; color: #991b1b; }
+.eh-auth-none { background: var(--color-bg-subtle); color: var(--color-text-muted); }
+.eh-route { padding: 0.8rem; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); margin-bottom: 0.4rem; background: var(--color-bg-white); font-size: 0.85rem; line-height: 1.5; }
+.eh-route-num { font-weight: bold; color: var(--color-primary); margin-right: 0.5rem; }
+.eh-route-server { font-weight: 600; }
+.eh-route-time { color: var(--color-text-muted); font-size: 0.8rem; }
+</style>
+<script>
+(function() {
+    document.getElementById('analyzeBtn').addEventListener('click', function() {
+        const raw = document.getElementById('headerInput').value;
+        if (!raw.trim()) return;
+
+        // Parse headers (handle continuation lines)
+        const unfolded = raw.replace(/\r?\n([ \t])/g, ' ');
+        const headers = [];
+        unfolded.split(/\r?\n/).forEach(line => {
+            const m = line.match(/^([A-Za-z0-9-]+):\s*(.*)/);
+            if (m) headers.push({ name: m[1], value: m[2] });
+        });
+
+        function getHeader(name) {
+            const h = headers.find(h => h.name.toLowerCase() === name.toLowerCase());
+            return h ? h.value : '';
+        }
+        function getAllHeaders(name) {
+            return headers.filter(h => h.name.toLowerCase() === name.toLowerCase()).map(h => h.value);
+        }
+
+        // Basic info
+        const basicBody = document.querySelector('#basicTable tbody');
+        basicBody.innerHTML = '';
+        const basics = [
+            ['From', getHeader('From')],
+            ['To', getHeader('To')],
+            ['Subject', getHeader('Subject')],
+            ['Date', getHeader('Date')],
+            ['Message-ID', getHeader('Message-ID')],
+            ['Return-Path', getHeader('Return-Path')],
+        ];
+        basics.forEach(([k, v]) => {
+            if (v) basicBody.innerHTML += `<tr><th>${k}</th><td>${escH(v)}</td></tr>`;
+        });
+
+        // Auth results
+        const authDiv = document.getElementById('authResults');
+        authDiv.innerHTML = '';
+        const authHeader = getHeader('Authentication-Results');
+        if (authHeader) {
+            const checks = ['spf', 'dkim', 'dmarc'];
+            checks.forEach(check => {
+                const re = new RegExp(check + '=([a-z]+)', 'i');
+                const m = authHeader.match(re);
+                if (m) {
+                    const result = m[1].toLowerCase();
+                    const cls = result === 'pass' ? 'eh-auth-pass' : result === 'fail' || result === 'softfail' ? 'eh-auth-fail' : 'eh-auth-none';
+                    authDiv.innerHTML += `<div class="eh-auth ${cls}">${check.toUpperCase()}: ${result}</div>`;
+                }
+            });
+        }
+        if (!authDiv.innerHTML) authDiv.innerHTML = '<div class="eh-auth eh-auth-none">Authentication-Results ヘッダーが見つかりません</div>';
+
+        // Received route
+        const routeDiv = document.getElementById('routeResults');
+        routeDiv.innerHTML = '';
+        const received = getAllHeaders('Received').reverse();
+        received.forEach((r, i) => {
+            const fromMatch = r.match(/from\s+(\S+)/i);
+            const byMatch = r.match(/by\s+(\S+)/i);
+            const dateMatch = r.match(/;\s*(.+)$/);
+            routeDiv.innerHTML += `
+                <div class="eh-route">
+                    <span class="eh-route-num">#${i + 1}</span>
+                    ${fromMatch ? `<span class="eh-route-server">${escH(fromMatch[1])}</span> → ` : ''}
+                    ${byMatch ? `<span class="eh-route-server">${escH(byMatch[1])}</span>` : ''}
+                    ${dateMatch ? `<br><span class="eh-route-time">${escH(dateMatch[1].trim())}</span>` : ''}
+                </div>
+            `;
+        });
+        if (!received.length) routeDiv.innerHTML = '<div class="eh-auth eh-auth-none">Received ヘッダーが見つかりません</div>';
+
+        // All headers
+        const allBody = document.querySelector('#allHeaders tbody');
+        allBody.innerHTML = headers.map(h => `<tr><th>${escH(h.name)}</th><td style="word-break:break-all;">${escH(h.value)}</td></tr>`).join('');
+
+        document.getElementById('resultPanel').style.display = '';
+    });
+
+    function escH(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('headerInput').value = '';
+        document.getElementById('resultPanel').style.display = 'none';
+    });
+})();
+</script>

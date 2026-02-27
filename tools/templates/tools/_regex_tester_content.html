@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 正規表現テスター</div>
     <h1>正規表現テスター</h1>
     <p class="tool-desc">正規表現パターンとテスト文字列を入力して、マッチ結果をリアルタイムで確認できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_regex_tester.html" %}</template>
 
     <div class="regex-input-row">
         <span class="regex-delim">/</span>

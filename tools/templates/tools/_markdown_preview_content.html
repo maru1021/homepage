@@ -1,0 +1,154 @@
+<div class="tool-page" style="max-width:1100px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Markdownプレビューア</div>
+    <h1>Markdownプレビューア</h1>
+    <p class="tool-desc">Markdownを入力するとリアルタイムでプレビューされます。HTMLとしてエクスポートも可能です。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_markdown_preview.html" %}</template>
+
+    <div class="tool-actions">
+        <button id="copyHtmlBtn" type="button" class="btn-secondary">HTMLをコピー</button>
+        <button id="clearBtn" type="button" class="btn-secondary">クリア</button>
+    </div>
+    <div class="md-container">
+        <div class="md-pane">
+            <div class="md-pane-label">Markdown</div>
+            <textarea id="mdInput" class="tool-textarea" rows="20" placeholder="# 見出し&#10;&#10;**太字** や *斜体* を入力...">## Hello, Markdown!
+
+**太字**、*斜体*、~~取り消し線~~が使えます。
+
+### リスト
+- 項目1
+- 項目2
+  - ネスト項目
+
+### コード
+```javascript
+console.log("Hello!");
+```
+
+### テーブル
+| 名前 | 年齢 |
+|------|------|
+| 太郎 | 25   |
+| 花子 | 30   |
+
+> 引用文もサポートしています。
+
+[リンク](https://example.com)</textarea>
+        </div>
+        <div class="md-pane">
+            <div class="md-pane-label">プレビュー</div>
+            <div id="mdPreview" class="md-preview"></div>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.md-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.md-pane-label { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.3rem; text-transform: uppercase; }
+.md-pane .tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.md-pane .tool-textarea:focus { border-color: var(--color-primary); }
+.md-preview { padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-white); min-height: 400px; overflow-y: auto; line-height: 1.7; }
+.md-preview h1,.md-preview h2,.md-preview h3,.md-preview h4 { margin: 1em 0 0.5em; color: var(--color-dark); }
+.md-preview h1 { font-size: 1.6rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+.md-preview h2 { font-size: 1.3rem; border-bottom: 1px solid var(--color-border-light); padding-bottom: 0.2em; }
+.md-preview h3 { font-size: 1.1rem; }
+.md-preview p { margin: 0.5em 0; }
+.md-preview code { background: var(--color-bg-subtle); padding: 0.15em 0.4em; border-radius: 3px; font-size: 0.9em; }
+.md-preview pre { background: #1e1e2e; color: #cdd6f4; padding: 1rem; border-radius: var(--radius-md); overflow-x: auto; margin: 0.8em 0; }
+.md-preview pre code { background: none; padding: 0; color: inherit; }
+.md-preview blockquote { border-left: 4px solid var(--color-primary); padding: 0.5em 1em; margin: 0.8em 0; background: var(--color-bg-subtle); border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.md-preview table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+.md-preview th,.md-preview td { border: 1px solid var(--color-border); padding: 0.5em 0.8em; text-align: left; }
+.md-preview th { background: var(--color-bg-subtle); font-weight: 600; }
+.md-preview ul,.md-preview ol { padding-left: 1.5em; margin: 0.5em 0; }
+.md-preview li { margin: 0.2em 0; }
+.md-preview a { color: var(--color-primary); }
+.md-preview del { text-decoration: line-through; color: var(--color-text-muted); }
+.md-preview img { max-width: 100%; border-radius: var(--radius-md); }
+.md-preview hr { border: none; border-top: 1px solid var(--color-border); margin: 1em 0; }
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.btn-secondary:hover { background: var(--color-bg-hover); }
+@media (max-width: 768px) { .md-container { grid-template-columns: 1fr; } }
+</style>
+<script>
+(function() {
+    const input = document.getElementById('mdInput');
+    const preview = document.getElementById('mdPreview');
+
+    function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function parseMd(md) {
+        let html = md;
+        // code blocks
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) {
+            return '<pre><code>' + escapeHtml(code.trim()) + '</code></pre>';
+        });
+        // inline code (preserve from further processing)
+        const codes = [];
+        html = html.replace(/`([^`]+)`/g, function(_, c) { codes.push(escapeHtml(c)); return '\x00CODE' + (codes.length-1) + '\x00'; });
+        // tables
+        html = html.replace(/^(\|.+\|)\n(\|[\s:|-]+\|)\n((?:\|.+\|\n?)*)/gm, function(_, header, sep, body) {
+            let t = '<table><thead><tr>';
+            header.split('|').filter(c=>c.trim()).forEach(c => t += '<th>' + c.trim() + '</th>');
+            t += '</tr></thead><tbody>';
+            body.trim().split('\n').forEach(row => {
+                t += '<tr>';
+                row.split('|').filter(c=>c.trim()).forEach(c => t += '<td>' + c.trim() + '</td>');
+                t += '</tr>';
+            });
+            return t + '</tbody></table>';
+        });
+        // headings
+        html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+        html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+        // hr
+        html = html.replace(/^---+$/gm, '<hr>');
+        // blockquote
+        html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+        // images
+        html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+        // links
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        // bold, italic, strikethrough
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+        // unordered list
+        html = html.replace(/(^- .+$(\n- .+$)*)/gm, function(block) {
+            const items = block.split('\n').map(l => '<li>' + l.replace(/^-\s+/, '').replace(/^\s+-\s+/, '') + '</li>').join('');
+            return '<ul>' + items + '</ul>';
+        });
+        // ordered list
+        html = html.replace(/(^\d+\. .+$(\n\d+\. .+$)*)/gm, function(block) {
+            const items = block.split('\n').map(l => '<li>' + l.replace(/^\d+\.\s+/, '') + '</li>').join('');
+            return '<ol>' + items + '</ol>';
+        });
+        // paragraphs
+        html = html.replace(/^(?!<[a-z/])((?!$).+)$/gm, '<p>$1</p>');
+        // restore inline code
+        html = html.replace(/\x00CODE(\d+)\x00/g, function(_, i) { return '<code>' + codes[i] + '</code>'; });
+        // clean empty lines
+        html = html.replace(/<p><\/p>/g, '');
+        // sanitize dangerous tags
+        html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+        html = html.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '');
+        html = html.replace(/javascript\s*:/gi, '');
+        return html;
+    }
+
+    function render() { preview.innerHTML = parseMd(input.value); }
+    input.addEventListener('input', render);
+    render();
+
+    document.getElementById('copyHtmlBtn').addEventListener('click', function() {
+        toolCopy(preview.innerHTML);
+    });
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        input.value = ''; render();
+    });
+})();
+</script>

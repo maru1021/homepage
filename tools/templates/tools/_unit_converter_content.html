@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 単位変換</div>
     <h1>単位変換</h1>
     <p class="tool-desc">カテゴリと単位を選んで数値を変換します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_unit_converter.html" %}</template>
 
     <div class="uc-category">
         <button type="button" class="uc-cat-btn active" data-cat="length">長さ</button>

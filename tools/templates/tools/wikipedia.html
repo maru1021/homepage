@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Wikipedia検索 - 無料オンラインツール{% endblock %}
+{% block meta_description %}Wikipediaの記事を検索して要約を表示する無料ツール。キーワードを入力するだけで記事の概要をすばやく確認できます。{% endblock %}
+{% block og_title %}Wikipedia検索 - 無料オンラインツール{% endblock %}
+{% block og_description %}Wikipediaの記事を検索して要約を表示する無料ツール{% endblock %}
+{% block twitter_title %}Wikipedia検索 - 無料オンラインツール{% endblock %}
+{% block twitter_description %}Wikipediaの記事を検索して要約を表示する無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Wikipedia検索",
+  "description": "Wikipediaの記事を検索して要約を表示する無料ツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:wikipedia' %}",
+  "applicationCategory": "UtilityApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "{{ SITE_NAME }}",
+    "url": "https://{{ request.get_host }}/"
+  },
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "Wikipedia検索" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_wikipedia_content.html" %}
+{% endblock %}

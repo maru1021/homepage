@@ -17,13 +17,17 @@ from django.utils import timezone
 from django.db.models import Max
 
 from stock_monitor.config import (
-    CATEGORY_LABELS, DAILY_CLOSE_MINUTES, FETCH_INTERVAL,
+    CATEGORY_CRYPTO, CATEGORY_LABELS, CRYPTO_COINGECKO_MAP,
+    DAILY_CLOSE_MINUTES, FETCH_INTERVAL,
     INTRADAY_RETENTION_DAYS, INTRADAY_OVERLAP_MINUTES, JST,
     MARKET_OVERVIEW_BY_CATEGORY, STOCKS,
     STOCKS_BY_CATEGORY, get_active_categories, is_market_open,
 )
 from stock_monitor.models import DailyStockPrice, StockFetchLog, StockPrice
-from stock_monitor.utils import batch_download, build_ohlcv_defaults, parse_ohlcv
+from stock_monitor.utils import (
+    batch_download, build_ohlcv_defaults, fetch_crypto_from_coingecko,
+    parse_ohlcv,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,56 +113,112 @@ class Command(BaseCommand):
             for items in MARKET_OVERVIEW_BY_CATEGORY.get(cat, {}).values():
                 for ticker, name in items:
                     all_tickers[ticker] = name
-        data = batch_download(
-            list(all_tickers.keys()), period='1d', interval='1m',
-        )
-
-        if data.empty:
-            self.stderr.write('データが空です（レートリミットまたは市場時間外の可能性）')
-            StockFetchLog.objects.create(
-                tickers_count=0, success=False,
-                message='データ空（レートリミットまたは市場時間外）',
-            )
-            return
-
-        # 銘柄ごとのDB最新タイムスタンプを一括取得
-        cutoff_map = {}
-        latest_by_ticker = (
-            StockPrice.objects
-            .filter(ticker__in=all_tickers.keys())
-            .values('ticker')
-            .annotate(latest=Max('timestamp'))
-        )
-        overlap = timezone.timedelta(minutes=INTRADAY_OVERLAP_MINUTES)
-        for row in latest_by_ticker:
-            cutoff_map[row['ticker']] = row['latest'] - overlap
 
         saved_count = 0
         new_records = 0
-        for ticker, name in all_tickers.items():
-            try:
-                if ticker not in data.columns.get_level_values(0):
+
+        # --- 仮想通貨: CoinGecko API から取得 ---
+        crypto_tickers = {}
+        if CATEGORY_CRYPTO in active_categories:
+            crypto_tickers = STOCKS_BY_CATEGORY.get(CATEGORY_CRYPTO, {})
+            # 概況の仮想通貨ティッカーも含める
+            for items in MARKET_OVERVIEW_BY_CATEGORY.get(
+                CATEGORY_CRYPTO, {},
+            ).values():
+                for ticker, name in items:
+                    if ticker in CRYPTO_COINGECKO_MAP:
+                        crypto_tickers[ticker] = name
+
+            crypto_data = fetch_crypto_from_coingecko(CRYPTO_COINGECKO_MAP)
+            if crypto_data:
+                now = timezone.now()
+                for ticker, name in crypto_tickers.items():
+                    if ticker in crypto_data:
+                        d = crypto_data[ticker]
+                        StockPrice.objects.update_or_create(
+                            ticker=ticker, timestamp=now,
+                            defaults={
+                                'name': name,
+                                'open': d['price'],
+                                'high': d['high_24h'],
+                                'low': d['low_24h'],
+                                'close': d['price'],
+                                'volume': d['volume'],
+                            },
+                        )
+                        saved_count += 1
+                        new_records += 1
+                self.stdout.write(
+                    f'  CoinGecko: {len(crypto_data)}銘柄取得'
+                )
+            else:
+                self.stderr.write('  CoinGecko: 取得失敗')
+
+        # --- その他: yfinance から取得 ---
+        yf_tickers = {
+            t: n for t, n in all_tickers.items()
+            if t not in crypto_tickers
+        }
+
+        if not yf_tickers:
+            # 仮想通貨のみがアクティブだった場合
+            self._finalize_intraday(saved_count, new_records)
+            return
+
+        data = batch_download(
+            list(yf_tickers.keys()), period='1d', interval='1m',
+        )
+
+        if data.empty:
+            self.stderr.write('yfinance データが空です（レートリミットまたは市場時間外の可能性）')
+            if saved_count == 0:
+                StockFetchLog.objects.create(
+                    tickers_count=0, success=False,
+                    message='データ空（レートリミットまたは市場時間外）',
+                )
+                return
+
+        if not data.empty:
+            # 銘柄ごとのDB最新タイムスタンプを一括取得
+            cutoff_map = {}
+            latest_by_ticker = (
+                StockPrice.objects
+                .filter(ticker__in=yf_tickers.keys())
+                .values('ticker')
+                .annotate(latest=Max('timestamp'))
+            )
+            overlap = timezone.timedelta(minutes=INTRADAY_OVERLAP_MINUTES)
+            for row in latest_by_ticker:
+                cutoff_map[row['ticker']] = row['latest'] - overlap
+
+            for ticker, name in yf_tickers.items():
+                try:
+                    if ticker not in data.columns.get_level_values(0):
+                        continue
+
+                    o, h, l, c, v, valid_idx = parse_ohlcv(data[ticker])
+                    cutoff_ts = cutoff_map.get(ticker)
+                    for ts in valid_idx:
+                        ts_dt = ts.to_pydatetime()
+                        if cutoff_ts and ts_dt < cutoff_ts:
+                            continue
+                        StockPrice.objects.update_or_create(
+                            ticker=ticker,
+                            timestamp=ts_dt,
+                            defaults=build_ohlcv_defaults(
+                                name, o, h, l, c, v, ts,
+                            ),
+                        )
+                        new_records += 1
+                    saved_count += 1
+                except (KeyError, IndexError) as e:
+                    logger.warning(f'{ticker} のデータ解析エラー: {e}')
                     continue
 
-                o, h, l, c, v, valid_idx = parse_ohlcv(data[ticker])
-                cutoff_ts = cutoff_map.get(ticker)
-                for ts in valid_idx:
-                    ts_dt = ts.to_pydatetime()
-                    # カットオフ以前のデータはスキップ（既に保存済み）
-                    if cutoff_ts and ts_dt < cutoff_ts:
-                        continue
-                    StockPrice.objects.update_or_create(
-                        ticker=ticker,
-                        timestamp=ts_dt,
-                        defaults=build_ohlcv_defaults(name, o, h, l, c, v, ts),
-                    )
-                    new_records += 1
-                saved_count += 1
-            except (KeyError, IndexError) as e:
-                logger.warning(f'{ticker} のデータ解析エラー: {e}')
-                continue
+        self._finalize_intraday(saved_count, new_records)
 
-        # 古いデータを削除
+    def _finalize_intraday(self, saved_count, new_records):
+        """古いデータ削除・ログ記録"""
         cutoff = timezone.now() - timezone.timedelta(days=INTRADAY_RETENTION_DAYS)
         deleted, _ = StockPrice.objects.filter(timestamp__lt=cutoff).delete()
 
@@ -166,7 +226,6 @@ class Command(BaseCommand):
             tickers_count=saved_count, success=True,
             message=f'{saved_count}銘柄, {new_records}件保存, {deleted}件削除',
         )
-        # ログも古いものを削除（100件以上残っている場合）
         old_log_ids = list(
             StockFetchLog.objects.order_by('-fetched_at')
             .values_list('id', flat=True)[100:]

@@ -1,0 +1,194 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 祝日カレンダー</div>
+    <h1>祝日カレンダー</h1>
+    <p class="tool-desc">日本の祝日一覧を表示します。次の祝日までのカウントダウンも確認できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_holidays.html" %}</template>
+
+    <div id="loading" class="tool-loading">祝日データを取得中...</div>
+    <div id="error" class="tool-error" style="display:none"></div>
+
+    <div id="result" style="display:none">
+        <div class="holiday-countdown" id="countdown"></div>
+
+        <div class="holiday-today" id="todayStatus"></div>
+
+        <div class="holiday-year-selector">
+            <button type="button" id="prevYear">&lt;</button>
+            <span id="yearLabel"></span>
+            <button type="button" id="nextYear">&gt;</button>
+        </div>
+
+        <table class="tool-table">
+            <thead>
+                <tr><th>日付</th><th>曜日</th><th>祝日名</th></tr>
+            </thead>
+            <tbody id="holidayList"></tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.holiday-countdown {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+.holiday-countdown .countdown-days {
+    font-size: 2.5rem;
+    font-weight: bold;
+    display: block;
+    margin: 0.3rem 0;
+}
+.holiday-countdown .countdown-name {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+.holiday-today {
+    text-align: center;
+    padding: 0.8rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+.holiday-today.is-holiday {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+}
+.holiday-today.not-holiday {
+    background: var(--color-bg-subtle);
+    color: var(--color-text-light);
+}
+.holiday-year-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.holiday-year-selector button {
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    font-size: 1rem;
+}
+.holiday-year-selector span {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--color-dark);
+}
+.tool-table th, .tool-table td { padding: 0.6rem 1rem; }
+.holiday-past { opacity: 0.5; }
+.holiday-today-row { background: #fef3c7 !important; font-weight: bold; }
+.day-sun { color: #e74c3c; }
+.day-sat { color: #3498db; }
+</style>
+<script>
+(function() {
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const resultEl = document.getElementById('result');
+    const DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+    let allHolidays = {};
+    let currentYear = new Date().getFullYear();
+
+    async function load() {
+        try {
+            const resp = await fetch('https://holidays-jp.github.io/api/v1/date.json');
+            if (!resp.ok) throw new Error();
+            allHolidays = await resp.json();
+            loadingEl.style.display = 'none';
+            resultEl.style.display = 'block';
+            showCountdown();
+            showYear(currentYear);
+        } catch {
+            loadingEl.style.display = 'none';
+            errorEl.textContent = '祝日データの取得に失敗しました';
+            errorEl.style.display = 'block';
+        }
+    }
+
+    function showCountdown() {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const todayStr = formatDate(today);
+
+        const todayStatus = document.getElementById('todayStatus');
+        if (allHolidays[todayStr]) {
+            todayStatus.className = 'holiday-today is-holiday';
+            todayStatus.textContent = '今日は祝日です: ' + allHolidays[todayStr];
+        } else {
+            todayStatus.className = 'holiday-today not-holiday';
+            todayStatus.textContent = '今日は祝日ではありません';
+        }
+
+        let nextDate = null;
+        let nextName = '';
+        const sorted = Object.keys(allHolidays).sort();
+        for (const d of sorted) {
+            if (d > todayStr) {
+                nextDate = new Date(d);
+                nextName = allHolidays[d];
+                break;
+            }
+        }
+
+        const countdown = document.getElementById('countdown');
+        if (nextDate) {
+            const diff = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+            countdown.innerHTML = `次の祝日まで<span class="countdown-days">${diff}日</span><span class="countdown-name">${nextName}（${nextDate.getMonth()+1}/${nextDate.getDate()}）</span>`;
+        } else {
+            countdown.textContent = '今後の祝日データがありません';
+        }
+    }
+
+    function formatDate(d) {
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function showYear(year) {
+        currentYear = year;
+        document.getElementById('yearLabel').textContent = year + '年';
+        const tbody = document.getElementById('holidayList');
+        tbody.innerHTML = '';
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const yearHolidays = Object.entries(allHolidays)
+            .filter(([d]) => d.startsWith(year + '-'))
+            .sort(([a], [b]) => a.localeCompare(b));
+
+        if (yearHolidays.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--color-text-muted);">この年の祝日データがありません</td></tr>';
+            return;
+        }
+
+        for (const [dateStr, name] of yearHolidays) {
+            const d = new Date(dateStr);
+            const tr = document.createElement('tr');
+            const dayIdx = d.getDay();
+            const isPast = d < today;
+            const isToday = formatDate(d) === formatDate(today);
+
+            if (isToday) tr.className = 'holiday-today-row';
+            else if (isPast) tr.className = 'holiday-past';
+
+            const dayClass = dayIdx === 0 ? 'day-sun' : dayIdx === 6 ? 'day-sat' : '';
+            tr.innerHTML = `<td>${d.getMonth()+1}/${d.getDate()}</td><td class="${dayClass}">${DAYS[dayIdx]}</td><td>${name}</td>`;
+            tbody.appendChild(tr);
+        }
+    }
+
+    document.getElementById('prevYear').addEventListener('click', () => showYear(currentYear - 1));
+    document.getElementById('nextYear').addEventListener('click', () => showYear(currentYear + 1));
+
+    load();
+})();
+</script>

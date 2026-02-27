@@ -3,6 +3,7 @@ import logging
 import time
 
 import pandas as pd
+import requests
 
 from .config import BATCH_DELAY, BATCH_SIZE, MAX_RETRIES, RETRY_BACKOFF_BASE
 
@@ -116,3 +117,42 @@ def build_ohlcv_defaults(name, o, h, l, c, v, ts):
         'close': round(float(c[ts]), 1),
         'volume': int(v[ts]) if pd.notna(v[ts]) else 0,
     }
+
+
+def fetch_crypto_from_coingecko(ticker_to_cg_map):
+    """CoinGecko API から仮想通貨の現在価格を取得。
+
+    Args:
+        ticker_to_cg_map: {"BTC-USD": "bitcoin", ...}
+
+    Returns:
+        {ticker: {price, high_24h, low_24h, volume}} or {} on error
+    """
+    ids = ','.join(ticker_to_cg_map.values())
+    url = (
+        'https://api.coingecko.com/api/v3/coins/markets'
+        f'?vs_currency=usd&ids={ids}&order=market_cap_desc&per_page=50'
+    )
+
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.error('CoinGecko API error: %s', e)
+        return {}
+
+    id_to_ticker = {v: k for k, v in ticker_to_cg_map.items()}
+
+    result = {}
+    for coin in data:
+        ticker = id_to_ticker.get(coin['id'])
+        if ticker:
+            price = coin.get('current_price') or 0
+            result[ticker] = {
+                'price': price,
+                'high_24h': coin.get('high_24h') or price,
+                'low_24h': coin.get('low_24h') or price,
+                'volume': int(coin.get('total_volume') or 0),
+            }
+    return result

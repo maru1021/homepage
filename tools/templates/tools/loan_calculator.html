@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}ローン返済シミュレーター - 無料オンラインツール{% endblock %}
+{% block meta_description %}住宅ローン・自動車ローンなどの返済額をシミュレーション。元利均等・元金均等に対応。{% endblock %}
+{% block og_title %}ローン返済シミュレーター - 無料オンラインツール{% endblock %}
+{% block og_description %}ローン返済額をシミュレーションできる無料ツール{% endblock %}
+{% block twitter_title %}ローン返済シミュレーター - 無料オンラインツール{% endblock %}
+{% block twitter_description %}ローン返済額をシミュレーションできる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "ローン返済シミュレーター",
+  "description": "ローン返済額を元利均等・元金均等でシミュレーション",
+  "url": "https://{{ request.get_host }}{% url 'tools:loan_calculator' %}",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+      { "@type": "ListItem", "position": 2, "name": "ローン返済シミュレーター" }
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_loan_calculator_content.html" %}
+{% endblock %}

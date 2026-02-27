@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; HTTPヘッダー確認</div>
     <h1>HTTPヘッダー確認</h1>
     <p class="tool-desc">URLを入力してHTTPレスポンスヘッダーとセキュリティヘッダーの設定状況を確認します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_http_headers.html" %}</template>
 
     <div class="tool-form">
         <input type="text" id="urlInput" placeholder="例: https://example.com または https://219.94.232.146" autocomplete="off" spellcheck="false">

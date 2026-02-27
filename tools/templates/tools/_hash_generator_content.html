@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ハッシュ生成</div>
     <h1>ハッシュ生成</h1>
     <p class="tool-desc">テキストを入力すると、各種ハッシュ値をリアルタイムで計算します。すべてブラウザ内で処理されます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_hash_generator.html" %}</template>
 
     <label class="tool-label">入力テキスト</label>
     <textarea id="inputText" class="tool-textarea" rows="6" placeholder="ハッシュ化するテキストを入力"></textarea>
@@ -85,20 +86,23 @@
     }
 
     const input = document.getElementById('inputText');
+    const els = {
+        md5: document.getElementById('r-md5'),
+        sha1: document.getElementById('r-sha1'),
+        sha256: document.getElementById('r-sha256'),
+        sha512: document.getElementById('r-sha512'),
+    };
 
     async function update() {
         const text = input.value;
         if (!text) {
-            document.getElementById('r-md5').textContent = '-';
-            document.getElementById('r-sha1').textContent = '-';
-            document.getElementById('r-sha256').textContent = '-';
-            document.getElementById('r-sha512').textContent = '-';
+            Object.values(els).forEach(el => el.textContent = '-');
             return;
         }
-        document.getElementById('r-md5').textContent = md5(text);
-        document.getElementById('r-sha1').textContent = await digest('SHA-1', text);
-        document.getElementById('r-sha256').textContent = await digest('SHA-256', text);
-        document.getElementById('r-sha512').textContent = await digest('SHA-512', text);
+        els.md5.textContent = md5(text);
+        els.sha1.textContent = await digest('SHA-1', text);
+        els.sha256.textContent = await digest('SHA-256', text);
+        els.sha512.textContent = await digest('SHA-512', text);
     }
 
     let timer;
@@ -107,7 +111,7 @@
     document.querySelectorAll('.btn-copy').forEach(btn => {
         btn.addEventListener('click', () => {
             const el = document.getElementById(btn.dataset.target);
-            if (el && el.textContent !== '-') navigator.clipboard.writeText(el.textContent);
+            if (el && el.textContent !== '-') toolCopy(el.textContent);
         });
     });
 })();

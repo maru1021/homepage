@@ -1,0 +1,209 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; PDF結合・分割</div>
+    <h1>PDF結合・分割</h1>
+    <p class="tool-desc">ブラウザ内でPDFを結合・分割します。サーバーへのアップロードなし、完全ローカル処理です。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_pdf_tool.html" %}</template>
+
+    <div class="pdf-tabs">
+        <button class="pdf-tab active" data-tab="merge">結合</button>
+        <button class="pdf-tab" data-tab="split">分割</button>
+    </div>
+
+    <div id="mergePanel" class="pdf-panel">
+        <div class="pdf-drop" id="mergeDropZone">
+            <input type="file" id="mergeFileInput" accept=".pdf" multiple style="display:none">
+            <p>PDFファイルをドラッグ&ドロップ または <button type="button" class="pdf-select-btn" id="mergeSelectBtn">ファイルを選択</button></p>
+            <p class="pdf-hint">複数ファイル選択可</p>
+        </div>
+        <ul id="mergeFileList" class="pdf-file-list"></ul>
+        <div class="tool-actions" id="mergeActions" style="display:none;">
+            <button id="mergeBtn" type="button">結合してダウンロード</button>
+            <button id="mergeClearBtn" type="button" class="btn-secondary">クリア</button>
+        </div>
+    </div>
+
+    <div id="splitPanel" class="pdf-panel" style="display:none;">
+        <div class="pdf-drop" id="splitDropZone">
+            <input type="file" id="splitFileInput" accept=".pdf" style="display:none">
+            <p>分割するPDFを <button type="button" class="pdf-select-btn" id="splitSelectBtn">選択</button></p>
+        </div>
+        <div id="splitOptions" style="display:none;">
+            <div class="pdf-info" id="splitInfo"></div>
+            <div class="pdf-split-mode">
+                <label><input type="radio" name="splitMode" value="each" checked> 1ページずつ分割</label>
+                <label><input type="radio" name="splitMode" value="range"> ページ範囲指定</label>
+            </div>
+            <div id="rangeInput" style="display:none;">
+                <input type="text" id="pageRange" placeholder="例: 1-3, 5, 7-9" class="pdf-range-input">
+            </div>
+            <div class="tool-actions">
+                <button id="splitBtn" type="button">分割してダウンロード</button>
+                <button id="splitClearBtn" type="button" class="btn-secondary">クリア</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.pdf-tabs { display: flex; gap: 0; margin-bottom: 1rem; }
+.pdf-tab { flex: 1; padding: 0.7rem; border: 1px solid var(--color-border); background: var(--color-bg-subtle); cursor: pointer; font-size: 0.95rem; transition: all 0.15s; }
+.pdf-tab:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.pdf-tab:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.pdf-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.pdf-drop { border: 2px dashed var(--color-border); border-radius: var(--radius-lg); padding: 2.5rem 2rem; text-align: center; color: var(--color-text-muted); cursor: pointer; transition: border-color 0.2s; }
+.pdf-drop:hover,.pdf-drop.dragover { border-color: var(--color-primary); background: var(--color-bg-subtle); }
+.pdf-select-btn { background: var(--color-primary); color: #fff; border: none; padding: 0.4rem 1rem; border-radius: var(--radius-md); cursor: pointer; }
+.pdf-hint { font-size: 0.8rem; margin-top: 0.5rem; }
+.pdf-file-list { list-style: none; padding: 0; margin: 0.8rem 0; }
+.pdf-file-list li { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.8rem; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); margin-bottom: 0.3rem; font-size: 0.9rem; background: var(--color-bg-white); }
+.pdf-file-list .remove-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; }
+.pdf-info { font-size: 0.85rem; color: var(--color-text-muted); margin: 0.8rem 0; padding: 0.5rem; background: var(--color-bg-subtle); border-radius: var(--radius-md); }
+.pdf-split-mode { display: flex; gap: 1rem; margin: 0.8rem 0; }
+.pdf-split-mode label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.9rem; cursor: pointer; }
+.pdf-range-input { width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 0.8rem; }
+.tool-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+</style>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script>
+(function() {
+    const { PDFDocument } = PDFLib;
+
+    // Tab switching
+    document.querySelectorAll('.pdf-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.pdf-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('mergePanel').style.display = this.dataset.tab === 'merge' ? '' : 'none';
+            document.getElementById('splitPanel').style.display = this.dataset.tab === 'split' ? '' : 'none';
+        });
+    });
+
+    // === MERGE ===
+    let mergeFiles = [];
+    const mergeDropZone = document.getElementById('mergeDropZone');
+    const mergeFileInput = document.getElementById('mergeFileInput');
+    const mergeFileList = document.getElementById('mergeFileList');
+
+    function setupDrop(zone, input, handler) {
+        zone.addEventListener('click', (e) => { if (!e.target.closest('.pdf-select-btn')) input.click(); });
+        zone.querySelector('.pdf-select-btn').addEventListener('click', () => input.click());
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', (e) => { e.preventDefault(); zone.classList.remove('dragover'); handler(e.dataTransfer.files); });
+        input.addEventListener('change', () => { handler(input.files); input.value = ''; });
+    }
+
+    setupDrop(mergeDropZone, mergeFileInput, (files) => {
+        for (const f of files) { if (f.type === 'application/pdf') mergeFiles.push(f); }
+        renderMergeList();
+    });
+
+    function renderMergeList() {
+        mergeFileList.innerHTML = '';
+        mergeFiles.forEach((f, i) => {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = f.name + ' (' + (f.size/1024).toFixed(1) + ' KB)';
+            li.appendChild(span);
+            const btn = document.createElement('button');
+            btn.className = 'remove-btn';
+            btn.dataset.idx = i;
+            btn.textContent = '\u00d7';
+            li.appendChild(btn);
+            mergeFileList.appendChild(li);
+        });
+        mergeFileList.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => { mergeFiles.splice(parseInt(btn.dataset.idx), 1); renderMergeList(); });
+        });
+        document.getElementById('mergeActions').style.display = mergeFiles.length >= 2 ? '' : 'none';
+    }
+
+    document.getElementById('mergeBtn').addEventListener('click', async () => {
+        const merged = await PDFDocument.create();
+        for (const file of mergeFiles) {
+            const bytes = await file.arrayBuffer();
+            const doc = await PDFDocument.load(bytes);
+            const pages = await merged.copyPages(doc, doc.getPageIndices());
+            pages.forEach(p => merged.addPage(p));
+        }
+        const blob = new Blob([await merged.save()], { type: 'application/pdf' });
+        downloadBlob(blob, 'merged.pdf');
+    });
+
+    document.getElementById('mergeClearBtn').addEventListener('click', () => { mergeFiles = []; renderMergeList(); });
+
+    // === SPLIT ===
+    let splitFile = null, splitPageCount = 0;
+    const splitDropZone = document.getElementById('splitDropZone');
+    const splitFileInput = document.getElementById('splitFileInput');
+
+    setupDrop(splitDropZone, splitFileInput, async (files) => {
+        const f = files[0];
+        if (!f || f.type !== 'application/pdf') return;
+        splitFile = await f.arrayBuffer();
+        const doc = await PDFDocument.load(splitFile);
+        splitPageCount = doc.getPageCount();
+        document.getElementById('splitInfo').textContent = `${f.name} — ${splitPageCount}ページ`;
+        document.getElementById('splitOptions').style.display = '';
+        splitDropZone.style.display = 'none';
+    });
+
+    document.querySelectorAll('input[name="splitMode"]').forEach(r => {
+        r.addEventListener('change', () => {
+            document.getElementById('rangeInput').style.display = r.value === 'range' && r.checked ? '' : 'none';
+        });
+    });
+
+    document.getElementById('splitBtn').addEventListener('click', async () => {
+        const mode = document.querySelector('input[name="splitMode"]:checked').value;
+        const srcDoc = await PDFDocument.load(splitFile);
+
+        if (mode === 'each') {
+            for (let i = 0; i < splitPageCount; i++) {
+                const newDoc = await PDFDocument.create();
+                const [page] = await newDoc.copyPages(srcDoc, [i]);
+                newDoc.addPage(page);
+                const blob = new Blob([await newDoc.save()], { type: 'application/pdf' });
+                downloadBlob(blob, `page_${i + 1}.pdf`);
+            }
+        } else {
+            const rangeText = document.getElementById('pageRange').value;
+            const indices = parseRange(rangeText, splitPageCount);
+            if (indices.length === 0) { alert('有効なページ範囲を入力してください'); return; }
+            const newDoc = await PDFDocument.create();
+            const pages = await newDoc.copyPages(srcDoc, indices);
+            pages.forEach(p => newDoc.addPage(p));
+            const blob = new Blob([await newDoc.save()], { type: 'application/pdf' });
+            downloadBlob(blob, 'split.pdf');
+        }
+    });
+
+    document.getElementById('splitClearBtn').addEventListener('click', () => {
+        splitFile = null; splitPageCount = 0;
+        document.getElementById('splitOptions').style.display = 'none';
+        splitDropZone.style.display = '';
+    });
+
+    function parseRange(text, max) {
+        const indices = new Set();
+        text.split(',').forEach(part => {
+            part = part.trim();
+            const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+            if (m) { for (let i = parseInt(m[1]); i <= parseInt(m[2]) && i <= max; i++) if (i >= 1) indices.add(i - 1); }
+            else { const n = parseInt(part); if (n >= 1 && n <= max) indices.add(n - 1); }
+        });
+        return [...indices].sort((a, b) => a - b);
+    }
+
+    function downloadBlob(blob, name) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+})();
+</script>

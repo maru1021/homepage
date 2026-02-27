@@ -1,0 +1,147 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ジオコーディング</div>
+    <h1>ジオコーディング</h1>
+    <p class="tool-desc">住所から緯度・経度、または座標から住所を変換します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_geocoding.html" %}</template>
+
+    <div class="geo-tabs">
+        <button type="button" class="geo-tab active" data-mode="search">住所 → 座標</button>
+        <button type="button" class="geo-tab" data-mode="reverse">座標 → 住所</button>
+    </div>
+
+    <div id="geoSearch" class="geo-mode">
+        <div class="tool-form">
+            <input type="text" id="geoAddr" placeholder="例: 東京タワー、渋谷駅、大阪城" autocomplete="off" spellcheck="false">
+            <button id="geoSearchBtn" type="button">検索</button>
+        </div>
+    </div>
+
+    <div id="geoReverse" class="geo-mode" style="display:none">
+        <div class="tool-form">
+            <input type="text" id="geoLat" placeholder="緯度 (例: 35.6584)" style="flex:1">
+            <input type="text" id="geoLon" placeholder="経度 (例: 139.7455)" style="flex:1">
+            <button id="geoRevBtn" type="button">検索</button>
+        </div>
+    </div>
+
+    <div id="geoError" class="tool-error" style="display:none"></div>
+    <div id="geoLoading" class="tool-loading" style="display:none">検索中...</div>
+
+    <div id="geoSearchResult" style="display:none">
+        <table class="tool-table geo-table">
+            <thead><tr><th>住所</th><th>緯度</th><th>経度</th></tr></thead>
+            <tbody id="geoSearchBody"></tbody>
+        </table>
+    </div>
+
+    <div id="geoRevResult" style="display:none">
+        <table class="tool-table">
+            <tbody>
+                <tr><th>住所</th><td id="geoRevAddr"></td></tr>
+                <tr><th>緯度</th><td id="geoRevLat"></td></tr>
+                <tr><th>経度</th><td id="geoRevLon"></td></tr>
+            </tbody>
+        </table>
+        <div style="margin-top:0.8rem; text-align:right;">
+            <button type="button" class="geo-copy-btn" id="geoRevCopy">住所をコピー</button>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.geo-tabs {
+    display: flex; margin-bottom: 1rem;
+    border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;
+}
+.geo-tab {
+    flex: 1; padding: 0.5rem; border: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600;
+    background: var(--color-bg-white); color: var(--color-text-muted); transition: all 0.15s;
+}
+.geo-tab.active { background: var(--color-primary); color: #fff; }
+.geo-table th, .geo-table td { font-size: 0.85rem; padding: 0.5rem; }
+.geo-row { cursor: pointer; transition: background 0.1s; }
+.geo-row:hover { background: rgba(108,92,231,0.06); }
+.geo-copy-btn {
+    background: var(--color-primary); color: #fff; border: none;
+    padding: 0.4rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-size: 0.85rem;
+}
+.geo-copy-btn:hover { opacity: 0.85; }
+</style>
+<script>
+(function() {
+    function $(id) { return document.getElementById(id); }
+    function show(id) { $(id).style.display = 'block'; }
+    function hide(id) { $(id).style.display = 'none'; }
+    function resetUI() { hide('geoError'); hide('geoLoading'); hide('geoSearchResult'); hide('geoRevResult'); }
+    function showError(msg) { $('geoError').textContent = msg; show('geoError'); }
+
+    /* タブ切替 */
+    document.querySelectorAll('.geo-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.geo-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            resetUI();
+            if (tab.dataset.mode === 'search') { show('geoSearch'); hide('geoReverse'); }
+            else { hide('geoSearch'); show('geoReverse'); }
+        });
+    });
+
+    /* 住所 → 座標 */
+    async function searchAddr() {
+        var q = $('geoAddr').value.trim();
+        if (!q) { showError('住所を入力してください'); return; }
+        resetUI(); show('geoLoading');
+        $('geoSearchBtn').disabled = true;
+        try {
+            var resp = await fetch('/tools/api/geocoding/?mode=search&q=' + encodeURIComponent(q));
+            var data = await resp.json();
+            if (!resp.ok) { showError(data.error || '検索に失敗しました'); return; }
+            var results = data.results;
+            if (!results || !results.length) { showError('該当する住所が見つかりませんでした'); return; }
+            var body = $('geoSearchBody');
+            body.innerHTML = '';
+            results.forEach(function(r) {
+                var tr = document.createElement('tr');
+                tr.className = 'geo-row';
+                tr.innerHTML = '<td>' + r.display_name + '</td><td>' + r.lat + '</td><td>' + r.lon + '</td>';
+                tr.addEventListener('click', function() {
+                    toolCopy(r.lat + ', ' + r.lon, '座標をコピーしました');
+                });
+                body.appendChild(tr);
+            });
+            show('geoSearchResult');
+        } catch(e) { showError('通信エラーが発生しました'); }
+        finally { hide('geoLoading'); $('geoSearchBtn').disabled = false; }
+    }
+
+    $('geoSearchBtn').addEventListener('click', searchAddr);
+    $('geoAddr').addEventListener('keydown', function(e) { if (e.key === 'Enter') searchAddr(); });
+
+    /* 座標 → 住所 */
+    async function reverseGeo() {
+        var lat = $('geoLat').value.trim();
+        var lon = $('geoLon').value.trim();
+        if (!lat || !lon) { showError('緯度と経度を入力してください'); return; }
+        resetUI(); show('geoLoading');
+        $('geoRevBtn').disabled = true;
+        try {
+            var resp = await fetch('/tools/api/geocoding/?mode=reverse&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon));
+            var data = await resp.json();
+            if (!resp.ok) { showError(data.error || '検索に失敗しました'); return; }
+            var r = data.result;
+            if (!r || r.error) { showError('該当する住所が見つかりませんでした'); return; }
+            $('geoRevAddr').textContent = r.display_name || '';
+            $('geoRevLat').textContent = r.lat || lat;
+            $('geoRevLon').textContent = r.lon || lon;
+            show('geoRevResult');
+        } catch(e) { showError('通信エラーが発生しました'); }
+        finally { hide('geoLoading'); $('geoRevBtn').disabled = false; }
+    }
+
+    $('geoRevBtn').addEventListener('click', reverseGeo);
+    $('geoLat').addEventListener('keydown', function(e) { if (e.key === 'Enter') reverseGeo(); });
+    $('geoLon').addEventListener('keydown', function(e) { if (e.key === 'Enter') reverseGeo(); });
+    $('geoRevCopy').addEventListener('click', function() { toolCopy($('geoRevAddr').textContent); });
+})();
+</script>

@@ -1,0 +1,97 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ダミーテキスト生成</div>
+    <h1>ダミーテキスト生成</h1>
+    <p class="tool-desc">Lorem Ipsum や日本語のダミーテキストを生成します。Webデザインやモックアップに。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_dummy_text.html" %}</template>
+
+    <div class="dt-controls">
+        <label>言語:
+            <select id="lang">
+                <option value="ja">日本語</option>
+                <option value="lorem">Lorem Ipsum</option>
+            </select>
+        </label>
+        <label>段落数: <input type="number" id="paraCount" value="3" min="1" max="50"></label>
+        <label>1段落あたりの文数: <input type="number" id="sentCount" value="5" min="1" max="20"></label>
+        <button id="genBtn" type="button">生成</button>
+        <button id="copyBtn" type="button" class="btn-secondary">コピー</button>
+    </div>
+
+    <div id="output" class="dt-output"></div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.dt-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; margin-bottom: 1rem; }
+.dt-controls label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+.dt-controls input { width: 60px; padding: 0.3rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: center; }
+.dt-controls select { padding: 0.3rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.dt-controls button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle) !important; color: var(--color-text) !important; border: 1px solid var(--color-border) !important; }
+.dt-output { background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1.5rem; line-height: 1.8; }
+.dt-output p { margin-bottom: 1em; }
+.dt-output p:last-child { margin-bottom: 0; }
+</style>
+<script>
+(function() {
+    const LOREM = [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.",
+        "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia.",
+        "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.",
+        "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet.",
+        "Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit.",
+        "Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse.",
+        "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis.",
+        "Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit.",
+        "Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet.",
+    ];
+    const JA = [
+        "吾輩は猫である。名前はまだ無い。",
+        "どこで生れたかとんと見当がつかぬ。",
+        "何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。",
+        "吾輩はここで始めて人間というものを見た。",
+        "しかもあとで聞くとそれは書生という人間中で一番獰悪な種族であったそうだ。",
+        "この書生というのは時々我々を捕えて煮て食うという話である。",
+        "祇園精舎の鐘の声、諸行無常の響きあり。",
+        "沙羅双樹の花の色、盛者必衰のことわりをあらわす。",
+        "おごれる人も久しからず、ただ春の夜の夢のごとし。",
+        "たけき者もつひには滅びぬ、ひとへに風の前の塵に同じ。",
+        "月日は百代の過客にして、行きかふ年もまた旅人なり。",
+        "舟の上に生涯を浮かべ、馬の口とらへて老いを迎ふる者は日々旅にして旅を栖とす。",
+        "春はあけぼの。やうやう白くなりゆく山際、少し明かりて、紫だちたる雲の細くたなびきたる。",
+        "夏は夜。月のころはさらなり、闇もなほ、蛍の多く飛びちがひたる。",
+        "秋は夕暮れ。夕日のさして山の端いと近うなりたるに、烏の寝所へ行くとて三つ四つ、二つ三つなど飛び急ぐさへあはれなり。",
+        "冬はつとめて。雪の降りたるはいふべきにもあらず、霜のいと白きも、またさらでもいと寒きに。",
+        "国境の長いトンネルを抜けると雪国であった。夜の底が白くなった。",
+        "メロスは激怒した。必ず、かの邪智暴虐の王を除かなければならぬと決意した。",
+    ];
+
+    function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+        return a;
+    }
+
+    function generate() {
+        const lang = document.getElementById('lang').value;
+        const pCount = parseInt(document.getElementById('paraCount').value) || 3;
+        const sCount = parseInt(document.getElementById('sentCount').value) || 5;
+        const pool = lang === 'ja' ? JA : LOREM;
+        const output = document.getElementById('output');
+        let html = '';
+        for (let p = 0; p < pCount; p++) {
+            const sentences = shuffle(pool).slice(0, Math.min(sCount, pool.length));
+            html += '<p>' + sentences.join(' ') + '</p>';
+        }
+        output.innerHTML = html;
+    }
+
+    document.getElementById('genBtn').addEventListener('click', generate);
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        toolCopy(document.getElementById('output').textContent);
+    });
+    generate();
+})();
+</script>

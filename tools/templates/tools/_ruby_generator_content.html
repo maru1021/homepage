@@ -1,0 +1,74 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ルビ（ふりがな）HTML生成</div>
+    <h1>ルビ（ふりがな）HTML生成</h1>
+    <p class="tool-desc">漢字とふりがなを入力して、HTML ruby タグを生成します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_ruby_generator.html" %}</template>
+
+    <div class="rb-form">
+        <div class="rb-row">
+            <label>漢字 <input type="text" id="kanjiInput" placeholder="漢字" value="東京都"></label>
+            <label>ふりがな <input type="text" id="rubyInput" placeholder="ふりがな" value="とうきょうと"></label>
+            <button id="addBtn" type="button">追加</button>
+        </div>
+    </div>
+
+    <div id="itemList" class="rb-items"></div>
+
+    <div class="rb-section">
+        <div class="rb-section-header">
+            <span>生成されたHTML</span>
+            <button id="copyBtn" type="button" class="btn-sm">コピー</button>
+        </div>
+        <div id="htmlOutput" class="rb-code"></div>
+    </div>
+
+    <div class="rb-section">
+        <span>プレビュー</span>
+        <div id="preview" class="rb-preview"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.rb-form { margin-bottom: 1rem; }
+.rb-row { display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; }
+.rb-row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; color: var(--color-text-muted); }
+.rb-row input { padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 1rem; }
+.rb-row button { padding: 0.5rem 1rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); cursor: pointer; white-space: nowrap; }
+.rb-items { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+.rb-item { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.9rem; }
+.rb-item .del { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1rem; padding: 0; }
+.rb-section { margin-bottom: 1rem; }
+.rb-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--color-text-muted); }
+.btn-sm { padding: 0.2rem 0.6rem; font-size: 0.8rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
+.rb-code { padding: 1rem; background: #1e1e2e; color: #cdd6f4; border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; min-height: 40px; }
+.rb-preview { padding: 1.5rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 1.5rem; line-height: 2.5; min-height: 60px; }
+</style>
+<script>
+(function() {
+    let items = [{ kanji: '東京都', ruby: 'とうきょうと' }];
+
+    function render() {
+        const list = document.getElementById('itemList');
+        list.innerHTML = items.map((it, i) =>
+            `<span class="rb-item"><ruby>${it.kanji}<rp>(</rp><rt>${it.ruby}</rt><rp>)</rp></ruby><button class="del" data-idx="${i}">&times;</button></span>`
+        ).join('');
+        list.querySelectorAll('.del').forEach(b => b.addEventListener('click', () => { items.splice(parseInt(b.dataset.idx), 1); render(); }));
+
+        const html = items.map(it => `<ruby>${it.kanji}<rp>(</rp><rt>${it.ruby}</rt><rp>)</rp></ruby>`).join('');
+        document.getElementById('htmlOutput').textContent = html;
+        document.getElementById('preview').innerHTML = html;
+    }
+
+    document.getElementById('addBtn').addEventListener('click', () => {
+        const k = document.getElementById('kanjiInput').value.trim();
+        const r = document.getElementById('rubyInput').value.trim();
+        if (k && r) { items.push({ kanji: k, ruby: r }); render(); document.getElementById('kanjiInput').value = ''; document.getElementById('rubyInput').value = ''; document.getElementById('kanjiInput').focus(); }
+    });
+
+    document.getElementById('kanjiInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('rubyInput').focus(); });
+    document.getElementById('rubyInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('addBtn').click(); });
+
+    document.getElementById('copyBtn').addEventListener('click', () => toolCopy(document.getElementById('htmlOutput').textContent));
+    render();
+})();
+</script>

@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 JST = ZoneInfo('Asia/Tokyo')
 
 # データ取得設定
-FETCH_INTERVAL = 1800       # 分足取得間隔（秒）= 30分
+FETCH_INTERVAL = 3600       # 分足取得間隔（秒）= 60分
 DAILY_FETCH_DELAY = 8       # 日足初回取得時の銘柄間待機（秒）
 INTRADAY_RETENTION_DAYS = 3 # 分足データの保持日数
 INTRADAY_OVERLAP_MINUTES = 5  # 重複許容バッファ（直近N分は再保存）
@@ -14,7 +14,7 @@ DEFAULT_DAILY_MONTHS = 6    # 長期チャートのデフォルト月数
 
 # バッチ取得設定
 BATCH_SIZE = 10             # 1回の yf.download() あたりの銘柄数
-BATCH_DELAY = 8             # バッチ間の待機秒数
+BATCH_DELAY = 15            # バッチ間の待機秒数
 MAX_RETRIES = 4             # リトライ最大回数
 RETRY_BACKOFF_BASE = 30     # リトライ待機の基底秒数（指数バックオフ）
 
@@ -365,6 +365,41 @@ MARKET_OVERVIEW_BY_CATEGORY = {
 
 # 後方互換
 MARKET_OVERVIEW = MARKET_OVERVIEW_BY_CATEGORY[CATEGORY_JP_STOCK]
+
+# ========== CoinGecko マッピング（仮想通貨） ==========
+# yfinance ticker → CoinGecko ID
+CRYPTO_COINGECKO_MAP = {
+    "BTC-USD": "bitcoin",
+    "ETH-USD": "ethereum",
+    "XRP-USD": "ripple",
+    "SOL-USD": "solana",
+    "BNB-USD": "binancecoin",
+    "ADA-USD": "cardano",
+    "DOGE-USD": "dogecoin",
+    "TRX-USD": "tron",
+    "AVAX-USD": "avalanche-2",
+    "DOT-USD": "polkadot",
+    "LINK-USD": "chainlink",
+    "MATIC-USD": "polygon-ecosystem-token",
+    "SHIB-USD": "shiba-inu",
+    "UNI-USD": "uniswap",
+    "LTC-USD": "litecoin",
+    "ATOM-USD": "cosmos",
+    "XLM-USD": "stellar",
+    "NEAR-USD": "near",
+    "APT-USD": "aptos",
+    "FIL-USD": "filecoin",
+    "AAVE-USD": "aave",
+    "ARB-USD": "arbitrum",
+    "OP-USD": "optimism",
+    "SUI-USD": "sui",
+    "SEI-USD": "sei-network",
+    "PEPE-USD": "pepe",
+    "RENDER-USD": "render-token",
+    "INJ-USD": "injective-protocol",
+    "FET-USD": "fetch-ai",
+    "ALGO-USD": "algorand",
+}
 
 
 # ========== ヘルパー関数 ==========

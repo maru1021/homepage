@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Base64エンコード/デコード</div>
     <h1>Base64エンコード/デコード</h1>
     <p class="tool-desc">テキストや画像をBase64に変換します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_base64.html" %}</template>
 
     <!-- タブ切り替え -->
     <div class="b64-tabs">
@@ -110,7 +111,7 @@
         catch (e) { showError('無効なBase64文字列です'); }
     });
     document.getElementById('copyBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(output.value);
+        toolCopy(output.value);
     });
 
     // --- 画像タブ ---
@@ -180,15 +181,15 @@
 
     // コピーボタン
     document.getElementById('copyDataUrlBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(currentDataUrl);
+        toolCopy(currentDataUrl);
     });
     document.getElementById('copyBase64OnlyBtn').addEventListener('click', () => {
         const base64Only = currentDataUrl.split(',')[1] || '';
-        navigator.clipboard.writeText(base64Only);
+        toolCopy(base64Only);
     });
     document.getElementById('copyImgTagBtn').addEventListener('click', () => {
         const tag = '<img src="' + currentDataUrl + '" alt="">';
-        navigator.clipboard.writeText(tag);
+        toolCopy(tag);
     });
 })();
 </script>

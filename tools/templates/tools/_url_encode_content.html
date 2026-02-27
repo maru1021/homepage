@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; URLエンコード/デコード</div>
     <h1>URLエンコード/デコード</h1>
     <p class="tool-desc">URLのパーセントエンコード（%xx）とデコードを行います。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_url_encode.html" %}</template>
 
     <div class="tool-actions">
         <button id="encodeBtn" type="button">エンコード ↓</button>
@@ -47,7 +48,7 @@
         try { output.value = decodeURIComponent(input.value); } catch(e) { showError('無効なエンコード文字列です'); }
     });
     document.getElementById('copyBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(output.value);
+        toolCopy(output.value);
     });
 })();
 </script>

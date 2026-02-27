@@ -11,4 +11,5 @@ urlpatterns = [
     path('api/stocks/', views.api_stock_list, name='api_stock_list'),
     path('api/market-overview/', views.api_market_overview, name='api_market_overview'),
     path('api/categories/', views.api_categories, name='api_categories'),
+    path('api/scores/', views.api_stock_scores, name='api_stock_scores'),
 ]

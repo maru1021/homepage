@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}ファビコン生成 - 無料オンラインツール{% endblock %}
+{% block meta_description %}画像からファビコン（各サイズPNG）を生成できる無料ツール。{% endblock %}
+{% block og_title %}ファビコン生成 - 無料オンラインツール{% endblock %}
+{% block og_description %}画像からファビコンを生成できる無料ツール{% endblock %}
+{% block twitter_title %}ファビコン生成 - 無料オンラインツール{% endblock %}
+{% block twitter_description %}画像からファビコンを生成できる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org", "@type": "WebApplication",
+  "name": "ファビコン生成", "description": "画像からファビコンを生成",
+  "url": "https://{{ request.get_host }}{% url 'tools:favicon_generator' %}",
+  "applicationCategory": "DeveloperApplication", "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" }, "inLanguage": "ja",
+  "breadcrumb": { "@type": "BreadcrumbList", "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+    { "@type": "ListItem", "position": 2, "name": "ファビコン生成" }
+  ]}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_favicon_generator_content.html" %}
+{% endblock %}

@@ -1,0 +1,129 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 文章校正チェッカー</div>
+    <h1>文章校正チェッカー</h1>
+    <p class="tool-desc">日本語文章の問題点を自動で検出します。ら抜き言葉、二重否定、冗長表現など。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_text_proofreader.html" %}</template>
+
+    <div class="tool-actions">
+        <button id="checkBtn" type="button">チェックする</button>
+        <button id="clearBtn" type="button" class="btn-secondary">クリア</button>
+    </div>
+    <textarea id="textInput" class="tool-textarea" rows="12" placeholder="チェックしたい文章を入力してください..."></textarea>
+    <div id="results" class="pr-results" style="display:none;">
+        <div class="pr-summary" id="summary"></div>
+        <div id="issueList"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); line-height: 1.8; }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.pr-results { margin-top: 1rem; }
+.pr-summary { padding: 0.8rem 1rem; border-radius: var(--radius-md); margin-bottom: 0.8rem; font-weight: 600; }
+.pr-summary.ok { background: #dcfce7; color: #166534; }
+.pr-summary.warn { background: #fef3c7; color: #92400e; }
+.pr-issue { padding: 0.8rem 1rem; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); margin-bottom: 0.5rem; background: var(--color-bg-white); }
+.pr-issue-type { font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 3px; margin-right: 0.5rem; }
+.pr-type-warn { background: #fef3c7; color: #92400e; }
+.pr-type-info { background: #dbeafe; color: #1e40af; }
+.pr-issue-text { font-size: 0.9rem; margin-top: 0.3rem; }
+.pr-issue-match { background: #fecaca; padding: 0.1rem 0.3rem; border-radius: 2px; font-weight: 600; }
+.pr-issue-suggest { color: var(--color-primary); font-weight: 600; }
+</style>
+<script>
+(function() {
+    const RULES = [
+        { name: 'ら抜き言葉', type: 'warn', patterns: [
+            { re: /([見食着出寝起来])(れる|れた|れない|れます|れません)/g, suggest: '$1られる' },
+        ]},
+        { name: '二重否定', type: 'warn', patterns: [
+            { re: /ない(?:こと|の|わけ)(?:は|も)?ない/g, note: '二重否定は読みにくくなります' },
+            { re: /なくはない/g, note: '肯定的に書き換えることを検討してください' },
+            { re: /ないとは(?:言えない|限らない)/g, note: '二重否定表現です' },
+        ]},
+        { name: '冗長表現', type: 'info', patterns: [
+            { re: /することができる/g, suggest: 'できる' },
+            { re: /することが可能/g, suggest: 'できる' },
+            { re: /を行う/g, suggest: 'する' },
+            { re: /についての/g, suggest: 'の' },
+            { re: /という(?:こと|もの)/g, note: '不要な場合があります' },
+            { re: /(?:まず)?最初に/g, suggest: 'まず' },
+            { re: /一番最(?:初|後)/g, note: '重複表現です' },
+        ]},
+        { name: '表記ゆれ・誤用', type: 'warn', patterns: [
+            { re: /づらい/g, note: '「〜しづらい」は「〜しにくい」が標準的です' },
+            { re: /いずれにしろ/g, suggest: 'いずれにせよ' },
+            { re: /的を得/g, suggest: '的を射' },
+            { re: /汚名挽回/g, suggest: '汚名返上 または 名誉挽回' },
+            { re: /敷居が高い/g, note: '本来「不義理で行きにくい」の意味です' },
+        ]},
+        { name: '一文が長い', type: 'info', patterns: [
+            { re: /[^。！？\n]{100,}/g, note: '一文が長すぎます（100文字以上）。分割を検討してください' },
+        ]},
+        { name: '同じ助詞の連続', type: 'info', patterns: [
+            { re: /の.{0,5}の.{0,5}の/g, note: '「の」が連続しています' },
+            { re: /が.{0,5}が.{0,5}が/g, note: '「が」が連続しています' },
+            { re: /を.{0,5}を/g, note: '「を」が連続しています' },
+        ]},
+        { name: '全角英数字', type: 'info', patterns: [
+            { re: /[Ａ-Ｚａ-ｚ０-９]+/g, note: '全角英数字が使われています。半角に統一を検討してください' },
+        ]},
+    ];
+
+    document.getElementById('checkBtn').addEventListener('click', function() {
+        const text = document.getElementById('textInput').value;
+        if (!text.trim()) return;
+
+        const issues = [];
+        RULES.forEach(rule => {
+            rule.patterns.forEach(p => {
+                let m;
+                const re = new RegExp(p.re.source, p.re.flags);
+                while ((m = re.exec(text)) !== null) {
+                    issues.push({
+                        name: rule.name,
+                        type: rule.type,
+                        match: m[0],
+                        index: m.index,
+                        suggest: p.suggest ? m[0].replace(new RegExp(p.re.source), p.suggest) : null,
+                        note: p.note || null,
+                    });
+                }
+            });
+        });
+
+        const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        const issueList = document.getElementById('issueList');
+
+        if (issues.length === 0) {
+            summary.className = 'pr-summary ok';
+            summary.textContent = '問題は見つかりませんでした';
+            issueList.innerHTML = '';
+        } else {
+            summary.className = 'pr-summary warn';
+            summary.textContent = `${issues.length}件の指摘があります`;
+            issueList.innerHTML = issues.map(i => `
+                <div class="pr-issue">
+                    <span class="pr-issue-type pr-type-${i.type}">${i.name}</span>
+                    <div class="pr-issue-text">
+                        <span class="pr-issue-match">${i.match}</span>
+                        ${i.suggest ? ` → <span class="pr-issue-suggest">${i.suggest}</span>` : ''}
+                        ${i.note ? `<br><small style="color:var(--color-text-muted)">${i.note}</small>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        results.style.display = '';
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('textInput').value = '';
+        document.getElementById('results').style.display = 'none';
+    });
+})();
+</script>

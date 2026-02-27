@@ -14,9 +14,14 @@ from django.core.management.base import BaseCommand
 
 import yfinance as yf
 
-from stock_monitor.config import DAILY_FETCH_DELAY, STOCKS
+from stock_monitor.config import (
+    CRYPTO_COINGECKO_MAP, DAILY_FETCH_DELAY, STOCKS,
+)
 from stock_monitor.models import DailyStockPrice, StockFetchLog
-from stock_monitor.utils import batch_download, build_ohlcv_defaults, parse_ohlcv
+from stock_monitor.utils import (
+    batch_download, build_ohlcv_defaults, fetch_crypto_from_coingecko,
+    parse_ohlcv,
+)
 
 logger = logging.getLogger(__name__)
 

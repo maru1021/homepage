@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; サブネット計算機</div>
     <h1>サブネット計算機</h1>
     <p class="tool-desc">IPアドレスとCIDRまたはサブネットマスクからネットワーク情報を計算します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_subnet_calculator.html" %}</template>
 
     <div class="tool-form">
         <input type="text" id="cidrInput" placeholder="例: 192.168.1.0/24" autocomplete="off" spellcheck="false">

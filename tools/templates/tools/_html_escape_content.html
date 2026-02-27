@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; HTMLエスケープ</div>
     <h1>HTMLエスケープ/アンエスケープ</h1>
     <p class="tool-desc">&lt; &gt; &amp; " ' などのHTML特殊文字をエスケープ/アンエスケープします。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_html_escape.html" %}</template>
 
     <div class="tool-actions">
         <button id="escapeBtn" type="button">エスケープ ↓</button>
@@ -53,6 +54,6 @@
 
     document.getElementById('escapeBtn').addEventListener('click', () => { output.value = escapeHtml(input.value); });
     document.getElementById('unescapeBtn').addEventListener('click', () => { output.value = unescapeHtml(input.value); });
-    document.getElementById('copyBtn').addEventListener('click', () => { navigator.clipboard.writeText(output.value); });
+    document.getElementById('copyBtn').addEventListener('click', () => { toolCopy(output.value); });
 })();
 </script>

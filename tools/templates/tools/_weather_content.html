@@ -1,0 +1,233 @@
+{% load static %}
+<div class="tool-page weather-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 天気予報</div>
+    <h1>天気予報</h1>
+    <p class="tool-desc">日本の主要都市の現在の天気と7日間の予報を表示します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_weather.html" %}</template>
+
+    <div id="mapLoading" class="tool-loading">天気情報を取得中...</div>
+    <div id="mapError" class="tool-error" style="display:none"></div>
+
+    <div id="mapWrap" class="map-wrap" style="display:none">
+        <img src="{% static 'image/japan_map.svg' %}" alt="日本地図" class="japan-map-img" draggable="false">
+    </div>
+
+    <div id="detailGuide" class="detail-guide" style="display:none">都市をタップして詳細を表示</div>
+
+    <div id="result" style="display:none">
+        <div class="weather-current">
+            <h2 id="cityName"></h2>
+            <div class="weather-current-info">
+                <span class="weather-icon" id="currentIcon"></span>
+                <span class="weather-temp" id="currentTemp"></span>
+                <span class="weather-desc" id="currentDesc"></span>
+            </div>
+            <div class="weather-detail">
+                <span>湿度: <strong id="currentHumidity"></strong></span>
+                <span>風速: <strong id="currentWind"></strong></span>
+            </div>
+        </div>
+        <h3 class="forecast-title">7日間予報</h3>
+        <div class="forecast-grid" id="forecastGrid"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.weather-page.tool-page { max-width: 900px; }
+
+/* --- 地図コンテナ --- */
+.map-wrap {
+    position: relative;
+    width: min(100%, calc(100vh - 200px));
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 0.5rem;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    background: linear-gradient(180deg, #e3f0fa 0%, #cde5f5 100%);
+}
+.japan-map-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; user-select: none;
+}
+
+/* --- マーカー --- */
+.w-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.92);
+    border: 1.5px solid #bbb;
+    border-radius: 8px;
+    padding: 2px 6px;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.2;
+    transition: all 0.15s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.13);
+    user-select: none;
+    z-index: 1;
+}
+.w-marker:hover {
+    transform: translate(-50%, -50%) scale(1.12);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.22);
+    z-index: 2;
+}
+.w-marker.active {
+    border-color: #6c5ce7; border-width: 2px;
+    background: rgba(255,255,255,0.97);
+    box-shadow: 0 3px 10px rgba(108,92,231,0.35);
+    z-index: 3;
+}
+.w-marker-name  { font-size: 9px;  color: #666; font-weight: 700; white-space: nowrap; }
+.w-marker-info  { font-size: 12px; color: #333; font-weight: bold; white-space: nowrap; }
+
+/* --- ガイド・詳細 --- */
+.detail-guide { text-align: center; color: var(--color-text-muted); padding: 0.5rem; font-size: 0.85rem; }
+
+.weather-current {
+    background: var(--color-bg-white); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: 1.2rem; margin-bottom: 1rem; text-align: center;
+}
+.weather-current h2   { font-size: 1.2rem; margin-bottom: 0.8rem; color: var(--color-dark); }
+.weather-current-info { display: flex; align-items: center; justify-content: center; gap: 0.8rem; margin-bottom: 0.8rem; }
+.weather-icon   { font-size: 2.5rem; }
+.weather-temp   { font-size: 2rem; font-weight: bold; color: var(--color-dark); }
+.weather-desc   { font-size: 1rem; color: var(--color-text-muted); }
+.weather-detail { display: flex; justify-content: center; gap: 1.5rem; color: var(--color-text-light); font-size: 0.85rem; }
+
+/* --- 7日間予報 --- */
+.forecast-title { font-size: 1rem; margin-bottom: 0.8rem; color: var(--color-dark); }
+.forecast-grid  { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6rem; }
+.forecast-card  {
+    background: var(--color-bg-white); border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); padding: 0.8rem; text-align: center;
+}
+.forecast-card .fc-date { font-size: 0.8rem;  color: var(--color-text-muted); margin-bottom: 0.2rem; }
+.forecast-card .fc-icon { font-size: 1.6rem;  margin: 0.2rem 0; }
+.forecast-card .fc-temp { font-size: 0.85rem; color: var(--color-dark); }
+.forecast-card .fc-temp .high { color: #e74c3c; font-weight: bold; }
+.forecast-card .fc-temp .low  { color: #3498db; }
+.forecast-card .fc-rain { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.2rem; }
+</style>
+<script>
+(function() {
+    /* ── 定数 ── */
+    var WMO_CODES = {
+         0: ['☀️','快晴'],    1: ['🌤️','晴れ'],      2: ['⛅','くもり時々晴れ'], 3: ['☁️','くもり'],
+        45: ['🌫️','霧'],     48: ['🌫️','霧氷'],
+        51: ['🌦️','小雨'],   53: ['🌧️','雨'],       55: ['🌧️','強い雨'],
+        61: ['🌧️','小雨'],   63: ['🌧️','雨'],       65: ['🌧️','大雨'],
+        71: ['🌨️','小雪'],   73: ['🌨️','雪'],       75: ['🌨️','大雪'],       77: ['🌨️','あられ'],
+        80: ['🌦️','にわか雨'],81: ['🌧️','にわか雨'],82: ['⛈️','激しいにわか雨'],
+        85: ['🌨️','にわか雪'],86: ['🌨️','激しいにわか雪'],
+        95: ['⛈️','雷雨'],   96: ['⛈️','雷雨(ひょう)'],99: ['⛈️','激しい雷雨']
+    };
+    var DAY_NAMES = ['日','月','火','水','木','金','土'];
+
+    // Geolonia SVG viewBox(0 0 1000 1000) に対する都市座標(%)
+    var CITIES = {
+        sapporo:  { name: '札幌',   top: 17,   left: 75   },
+        sendai:   { name: '仙台',   top: 49,   left: 66   },
+        niigata:  { name: '新潟',   top: 54,   left: 55   },
+        kanazawa: { name: '金沢',   top: 59,   left: 45   },
+        tokyo:    { name: '東京',   top: 69,   left: 59   },
+        nagoya:   { name: '名古屋', top: 73,   left: 47   },
+        osaka:    { name: '大阪',   top: 73.5, left: 37.5 },
+        hiroshima:{ name: '広島',   top: 73,   left: 23   },
+        fukuoka:  { name: '福岡',   top: 80,   left: 13   },
+        naha:     { name: '那覇',   top: 22,   left: 5    }
+    };
+
+    /* ── ヘルパー ── */
+    function wmo(code) { return WMO_CODES[code] || ['❓','不明']; }
+
+    function $(id) { return document.getElementById(id); }
+
+    function setText(id, text) { $(id).textContent = text; }
+
+    function show(id) { $(id).style.display = 'block'; }
+    function hide(id) { $(id).style.display = 'none'; }
+
+    /* ── マーカー生成 ── */
+    var allData = null;
+
+    function createMarker(key, city, current) {
+        var icon = wmo(current.weather_code)[0];
+        var el = document.createElement('div');
+        el.className = 'w-marker';
+        el.dataset.city = key;
+        el.style.top  = city.top + '%';
+        el.style.left = city.left + '%';
+        el.innerHTML =
+            '<div class="w-marker-name">' + city.name + '</div>' +
+            '<div class="w-marker-info">' + icon + ' ' + Math.round(current.temperature_2m) + '°</div>';
+        el.addEventListener('click', function() { selectCity(key); });
+        return el;
+    }
+
+    /* ── 都市選択 → 詳細表示 ── */
+    function selectCity(key) {
+        document.querySelectorAll('.w-marker').forEach(function(m) { m.classList.remove('active'); });
+        var marker = document.querySelector('.w-marker[data-city="' + key + '"]');
+        if (marker) marker.classList.add('active');
+
+        var data = allData[key];
+        var cur  = data.current;
+        var w    = wmo(cur.weather_code);
+
+        setText('cityName',        data.name + 'の天気');
+        setText('currentIcon',     w[0]);
+        setText('currentTemp',     cur.temperature_2m + '°C');
+        setText('currentDesc',     w[1]);
+        setText('currentHumidity', cur.relative_humidity_2m + '%');
+        setText('currentWind',     cur.wind_speed_10m + ' km/h');
+
+        renderForecast(data.daily);
+        hide('detailGuide');
+        show('result');
+        $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderForecast(daily) {
+        var grid = $('forecastGrid');
+        grid.innerHTML = '';
+        for (var i = 0; i < daily.time.length; i++) {
+            var d = new Date(daily.time[i]);
+            var card = document.createElement('div');
+            card.className = 'forecast-card';
+            card.innerHTML =
+                '<div class="fc-date">' + (d.getMonth()+1) + '/' + d.getDate() + ' (' + DAY_NAMES[d.getDay()] + ')</div>' +
+                '<div class="fc-icon">' + wmo(daily.weather_code[i])[0] + '</div>' +
+                '<div class="fc-temp"><span class="high">' + daily.temperature_2m_max[i] + '°</span> / ' +
+                    '<span class="low">' + daily.temperature_2m_min[i] + '°</span></div>' +
+                '<div class="fc-rain">☔ ' + daily.precipitation_probability_max[i] + '%</div>';
+            grid.appendChild(card);
+        }
+    }
+
+    /* ── 初期化 ── */
+    async function init() {
+        try {
+            var resp = await fetch('/tools/api/weather/?city=all');
+            var json = await resp.json();
+            if (!resp.ok) throw new Error(json.error || '取得に失敗しました');
+            allData = json.cities;
+
+            var mapEl = $('mapWrap');
+            for (var key in CITIES) {
+                if (allData[key]) mapEl.appendChild(createMarker(key, CITIES[key], allData[key].current));
+            }
+            hide('mapLoading');
+            show('mapWrap');
+            show('detailGuide');
+        } catch (e) {
+            hide('mapLoading');
+            setText('mapError', e.message || '天気情報の取得に失敗しました');
+            show('mapError');
+        }
+    }
+
+    init();
+})();
+</script>

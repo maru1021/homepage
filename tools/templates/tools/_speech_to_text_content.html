@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 音声文字起こし</div>
     <h1>音声文字起こし</h1>
     <p class="tool-desc">マイクからの音声をリアルタイムでテキストに変換します。Web Speech API を使用し、データはサーバーに送信されません。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_speech_to_text.html" %}</template>
 
     <div id="sttUnsupported" class="tool-error" style="display:none;">
         このブラウザは音声認識に対応していません。Chrome / Edge の最新版をお使いください。
@@ -174,34 +175,31 @@
 </style>
 <script>
 (function() {
-    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
         document.getElementById('sttUnsupported').style.display = 'block';
         return;
     }
     document.getElementById('sttMain').style.display = 'block';
 
-    var recognition = new SR();
+    const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    var btn = document.getElementById('sttBtn');
-    var btnLabel = document.getElementById('sttBtnLabel');
-    var langSelect = document.getElementById('sttLang');
-    var statusEl = document.getElementById('sttStatus');
-    var interimEl = document.getElementById('sttInterim');
-    var resultArea = document.getElementById('sttResult');
-    var charCountEl = document.getElementById('sttCharCount');
-    var copyBtn = document.getElementById('sttCopy');
-    var clearBtn = document.getElementById('sttClear');
-    var recording = false;
+    const btn = document.getElementById('sttBtn');
+    const btnLabel = document.getElementById('sttBtnLabel');
+    const langSelect = document.getElementById('sttLang');
+    const statusEl = document.getElementById('sttStatus');
+    const interimEl = document.getElementById('sttInterim');
+    const resultArea = document.getElementById('sttResult');
+    const charCountEl = document.getElementById('sttCharCount');
+    let recording = false;
 
-    function updateCharCount() {
-        var len = resultArea.value.length;
-        charCountEl.textContent = len + ' 文字';
-    }
+    const updateCharCount = () => {
+        charCountEl.textContent = resultArea.value.length + ' 文字';
+    };
 
-    function startRecognition() {
+    const startRecognition = () => {
         recognition.lang = langSelect.value;
         recognition.start();
         recording = true;
@@ -209,9 +207,9 @@
         btnLabel.textContent = '録音停止';
         statusEl.textContent = '音声を認識中...';
         langSelect.disabled = true;
-    }
+    };
 
-    function stopRecognition() {
+    const stopRecognition = () => {
         recognition.stop();
         recording = false;
         btn.classList.remove('is-recording');
@@ -219,26 +217,19 @@
         statusEl.textContent = '';
         interimEl.textContent = '';
         langSelect.disabled = false;
-    }
+    };
 
-    btn.addEventListener('click', function() {
-        if (recording) {
-            stopRecognition();
-        } else {
-            startRecognition();
-        }
+    btn.addEventListener('click', () => {
+        recording ? stopRecognition() : startRecognition();
     });
 
-    recognition.addEventListener('result', function(e) {
-        var interim = '';
-        var finalText = '';
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-            var transcript = e.results[i][0].transcript;
-            if (e.results[i].isFinal) {
-                finalText += transcript;
-            } else {
-                interim += transcript;
-            }
+    recognition.addEventListener('result', (e) => {
+        let interim = '';
+        let finalText = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const transcript = e.results[i][0].transcript;
+            if (e.results[i].isFinal) finalText += transcript;
+            else interim += transcript;
         }
         interimEl.textContent = interim;
         if (finalText) {
@@ -247,7 +238,7 @@
         }
     });
 
-    recognition.addEventListener('error', function(e) {
+    recognition.addEventListener('error', (e) => {
         if (e.error === 'no-speech') {
             statusEl.textContent = '音声が検出されませんでした。もう一度お試しください。';
         } else if (e.error === 'not-allowed') {
@@ -258,23 +249,15 @@
         }
     });
 
-    recognition.addEventListener('end', function() {
-        if (recording) {
-            recognition.start();
-        }
+    recognition.addEventListener('end', () => {
+        if (recording) recognition.start();
     });
 
-    copyBtn.addEventListener('click', function() {
-        var text = resultArea.value;
-        if (!text) return;
-        navigator.clipboard.writeText(text).then(function() {
-            var orig = copyBtn.textContent;
-            copyBtn.textContent = 'コピーしました';
-            setTimeout(function() { copyBtn.textContent = orig; }, 1500);
-        });
+    document.getElementById('sttCopy').addEventListener('click', () => {
+        if (resultArea.value) toolCopy(resultArea.value);
     });
 
-    clearBtn.addEventListener('click', function() {
+    document.getElementById('sttClear').addEventListener('click', () => {
         resultArea.value = '';
         interimEl.textContent = '';
         updateCharCount();

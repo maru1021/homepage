@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ポートスキャナー</div>
     <h1>ポートスキャナー</h1>
     <p class="tool-desc">ホスト名を入力して開放されているポートを確認します。自身が管理するサーバーの確認にお使いください。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_port_scanner.html" %}</template>
 
     <div class="tool-form">
         <input type="text" id="hostInput" placeholder="例: example.com または 192.168.1.1" autocomplete="off" spellcheck="false">

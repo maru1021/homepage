@@ -1,0 +1,167 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; タイピング速度テスト</div>
+    <h1>タイピング速度テスト</h1>
+    <p class="tool-desc">テキストを正確にタイピングして速度と正確性を測定します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_typing_test.html" %}</template>
+
+    <div class="tp-controls">
+        <label>制限時間:
+            <select id="timeSelect">
+                <option value="30">30秒</option>
+                <option value="60" selected>60秒</option>
+                <option value="120">120秒</option>
+            </select>
+        </label>
+        <button id="startBtn" type="button">スタート</button>
+    </div>
+
+    <div class="tp-stats" id="stats">
+        <div class="tp-stat"><span class="tp-stat-val" id="wpm">0</span><span class="tp-stat-label">WPM</span></div>
+        <div class="tp-stat"><span class="tp-stat-val" id="accuracy">100</span><span class="tp-stat-label">正確性 %</span></div>
+        <div class="tp-stat"><span class="tp-stat-val" id="timer">60</span><span class="tp-stat-label">残り秒</span></div>
+        <div class="tp-stat"><span class="tp-stat-val" id="charCount">0</span><span class="tp-stat-label">入力文字</span></div>
+    </div>
+
+    <div id="textDisplay" class="tp-text"></div>
+    <textarea id="typingInput" class="tp-input" placeholder="スタートを押してからここに入力..." disabled rows="3"></textarea>
+
+    <div id="resultPanel" class="tp-result" style="display:none;">
+        <h2>結果</h2>
+        <div class="tp-result-grid" id="resultGrid"></div>
+        <button id="retryBtn" type="button">もう一度</button>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tp-controls { display: flex; gap: 0.8rem; align-items: center; margin-bottom: 1rem; }
+.tp-controls select { padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.tp-controls button, #retryBtn { padding: 0.5rem 1.5rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.95rem; }
+.tp-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-bottom: 1rem; }
+.tp-stat { text-align: center; padding: 0.8rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.tp-stat-val { display: block; font-size: 1.8rem; font-weight: bold; color: var(--color-primary); }
+.tp-stat-label { font-size: 0.75rem; color: var(--color-text-muted); }
+.tp-text { padding: 1.5rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 1.1rem; line-height: 1.8; letter-spacing: 0.02em; margin-bottom: 0.8rem; min-height: 100px; user-select: none; }
+.tp-text .correct { color: var(--color-primary); }
+.tp-text .incorrect { color: #ef4444; background: rgba(239,68,68,0.1); border-radius: 2px; }
+.tp-text .current { background: rgba(59,130,246,0.2); border-radius: 2px; }
+.tp-text .pending { color: var(--color-text-muted); }
+.tp-input { width: 100%; padding: 1rem; border: 2px solid var(--color-border); border-radius: var(--radius-md); font-size: 1.1rem; outline: none; resize: none; }
+.tp-input:focus { border-color: var(--color-primary); }
+.tp-input:disabled { background: var(--color-bg-subtle); cursor: not-allowed; }
+.tp-result { margin-top: 1.5rem; padding: 1.5rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); text-align: center; }
+.tp-result h2 { margin-bottom: 1rem; }
+.tp-result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.tp-result-item { padding: 0.8rem; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); }
+.tp-result-item .val { font-size: 1.5rem; font-weight: bold; color: var(--color-primary); }
+.tp-result-item .lbl { font-size: 0.8rem; color: var(--color-text-muted); }
+@media (max-width: 500px) { .tp-stats { grid-template-columns: repeat(2, 1fr); } }
+</style>
+<script>
+(function() {
+    const WORDS_EN = "the be to of and a in that have i it for not on with he as you do at this but his by from they we say her she or an will my one all would there their what so up out if about who get which go me when make can like time no just him know take people into year your good some could them see other than then now look only come its over think also back after use two how our work first well way even new want because any these give day most us".split(' ');
+
+    const textDisplay = document.getElementById('textDisplay');
+    const typingInput = document.getElementById('typingInput');
+    const wpmEl = document.getElementById('wpm');
+    const accuracyEl = document.getElementById('accuracy');
+    const timerEl = document.getElementById('timer');
+    const charCountEl = document.getElementById('charCount');
+
+    let text = '', startTime = null, timerInterval = null, timeLimit = 60, running = false;
+    let correctChars = 0, totalChars = 0;
+
+    function generateText() {
+        const words = [];
+        for (let i = 0; i < 80; i++) words.push(WORDS_EN[Math.floor(Math.random() * WORDS_EN.length)]);
+        return words.join(' ');
+    }
+
+    function renderText(typed) {
+        let html = '';
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i] === ' ' ? '&nbsp;' : text[i];
+            if (i < typed.length) {
+                html += typed[i] === text[i]
+                    ? `<span class="correct">${c}</span>`
+                    : `<span class="incorrect">${c}</span>`;
+            } else if (i === typed.length) {
+                html += `<span class="current">${c}</span>`;
+            } else {
+                html += `<span class="pending">${c}</span>`;
+            }
+        }
+        textDisplay.innerHTML = html;
+    }
+
+    function reset() {
+        clearInterval(timerInterval);
+        text = generateText();
+        running = false; startTime = null; correctChars = 0; totalChars = 0;
+        timeLimit = parseInt(document.getElementById('timeSelect').value);
+        timerEl.textContent = timeLimit;
+        wpmEl.textContent = '0'; accuracyEl.textContent = '100'; charCountEl.textContent = '0';
+        typingInput.value = ''; typingInput.disabled = true;
+        renderText('');
+        document.getElementById('resultPanel').style.display = 'none';
+    }
+
+    function start() {
+        reset();
+        typingInput.disabled = false;
+        typingInput.focus();
+        running = true;
+    }
+
+    function finish() {
+        running = false;
+        clearInterval(timerInterval);
+        typingInput.disabled = true;
+
+        const elapsed = (Date.now() - startTime) / 1000 / 60;
+        const wpm = elapsed > 0 ? Math.round((correctChars / 5) / elapsed) : 0;
+        const acc = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
+
+        const grid = document.getElementById('resultGrid');
+        grid.innerHTML = `
+            <div class="tp-result-item"><div class="val">${wpm}</div><div class="lbl">WPM</div></div>
+            <div class="tp-result-item"><div class="val">${acc}%</div><div class="lbl">正確性</div></div>
+            <div class="tp-result-item"><div class="val">${correctChars}</div><div class="lbl">正確な文字数</div></div>
+            <div class="tp-result-item"><div class="val">${totalChars - correctChars}</div><div class="lbl">ミス</div></div>
+        `;
+        document.getElementById('resultPanel').style.display = '';
+    }
+
+    typingInput.addEventListener('input', function() {
+        if (!running) return;
+        if (!startTime) {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const remaining = Math.max(0, timeLimit - Math.floor((Date.now() - startTime) / 1000));
+                timerEl.textContent = remaining;
+                if (remaining <= 0) finish();
+            }, 200);
+        }
+
+        const typed = typingInput.value;
+        correctChars = 0; totalChars = typed.length;
+        for (let i = 0; i < typed.length; i++) {
+            if (typed[i] === text[i]) correctChars++;
+        }
+
+        const elapsed = (Date.now() - startTime) / 1000 / 60;
+        wpmEl.textContent = elapsed > 0 ? Math.round((correctChars / 5) / elapsed) : 0;
+        accuracyEl.textContent = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
+        charCountEl.textContent = totalChars;
+        renderText(typed);
+
+        if (typed.length >= text.length) finish();
+    });
+
+    // prevent paste
+    typingInput.addEventListener('paste', e => e.preventDefault());
+
+    document.getElementById('startBtn').addEventListener('click', start);
+    document.getElementById('retryBtn').addEventListener('click', start);
+    reset();
+})();
+</script>

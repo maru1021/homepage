@@ -1,0 +1,169 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 画像圧縮・リサイズ</div>
+    <h1>画像圧縮・リサイズ</h1>
+    <p class="tool-desc">ブラウザ内で画像を圧縮・リサイズします。サーバーへのアップロードなし、完全ローカル処理です。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_image_compress.html" %}</template>
+
+    <div class="ic-drop" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+        <p>画像をドラッグ&ドロップ または <button type="button" id="selectBtn" class="ic-select-btn">ファイルを選択</button></p>
+    </div>
+
+    <div id="editorPanel" style="display:none;">
+        <div class="ic-info" id="origInfo"></div>
+        <div class="ic-controls">
+            <label>品質: <input type="range" id="qualityRange" min="10" max="100" value="80"> <span id="qualityVal">80%</span></label>
+            <label>幅: <input type="number" id="widthInput" min="1" placeholder="auto"> px</label>
+            <label>高さ: <input type="number" id="heightInput" min="1" placeholder="auto"> px</label>
+            <label><input type="checkbox" id="keepRatio" checked> アスペクト比を維持</label>
+            <label>フォーマット:
+                <select id="formatSelect">
+                    <option value="image/jpeg">JPEG</option>
+                    <option value="image/png">PNG</option>
+                    <option value="image/webp">WebP</option>
+                </select>
+            </label>
+        </div>
+        <div class="tool-actions">
+            <button id="compressBtn" type="button">圧縮・リサイズ</button>
+            <button id="downloadBtn" type="button" class="btn-secondary" style="display:none;">ダウンロード</button>
+            <button id="resetBtn" type="button" class="btn-secondary">リセット</button>
+        </div>
+        <div class="ic-result" id="resultPanel" style="display:none;">
+            <div class="ic-info" id="resultInfo"></div>
+            <div class="ic-compare">
+                <div><div class="ic-label">元画像</div><canvas id="origCanvas"></canvas></div>
+                <div><div class="ic-label">圧縮後</div><canvas id="resultCanvas"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ic-drop { border: 2px dashed var(--color-border); border-radius: var(--radius-lg); padding: 3rem 2rem; text-align: center; color: var(--color-text-muted); cursor: pointer; transition: border-color 0.2s; }
+.ic-drop:hover,.ic-drop.dragover { border-color: var(--color-primary); background: var(--color-bg-subtle); }
+.ic-select-btn { background: var(--color-primary); color: #fff; border: none; padding: 0.4rem 1rem; border-radius: var(--radius-md); cursor: pointer; }
+.ic-info { font-size: 0.85rem; color: var(--color-text-muted); margin: 0.5rem 0; padding: 0.5rem; background: var(--color-bg-subtle); border-radius: var(--radius-md); }
+.ic-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 1rem 0; }
+.ic-controls label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+.ic-controls input[type=number] { width: 80px; padding: 0.3rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.ic-controls select { padding: 0.3rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.ic-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem; }
+.ic-compare canvas { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.ic-label { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.3rem; }
+.tool-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.tool-actions button { padding: 0.5rem 1rem; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; }
+.tool-actions button:first-child { background: var(--color-primary); color: #fff; }
+.btn-secondary { background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border) !important; }
+@media (max-width: 600px) { .ic-compare { grid-template-columns: 1fr; } .ic-controls { flex-direction: column; } }
+</style>
+<script>
+(function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const editorPanel = document.getElementById('editorPanel');
+    const origInfo = document.getElementById('origInfo');
+    const qualityRange = document.getElementById('qualityRange');
+    const qualityVal = document.getElementById('qualityVal');
+    const widthInput = document.getElementById('widthInput');
+    const heightInput = document.getElementById('heightInput');
+    const keepRatio = document.getElementById('keepRatio');
+    const formatSelect = document.getElementById('formatSelect');
+    let origImg = null, origSize = 0, ratio = 1;
+
+    document.getElementById('selectBtn').addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', (e) => { if (e.target === dropZone || e.target.closest('.ic-drop') === dropZone) fileInput.click(); });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+
+    qualityRange.addEventListener('input', () => qualityVal.textContent = qualityRange.value + '%');
+
+    widthInput.addEventListener('input', () => {
+        if (keepRatio.checked && origImg && widthInput.value) {
+            heightInput.value = Math.round(widthInput.value / ratio);
+        }
+    });
+    heightInput.addEventListener('input', () => {
+        if (keepRatio.checked && origImg && heightInput.value) {
+            widthInput.value = Math.round(heightInput.value * ratio);
+        }
+    });
+
+    function formatBytes(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(2) + ' MB'; }
+
+    function loadFile(file) {
+        origSize = file.size;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            origImg = new Image();
+            origImg.onload = function() {
+                ratio = origImg.width / origImg.height;
+                widthInput.value = origImg.width;
+                heightInput.value = origImg.height;
+                origInfo.textContent = `元画像: ${origImg.width} x ${origImg.height} px / ${formatBytes(origSize)} / ${file.type}`;
+                editorPanel.style.display = '';
+                dropZone.style.display = 'none';
+                document.getElementById('resultPanel').style.display = 'none';
+                document.getElementById('downloadBtn').style.display = 'none';
+            };
+            origImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    document.getElementById('compressBtn').addEventListener('click', function() {
+        if (!origImg) return;
+        const w = parseInt(widthInput.value) || origImg.width;
+        const h = parseInt(heightInput.value) || origImg.height;
+        const q = parseInt(qualityRange.value) / 100;
+        const fmt = formatSelect.value;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(origImg, 0, 0, w, h);
+
+        canvas.toBlob(function(blob) {
+            const resultInfo = document.getElementById('resultInfo');
+            const saved = origSize - blob.size;
+            const pct = origSize > 0 ? ((saved / origSize) * 100).toFixed(1) : 0;
+            resultInfo.innerHTML = `圧縮後: ${w} x ${h} px / ${formatBytes(blob.size)} (<strong>${pct}% 削減</strong>)`;
+
+            // draw previews
+            const oc = document.getElementById('origCanvas');
+            const rc = document.getElementById('resultCanvas');
+            drawPreview(oc, origImg);
+            const rImg = new Image();
+            rImg.onload = function() { drawPreview(rc, rImg); };
+            rImg.src = URL.createObjectURL(blob);
+
+            document.getElementById('resultPanel').style.display = '';
+            const dlBtn = document.getElementById('downloadBtn');
+            dlBtn.style.display = '';
+            dlBtn.onclick = function() {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                const ext = fmt.split('/')[1];
+                a.download = 'compressed.' + ext;
+                a.click();
+            };
+        }, fmt, q);
+    });
+
+    function drawPreview(canvas, img) {
+        const max = 350;
+        const scale = Math.min(max / img.width, max / img.height, 1);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        origImg = null;
+        editorPanel.style.display = 'none';
+        dropZone.style.display = '';
+        fileInput.value = '';
+    });
+})();
+</script>

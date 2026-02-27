@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}割り勘計算機 - 無料オンラインツール{% endblock %}
+{% block meta_description %}人数・金額を入力して割り勘を計算。傾斜配分にも対応した無料ツール。{% endblock %}
+{% block og_title %}割り勘計算機 - 無料オンラインツール{% endblock %}
+{% block og_description %}割り勘を簡単に計算できる無料ツール{% endblock %}
+{% block twitter_title %}割り勘計算機 - 無料オンラインツール{% endblock %}
+{% block twitter_description %}割り勘を簡単に計算できる無料ツール{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"割り勘計算機","description":"割り勘を簡単に計算","url":"https://{{ request.get_host }}{% url 'tools:split_bill' %}","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"inLanguage":"ja","breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"便利ツール","item":"https://{{ request.get_host }}{% url 'tools:index' %}"},{"@type":"ListItem","position":2,"name":"割り勘計算機"}]}}
+</script>
+{% endblock %}
+{% block content %}{% include "tools/_split_bill_content.html" %}{% endblock %}

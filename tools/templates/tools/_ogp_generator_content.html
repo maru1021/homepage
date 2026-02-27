@@ -1,0 +1,95 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; OGP/メタタグ生成</div>
+    <h1>OGP/メタタグ生成</h1>
+    <p class="tool-desc">SNS（X、Facebook、LINEなど）でURLをシェアしたときに表示されるタイトル・説明文・画像を設定するためのHTMLタグを生成します。生成されたコードをページの <code>&lt;head&gt;</code> 内に貼り付けてください。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_ogp_generator.html" %}</template>
+
+    <div class="og-form">
+        <label>ページタイトル <span class="og-hint">SNSシェア時に太字で表示されるタイトル</span> <input type="text" id="ogTitle" placeholder="例: 無料オンラインツール集"></label>
+        <label>説明文 <span class="og-hint">タイトルの下に表示される説明文（100文字程度推奨）</span> <textarea id="ogDesc" rows="2" placeholder="例: Web開発に役立つ便利ツールを無料で提供"></textarea></label>
+        <label>ページURL <span class="og-hint">シェアするページのURL</span> <input type="url" id="ogUrl" placeholder="例: https://example.com/tools/"></label>
+        <label>OGP画像URL <span class="og-hint">シェア時に表示される画像のURL（推奨: 1200x630px）</span> <input type="url" id="ogImage" placeholder="例: https://example.com/ogp.png"></label>
+        <label>サイト名 <span class="og-hint">Webサイト全体の名前</span> <input type="text" id="ogSiteName" placeholder="例: My Site"></label>
+        <div class="og-row">
+            <label>OGタイプ <span class="og-hint">ページの種類</span>
+                <select id="ogType"><option>website</option><option>article</option><option>blog</option><option>product</option></select>
+            </label>
+            <label>Twitterカード <span class="og-hint">X での表示形式</span>
+                <select id="twCard"><option>summary_large_image</option><option>summary</option></select>
+            </label>
+            <label>Twitter @名 <span class="og-hint">X のアカウント名</span> <input type="text" id="twSite" placeholder="例: @username"></label>
+        </div>
+    </div>
+
+    <div class="og-output-header"><span>生成されたHTML</span><button id="copyBtn" type="button" class="btn-sm">コピー</button></div>
+    <pre id="output" class="og-code"></pre>
+
+    <div class="og-preview-title">プレビュー（SNSシェア時のイメージ）</div>
+    <div class="og-preview" id="preview"></div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.og-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; }
+.og-form label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; font-weight: 600; color: var(--color-dark); }
+.og-hint { font-weight: 400; font-size: 0.8rem; color: var(--color-text-muted); }
+.og-form input, .og-form textarea, .og-form select { padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.95rem; }
+.og-form textarea { resize: vertical; }
+.og-row { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.og-row label { flex: 1; min-width: 150px; }
+.og-output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--color-text-muted); }
+.btn-sm { padding: 0.2rem 0.6rem; font-size: 0.8rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
+.og-code { padding: 1rem; background: #1e1e2e; color: #cdd6f4; border-radius: var(--radius-md); font-family: 'SF Mono','Fira Code',monospace; font-size: 12px; white-space: pre-wrap; overflow-x: auto; line-height: 1.6; }
+.og-preview-title { font-size: 0.85rem; color: var(--color-text-muted); margin: 1rem 0 0.3rem; }
+.og-preview { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; max-width: 500px; background: var(--color-bg-white); }
+.og-preview img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+.og-preview-body { padding: 0.8rem; }
+.og-preview-site { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; }
+.og-preview-h { font-size: 0.95rem; font-weight: bold; color: var(--color-dark); margin: 0.2rem 0; }
+.og-preview-d { font-size: 0.82rem; color: var(--color-text-light); }
+</style>
+<script>
+(function() {
+    const fields = ['ogTitle','ogDesc','ogUrl','ogImage','ogSiteName','ogType','twCard','twSite'];
+    function generate() {
+        const t = document.getElementById('ogTitle').value;
+        const d = document.getElementById('ogDesc').value;
+        const u = document.getElementById('ogUrl').value;
+        const img = document.getElementById('ogImage').value;
+        const sn = document.getElementById('ogSiteName').value;
+        const ot = document.getElementById('ogType').value;
+        const tc = document.getElementById('twCard').value;
+        const tw = document.getElementById('twSite').value;
+
+        let html = '';
+        if (t) html += `<meta property="og:title" content="${esc(t)}">\n`;
+        if (d) html += `<meta property="og:description" content="${esc(d)}">\n`;
+        if (u) html += `<meta property="og:url" content="${esc(u)}">\n`;
+        if (img) html += `<meta property="og:image" content="${esc(img)}">\n`;
+        if (sn) html += `<meta property="og:site_name" content="${esc(sn)}">\n`;
+        html += `<meta property="og:type" content="${ot}">\n`;
+        html += `<meta name="twitter:card" content="${tc}">\n`;
+        if (t) html += `<meta name="twitter:title" content="${esc(t)}">\n`;
+        if (d) html += `<meta name="twitter:description" content="${esc(d)}">\n`;
+        if (img) html += `<meta name="twitter:image" content="${esc(img)}">\n`;
+        if (tw) html += `<meta name="twitter:site" content="${esc(tw)}">\n`;
+
+        document.getElementById('output').textContent = html;
+
+        const preview = document.getElementById('preview');
+        preview.innerHTML = `
+            ${img ? `<img src="${esc(img)}" alt="">` : ''}
+            <div class="og-preview-body">
+                <div class="og-preview-site">${esc(sn || (u ? new URL(u).hostname : ''))}</div>
+                <div class="og-preview-h">${esc(t)}</div>
+                <div class="og-preview-d">${esc(d)}</div>
+            </div>
+        `;
+    }
+
+    function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    fields.forEach(id => document.getElementById(id).addEventListener('input', generate));
+    document.getElementById('copyBtn').addEventListener('click', () => toolCopy(document.getElementById('output').textContent));
+    generate();
+})();
+</script>

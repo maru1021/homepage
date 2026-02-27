@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}YAML ↔ JSON 変換 - 無料オンラインツール{% endblock %}
+{% block meta_description %}YAMLとJSONを相互変換できる無料オンラインツール。{% endblock %}
+{% block og_title %}YAML ↔ JSON 変換 - 無料オンラインツール{% endblock %}
+{% block og_description %}YAMLとJSONを相互変換できる無料ツール{% endblock %}
+{% block twitter_title %}YAML ↔ JSON 変換 - 無料オンラインツール{% endblock %}
+{% block twitter_description %}YAMLとJSONを相互変換できる無料ツール{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"YAML ↔ JSON 変換","description":"YAMLとJSONを相互変換","url":"https://{{ request.get_host }}{% url 'tools:yaml_json' %}","applicationCategory":"DeveloperApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"inLanguage":"ja","breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"便利ツール","item":"https://{{ request.get_host }}{% url 'tools:index' %}"},{"@type":"ListItem","position":2,"name":"YAML ↔ JSON 変換"}]}}
+</script>
+{% endblock %}
+{% block content %}{% include "tools/_yaml_json_content.html" %}{% endblock %}

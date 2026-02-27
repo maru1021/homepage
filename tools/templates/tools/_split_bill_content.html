@@ -1,0 +1,141 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 割り勘計算機</div>
+    <h1>割り勘計算機</h1>
+    <p class="tool-desc">合計金額と人数を入力して割り勘を計算します。傾斜配分にも対応。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_split_bill.html" %}</template>
+
+    <div class="sb-card">
+        <label class="sb-label">合計金額 <input type="number" id="totalAmount" value="10000" min="0" step="100" class="sb-input-lg"> 円</label>
+
+        <div class="sb-mode">
+            <label><input type="radio" name="mode" value="equal" checked> 均等割り</label>
+            <label><input type="radio" name="mode" value="weighted"> 傾斜配分</label>
+        </div>
+
+        <div id="equalPanel">
+            <label class="sb-label">人数 <input type="number" id="numPeople" value="4" min="1" max="100" class="sb-input-sm"> 人</label>
+        </div>
+
+        <div id="weightedPanel" style="display:none;">
+            <div class="sb-members" id="memberList"></div>
+            <button id="addMemberBtn" type="button" class="sb-add-btn">+ メンバー追加</button>
+        </div>
+
+        <button id="calcBtn" type="button" class="sb-calc-btn">計算する</button>
+    </div>
+
+    <div id="resultPanel" class="sb-result" style="display:none;">
+        <h2>計算結果</h2>
+        <div id="resultContent"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.sb-card { background: var(--color-bg-white); padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin-bottom: 1rem; }
+.sb-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; margin-bottom: 0.8rem; }
+.sb-input-lg { width: 150px; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 1.1rem; text-align: right; }
+.sb-input-sm { width: 70px; padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: center; }
+.sb-mode { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.sb-mode label { display: flex; align-items: center; gap: 0.3rem; cursor: pointer; }
+.sb-members { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; }
+.sb-member { display: flex; gap: 0.5rem; align-items: center; }
+.sb-member input[type=text] { flex: 1; padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.sb-member input[type=number] { width: 60px; padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: center; }
+.sb-member .del { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; }
+.sb-add-btn { padding: 0.3rem 0.8rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; font-size: 0.85rem; margin-bottom: 1rem; }
+.sb-calc-btn { width: 100%; padding: 0.7rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 1rem; cursor: pointer; }
+.sb-result { background: var(--color-bg-white); padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.sb-result h2 { font-size: 1.1rem; margin-bottom: 0.8rem; }
+.sb-result-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--color-border-light); }
+.sb-result-item:last-child { border-bottom: none; }
+.sb-result-amount { font-weight: bold; color: var(--color-primary); }
+.sb-result-note { font-size: 0.82rem; color: var(--color-text-muted); margin-top: 0.5rem; }
+</style>
+<script>
+(function() {
+    const members = [{ name: '幹事', weight: 2 }, { name: 'メンバーA', weight: 1 }, { name: 'メンバーB', weight: 1 }];
+    const memberList = document.getElementById('memberList');
+
+    const esc = (s) => {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    };
+
+    const yen = (n) => n.toLocaleString('ja-JP') + ' 円';
+
+    const distributeRemainder = (amounts, total) => {
+        let remainder = total - amounts.reduce((s, a) => s + a.amount, 0);
+        const sorted = amounts.map((a, i) => ({ w: a.weight, idx: i })).sort((a, b) => b.w - a.w);
+        for (let i = 0; remainder > 0; i++, remainder--) {
+            amounts[sorted[i % sorted.length].idx].amount += 1;
+        }
+    };
+
+    document.querySelectorAll('input[name="mode"]').forEach(r => {
+        r.addEventListener('change', () => {
+            document.getElementById('equalPanel').style.display = r.value === 'equal' && r.checked ? '' : 'none';
+            document.getElementById('weightedPanel').style.display = r.value === 'weighted' && r.checked ? '' : 'none';
+        });
+    });
+
+    const renderMembers = () => {
+        memberList.innerHTML = members.map((m, i) =>
+            '<div class="sb-member">'
+            + '<input type="text" value="' + esc(m.name) + '" data-idx="' + i + '" data-field="name" placeholder="名前">'
+            + '<span>比率:</span><input type="number" value="' + m.weight + '" min="0.1" max="10" step="0.1" data-idx="' + i + '" data-field="weight">'
+            + '<button class="del" data-idx="' + i + '">&times;</button>'
+            + '</div>'
+        ).join('');
+    };
+
+    memberList.addEventListener('input', (e) => {
+        const inp = e.target;
+        if (!inp.dataset?.idx) return;
+        const idx = parseInt(inp.dataset.idx);
+        if (inp.dataset.field === 'name') members[idx].name = inp.value;
+        else members[idx].weight = parseFloat(inp.value) || 1;
+    });
+
+    memberList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.del');
+        if (!btn) return;
+        members.splice(parseInt(btn.dataset.idx), 1);
+        renderMembers();
+    });
+
+    document.getElementById('addMemberBtn').addEventListener('click', () => {
+        members.push({ name: 'メンバー' + (members.length + 1), weight: 1 });
+        renderMembers();
+    });
+
+    document.getElementById('calcBtn').addEventListener('click', () => {
+        const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        let amounts;
+
+        if (mode === 'equal') {
+            const n = parseInt(document.getElementById('numPeople').value) || 1;
+            const perPerson = Math.floor(total / n);
+            amounts = Array.from({ length: n }, (_, i) => ({ label: (i + 1) + '人目', amount: perPerson, weight: 1 }));
+        } else {
+            const totalWeight = members.reduce((s, m) => s + (m.weight || 1), 0);
+            amounts = members.map(m => {
+                const w = m.weight || 1;
+                return { label: esc(m.name) + '（比率: ' + w + '）', amount: Math.floor(total * (w / totalWeight)), weight: w };
+            });
+        }
+        distributeRemainder(amounts, total);
+
+        let html = amounts.map(a =>
+            '<div class="sb-result-item"><span>' + a.label + '</span><span class="sb-result-amount">' + yen(a.amount) + '</span></div>'
+        ).join('');
+        html += '<div class="sb-result-item" style="font-weight:bold;border-top:2px solid var(--color-border);margin-top:0.3rem;padding-top:0.5rem;"><span>合計</span><span>' + yen(total) + '</span></div>';
+
+        document.getElementById('resultContent').innerHTML = html;
+        document.getElementById('resultPanel').style.display = '';
+    });
+
+    renderMembers();
+})();
+</script>

@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 文字数カウンター</div>
     <h1>文字数カウンター</h1>
     <p class="tool-desc">テキストの文字数・単語数・バイト数をリアルタイムで計算します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_char_counter.html" %}</template>
 
     <div class="cc-stats">
         <div class="cc-stat"><span id="charCount">0</span><small>文字</small></div>

@@ -9,123 +9,293 @@ from datetime import datetime, timezone
 from django.http import JsonResponse
 from django.shortcuts import render
 
-
-# ---------------------
-# ページ表示
-# ---------------------
-
-def _render(request, full, partial, context=None):
-    template = partial if request.htmx else full
-    return render(request, template, context or {})
+from config.htmx import htmx_render
 
 
 def index(request):
-    return _render(request, "tools/index.html", "tools/_index_content.html")
+    return htmx_render(request, "tools/index.html", "tools/_index_content.html", title="便利ツール - 無料オンラインツール集")
 
 
 def ip_lookup(request):
-    return _render(request, "tools/ip_lookup.html", "tools/_ip_lookup_content.html")
+    return htmx_render(request, "tools/ip_lookup.html", "tools/_ip_lookup_content.html", title="IPアドレスからの住所検索 - 無料オンラインツール")
 
 
 def json_formatter(request):
-    return _render(request, "tools/json_formatter.html", "tools/_json_formatter_content.html")
+    return htmx_render(request, "tools/json_formatter.html", "tools/_json_formatter_content.html", title="JSON整形ツール - 無料オンラインツール")
 
 
 def base64_tool(request):
-    return _render(request, "tools/base64.html", "tools/_base64_content.html")
+    return htmx_render(request, "tools/base64.html", "tools/_base64_content.html", title="Base64エンコード/デコード - 無料オンラインツール")
 
 
 def password_generator(request):
-    return _render(request, "tools/password_generator.html", "tools/_password_generator_content.html")
+    return htmx_render(request, "tools/password_generator.html", "tools/_password_generator_content.html", title="パスワード生成器 - 安全なランダムパスワード作成")
 
 
 def qr_code(request):
-    return _render(request, "tools/qr_code.html", "tools/_qr_code_content.html")
+    return htmx_render(request, "tools/qr_code.html", "tools/_qr_code_content.html", title="QRコード生成 - 無料オンラインツール")
 
 
 def char_counter(request):
-    return _render(request, "tools/char_counter.html", "tools/_char_counter_content.html")
+    return htmx_render(request, "tools/char_counter.html", "tools/_char_counter_content.html", title="文字数カウンター - 無料オンラインツール")
 
 
 def whois_lookup(request):
-    return _render(request, "tools/whois.html", "tools/_whois_content.html")
+    return htmx_render(request, "tools/whois.html", "tools/_whois_content.html", title="Whois検索 - ドメイン登録情報調査")
 
 
 def regex_tester(request):
-    return _render(request, "tools/regex_tester.html", "tools/_regex_tester_content.html")
+    return htmx_render(request, "tools/regex_tester.html", "tools/_regex_tester_content.html", title="正規表現テスター - 無料オンラインツール")
 
 
 def cron_generator(request):
-    return _render(request, "tools/cron_generator.html", "tools/_cron_generator_content.html")
+    return htmx_render(request, "tools/cron_generator.html", "tools/_cron_generator_content.html", title="Cron式ジェネレータ - 無料オンラインツール")
 
 
 def color_converter(request):
-    return _render(request, "tools/color_converter.html", "tools/_color_converter_content.html")
+    return htmx_render(request, "tools/color_converter.html", "tools/_color_converter_content.html", title="色変換ツール - HEX/RGB/HSL相互変換")
 
 
 def url_encode(request):
-    return _render(request, "tools/url_encode.html", "tools/_url_encode_content.html")
+    return htmx_render(request, "tools/url_encode.html", "tools/_url_encode_content.html", title="URLエンコード/デコード - 無料オンラインツール")
 
 
 def unix_time(request):
-    return _render(request, "tools/unix_time.html", "tools/_unix_time_content.html")
+    return htmx_render(request, "tools/unix_time.html", "tools/_unix_time_content.html", title="Unix時間変換 - Unixタイムスタンプ変換ツール")
 
 
 def diff_tool(request):
-    return _render(request, "tools/diff.html", "tools/_diff_content.html")
+    return htmx_render(request, "tools/diff.html", "tools/_diff_content.html", title="テキスト比較 (diff) - 無料オンラインツール")
 
 
 def hash_generator(request):
-    return _render(request, "tools/hash_generator.html", "tools/_hash_generator_content.html")
+    return htmx_render(request, "tools/hash_generator.html", "tools/_hash_generator_content.html", title="ハッシュ生成 - MD5/SHA-1/SHA-256計算ツール")
 
 
 def html_escape(request):
-    return _render(request, "tools/html_escape.html", "tools/_html_escape_content.html")
+    return htmx_render(request, "tools/html_escape.html", "tools/_html_escape_content.html", title="HTMLエスケープ/アンエスケープ - 無料オンラインツール")
 
 
 def jwt_decoder(request):
-    return _render(request, "tools/jwt_decoder.html", "tools/_jwt_decoder_content.html")
+    return htmx_render(request, "tools/jwt_decoder.html", "tools/_jwt_decoder_content.html", title="JWTデコーダー - JWTトークン解析ツール")
 
 
 def unit_converter(request):
-    return _render(request, "tools/unit_converter.html", "tools/_unit_converter_content.html")
+    return htmx_render(request, "tools/unit_converter.html", "tools/_unit_converter_content.html", title="単位変換ツール - 長さ/重さ/温度/面積/体積/データ")
 
 
 def age_calculator(request):
-    return _render(request, "tools/age_calculator.html", "tools/_age_calculator_content.html")
+    return htmx_render(request, "tools/age_calculator.html", "tools/_age_calculator_content.html", title="年齢早見表・入学卒業年計算 - 生まれ年から一発検索")
 
 
 def http_headers(request):
-    return _render(request, "tools/http_headers.html", "tools/_http_headers_content.html")
+    return htmx_render(request, "tools/http_headers.html", "tools/_http_headers_content.html", title="HTTPヘッダー確認 - セキュリティヘッダーチェック")
 
 
 def ssl_checker(request):
-    return _render(request, "tools/ssl_checker.html", "tools/_ssl_checker_content.html")
+    return htmx_render(request, "tools/ssl_checker.html", "tools/_ssl_checker_content.html", title="SSL/TLS証明書チェッカー - 無料オンラインツール")
 
 
 def port_scanner(request):
-    return _render(request, "tools/port_scanner.html", "tools/_port_scanner_content.html")
+    return htmx_render(request, "tools/port_scanner.html", "tools/_port_scanner_content.html", title="ポートスキャナー - オープンポート確認ツール")
 
 
 def password_strength(request):
-    return _render(request, "tools/password_strength.html", "tools/_password_strength_content.html")
+    return htmx_render(request, "tools/password_strength.html", "tools/_password_strength_content.html", title="パスワード強度チェッカー - 安全性診断ツール")
 
 
 def subnet_calculator(request):
-    return _render(request, "tools/subnet_calculator.html", "tools/_subnet_calculator_content.html")
+    return htmx_render(request, "tools/subnet_calculator.html", "tools/_subnet_calculator_content.html", title="サブネット計算機 - CIDR/サブネットマスク変換")
 
 
 def speech_to_text(request):
-    return _render(request, "tools/speech_to_text.html", "tools/_speech_to_text_content.html")
+    return htmx_render(request, "tools/speech_to_text.html", "tools/_speech_to_text_content.html", title="音声文字起こし - 無料オンラインツール")
 
 
 def network_sim(request):
-    return _render(request, "tools/network_sim.html", "tools/_network_sim_content.html")
+    return htmx_render(request, "tools/network_sim.html", "tools/_network_sim_content.html", title="ネットワークシミュレーター - 構成・ルーティング学習ツール")
+
+
+def markdown_preview(request):
+    return htmx_render(request, "tools/markdown_preview.html", "tools/_markdown_preview_content.html", title="Markdownプレビューア - 無料オンラインツール")
+
+
+def image_compress(request):
+    return htmx_render(request, "tools/image_compress.html", "tools/_image_compress_content.html", title="画像圧縮・リサイズ - 無料オンラインツール")
+
+
+def sql_formatter(request):
+    return htmx_render(request, "tools/sql_formatter.html", "tools/_sql_formatter_content.html", title="SQLフォーマッター - 無料オンラインツール")
+
+
+def csv_json(request):
+    return htmx_render(request, "tools/csv_json.html", "tools/_csv_json_content.html", title="CSV ↔ JSON 変換 - 無料オンラインツール")
+
+
+def compound_interest(request):
+    return htmx_render(request, "tools/compound_interest.html", "tools/_compound_interest_content.html", title="複利計算シミュレーター - 無料オンラインツール")
+
+
+def loan_calculator(request):
+    return htmx_render(request, "tools/loan_calculator.html", "tools/_loan_calculator_content.html", title="ローン返済シミュレーター - 無料オンラインツール")
+
+
+def currency_converter(request):
+    return htmx_render(request, "tools/currency_converter.html", "tools/_currency_converter_content.html", title="為替換算ツール - 無料オンラインツール")
+
+
+def text_transform(request):
+    return htmx_render(request, "tools/text_transform.html", "tools/_text_transform_content.html", title="テキスト変換ツール - 無料オンラインツール")
+
+
+def dummy_text(request):
+    return htmx_render(request, "tools/dummy_text.html", "tools/_dummy_text_content.html", title="ダミーテキスト生成 - 無料オンラインツール")
+
+
+def typing_test(request):
+    return htmx_render(request, "tools/typing_test.html", "tools/_typing_test_content.html", title="タイピング速度テスト - 無料オンラインツール")
+
+
+def pdf_tool(request):
+    return htmx_render(request, "tools/pdf_tool.html", "tools/_pdf_tool_content.html", title="PDF結合・分割 - 無料オンラインツール")
+
+
+def text_proofreader(request):
+    return htmx_render(request, "tools/text_proofreader.html", "tools/_text_proofreader_content.html", title="文章校正チェッカー - 無料オンラインツール")
+
+
+def ruby_generator(request):
+    return htmx_render(request, "tools/ruby_generator.html", "tools/_ruby_generator_content.html", title="ルビ（ふりがな）HTML生成 - 無料オンラインツール")
+
+
+def image_converter(request):
+    return htmx_render(request, "tools/image_converter.html", "tools/_image_converter_content.html", title="画像フォーマット変換 - 無料オンラインツール")
+
+
+def ogp_preview(request):
+    return htmx_render(request, "tools/ogp_preview.html", "tools/_ogp_preview_content.html", title="OGP画像プレビュー - 無料オンラインツール")
+
+
+def favicon_generator(request):
+    return htmx_render(request, "tools/favicon_generator.html", "tools/_favicon_generator_content.html", title="ファビコン生成 - 無料オンラインツール")
+
+
+def yaml_json(request):
+    return htmx_render(request, "tools/yaml_json.html", "tools/_yaml_json_content.html", title="YAML ↔ JSON 変換 - 無料オンラインツール")
+
+
+def env_json(request):
+    return htmx_render(request, "tools/env_json.html", "tools/_env_json_content.html", title=".env ↔ JSON 変換 - 無料オンラインツール")
+
+
+def http_status(request):
+    return htmx_render(request, "tools/http_status.html", "tools/_http_status_content.html", title="HTTPステータスコード一覧 - 無料オンラインツール")
+
+
+def ogp_generator(request):
+    return htmx_render(request, "tools/ogp_generator.html", "tools/_ogp_generator_content.html", title="OGP/メタタグ生成 - 無料オンラインツール")
+
+
+def split_bill(request):
+    return htmx_render(request, "tools/split_bill.html", "tools/_split_bill_content.html", title="割り勘計算機 - 無料オンラインツール")
+
+
+def bmi_calculator(request):
+    return htmx_render(request, "tools/bmi_calculator.html", "tools/_bmi_calculator_content.html", title="BMI計算機 - 無料オンラインツール")
+
+
+def date_calculator(request):
+    return htmx_render(request, "tools/date_calculator.html", "tools/_date_calculator_content.html", title="日付計算機 - 無料オンラインツール")
+
+
+def email_header(request):
+    return htmx_render(request, "tools/email_header.html", "tools/_email_header_content.html", title="メールヘッダー解析 - 無料オンラインツール")
+
+
+def weather(request):
+    return htmx_render(request, "tools/weather.html", "tools/_weather_content.html", title="天気予報 - 無料オンラインツール")
+
+
+def zip_code(request):
+    return htmx_render(request, "tools/zip_code.html", "tools/_zip_code_content.html", title="郵便番号検索 - 無料オンラインツール")
+
+
+def holidays(request):
+    return htmx_render(request, "tools/holidays.html", "tools/_holidays_content.html", title="祝日カレンダー - 無料オンラインツール")
+
+
+
+def wikipedia(request):
+    return htmx_render(request, "tools/wikipedia.html", "tools/_wikipedia_content.html", title="Wikipedia検索 - 無料オンラインツール")
+
+
+def trivia_quiz(request):
+    return htmx_render(request, "tools/trivia_quiz.html", "tools/_trivia_quiz_content.html", title="クイズゲーム - 無料オンラインツール")
+
+
+
+def cocktail_recipe(request):
+    return htmx_render(request, "tools/cocktail_recipe.html", "tools/_cocktail_recipe_content.html", title="カクテルレシピ - 無料オンラインツール")
+
+
+def geocoding(request):
+    return htmx_render(request, "tools/geocoding.html", "tools/_geocoding_content.html", title="ジオコーディング - 無料オンラインツール")
 
 
 # ---------------------
 # API エンドポイント
 # ---------------------
+
+def api_ogp_preview(request):
+    url = request.GET.get("url", "").strip()
+    if not url or not re.match(r"^https?://", url, re.IGNORECASE):
+        return JsonResponse({"error": "有効なURL（http/https）を入力してください"}, status=400)
+
+    try:
+        req = urllib.request.Request(url)
+        req.add_header("User-Agent", "Mozilla/5.0 (compatible; OGPPreview/1.0)")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html = resp.read().decode("utf-8", errors="replace")
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return JsonResponse({"error": "URLの取得に失敗しました"}, status=502)
+
+    def get_meta(prop):
+        for attr in ["property", "name"]:
+            m = re.search(
+                rf'<meta\s+{attr}=["\']?{re.escape(prop)}["\']?\s+content=["\']([^"\']*)["\']',
+                html, re.IGNORECASE,
+            )
+            if m:
+                return m.group(1)
+            m = re.search(
+                rf'<meta\s+content=["\']([^"\']*)["\']?\s+{attr}=["\']?{re.escape(prop)}["\']',
+                html, re.IGNORECASE,
+            )
+            if m:
+                return m.group(1)
+        return ""
+
+    title = get_meta("og:title")
+    if not title:
+        m = re.search(r"<title>([^<]*)</title>", html, re.IGNORECASE)
+        title = m.group(1) if m else ""
+
+    meta_dict = {}
+    for prop in ["og:title", "og:description", "og:image", "og:url", "og:type",
+                  "og:site_name", "twitter:card", "twitter:title", "twitter:description",
+                  "twitter:image", "twitter:site"]:
+        v = get_meta(prop)
+        if v:
+            meta_dict[prop] = v
+
+    return JsonResponse({
+        "title": title,
+        "description": get_meta("og:description") or get_meta("description"),
+        "image": get_meta("og:image"),
+        "site_name": get_meta("og:site_name"),
+        "meta": meta_dict,
+    })
+
 
 _IP_RE = re.compile(
     r"^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$"
@@ -412,3 +582,159 @@ def api_port_scan(request):
         })
 
     return JsonResponse({"host": host, "ip": ip, "results": results})
+
+
+# 天気予報 API
+_CITIES = {
+    "tokyo": {"name": "東京", "lat": 35.6762, "lon": 139.6503},
+    "osaka": {"name": "大阪", "lat": 34.6937, "lon": 135.5023},
+    "nagoya": {"name": "名古屋", "lat": 35.1815, "lon": 136.9066},
+    "fukuoka": {"name": "福岡", "lat": 33.5904, "lon": 130.4017},
+    "sapporo": {"name": "札幌", "lat": 43.0618, "lon": 141.3545},
+    "sendai": {"name": "仙台", "lat": 38.2682, "lon": 140.8694},
+    "hiroshima": {"name": "広島", "lat": 34.3853, "lon": 132.4553},
+    "naha": {"name": "那覇", "lat": 26.2124, "lon": 127.6809},
+    "niigata": {"name": "新潟", "lat": 37.9026, "lon": 139.0236},
+    "kanazawa": {"name": "金沢", "lat": 36.5613, "lon": 136.6562},
+}
+
+
+def api_weather(request):
+    city_key = request.GET.get("city", "").strip().lower()
+
+    # 全都市一括取得
+    if city_key == "all":
+        keys = list(_CITIES.keys())
+        lats = ",".join(str(_CITIES[k]["lat"]) for k in keys)
+        lons = ",".join(str(_CITIES[k]["lon"]) for k in keys)
+        try:
+            url = (
+                f"https://api.open-meteo.com/v1/forecast?"
+                f"latitude={lats}&longitude={lons}"
+                f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+                f"&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+                f"&timezone=Asia%2FTokyo&forecast_days=7"
+            )
+            req = urllib.request.Request(url, headers={"Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data_list = json.loads(resp.read().decode())
+        except (urllib.error.URLError, TimeoutError):
+            return JsonResponse({"error": "天気情報の取得に失敗しました"}, status=502)
+
+        cities = {}
+        for i, key in enumerate(keys):
+            item = data_list[i] if isinstance(data_list, list) else data_list
+            cities[key] = {
+                "name": _CITIES[key]["name"],
+                "current": item.get("current", {}),
+                "daily": item.get("daily", {}),
+            }
+        return JsonResponse({"cities": cities})
+
+    # 単一都市取得
+    if city_key not in _CITIES:
+        return JsonResponse({"error": "都市を選択してください"}, status=400)
+
+    city = _CITIES[city_key]
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={city['lat']}&longitude={city['lon']}"
+            f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+            f"&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+            f"&timezone=Asia%2FTokyo&forecast_days=7"
+        )
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+    except (urllib.error.URLError, TimeoutError):
+        return JsonResponse({"error": "天気情報の取得に失敗しました"}, status=502)
+
+    return JsonResponse({
+        "city": city["name"],
+        "current": data.get("current", {}),
+        "daily": data.get("daily", {}),
+    })
+
+
+
+# Wikipedia検索 API
+def api_wikipedia(request):
+    query = request.GET.get("q", "").strip()
+    if not query:
+        return JsonResponse({"error": "検索キーワードを入力してください"}, status=400)
+
+    try:
+        search_url = (
+            f"https://ja.wikipedia.org/w/api.php?action=opensearch"
+            f"&search={urllib.request.quote(query)}&limit=5&format=json"
+        )
+        req = urllib.request.Request(search_url, headers={
+            "Accept": "application/json",
+            "User-Agent": "ToolsApp/1.0",
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            search_data = json.loads(resp.read().decode())
+    except (urllib.error.URLError, TimeoutError):
+        return JsonResponse({"error": "Wikipedia への接続に失敗しました"}, status=502)
+
+    titles = search_data[1] if len(search_data) > 1 else []
+    if not titles:
+        return JsonResponse({"error": "該当する記事が見つかりませんでした"}, status=404)
+
+    title = titles[0]
+    try:
+        summary_url = f"https://ja.wikipedia.org/api/rest_v1/page/summary/{urllib.request.quote(title)}"
+        req = urllib.request.Request(summary_url, headers={
+            "Accept": "application/json",
+            "User-Agent": "ToolsApp/1.0",
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            article = json.loads(resp.read().decode())
+    except (urllib.error.URLError, TimeoutError):
+        return JsonResponse({"error": "記事の取得に失敗しました"}, status=502)
+
+    return JsonResponse({
+        "title": article.get("title", ""),
+        "extract": article.get("extract", ""),
+        "thumbnail": article.get("thumbnail", {}).get("source", ""),
+        "url": article.get("content_urls", {}).get("desktop", {}).get("page", ""),
+        "suggestions": titles[1:],
+    })
+
+
+# ジオコーディング API (Nominatim プロキシ)
+def api_geocoding(request):
+    mode = request.GET.get("mode", "search")
+    ua = "maruomosquit-tools/1.0 (https://maruomosquit.com)"
+
+    try:
+        if mode == "reverse":
+            lat = request.GET.get("lat", "").strip()
+            lon = request.GET.get("lon", "").strip()
+            if not lat or not lon:
+                return JsonResponse({"error": "緯度と経度を入力してください"}, status=400)
+            url = (
+                f"https://nominatim.openstreetmap.org/reverse?"
+                f"lat={urllib.request.quote(lat)}&lon={urllib.request.quote(lon)}"
+                f"&format=json&accept-language=ja"
+            )
+        else:
+            q = request.GET.get("q", "").strip()
+            if not q:
+                return JsonResponse({"error": "検索キーワードを入力してください"}, status=400)
+            url = (
+                f"https://nominatim.openstreetmap.org/search?"
+                f"q={urllib.request.quote(q)}&format=json&limit=5&accept-language=ja"
+            )
+
+        req = urllib.request.Request(url, headers={
+            "Accept": "application/json",
+            "User-Agent": ua,
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+    except (urllib.error.URLError, TimeoutError):
+        return JsonResponse({"error": "ジオコーディングに失敗しました"}, status=502)
+
+    return JsonResponse({"results": data} if mode == "search" else {"result": data})

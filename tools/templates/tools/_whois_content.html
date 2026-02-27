@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; Whois検索</div>
     <h1>Whois検索</h1>
     <p class="tool-desc">ドメイン名を入力して登録情報を調べます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_whois.html" %}</template>
 
     <div class="tool-form">
         <input type="text" id="domainInput" placeholder="例: example.com" autocomplete="off" spellcheck="false">

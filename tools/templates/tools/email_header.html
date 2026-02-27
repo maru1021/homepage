@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}メールヘッダー解析 - 無料オンラインツール{% endblock %}
+{% block meta_description %}メールヘッダーを貼り付けて送信経路やSPF/DKIM情報を解析する無料ツール。{% endblock %}
+{% block og_title %}メールヘッダー解析 - 無料オンラインツール{% endblock %}
+{% block og_description %}メールヘッダーを解析できる無料ツール{% endblock %}
+{% block twitter_title %}メールヘッダー解析 - 無料オンラインツール{% endblock %}
+{% block twitter_description %}メールヘッダーを解析できる無料ツール{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"メールヘッダー解析","description":"メールヘッダーを解析して送信経路を確認","url":"https://{{ request.get_host }}{% url 'tools:email_header' %}","applicationCategory":"DeveloperApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"inLanguage":"ja","breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"便利ツール","item":"https://{{ request.get_host }}{% url 'tools:index' %}"},{"@type":"ListItem","position":2,"name":"メールヘッダー解析"}]}}
+</script>
+{% endblock %}
+{% block content %}{% include "tools/_email_header_content.html" %}{% endblock %}

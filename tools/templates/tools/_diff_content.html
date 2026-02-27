@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; テキスト比較 (diff)</div>
     <h1>テキスト比較 (diff)</h1>
     <p class="tool-desc">2つのテキストを比較して、差分をハイライト表示します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_diff.html" %}</template>
 
     <div class="diff-inputs">
         <div class="diff-col">

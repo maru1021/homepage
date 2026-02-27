@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 色変換ツール</div>
     <h1>色変換ツール</h1>
     <p class="tool-desc">HEX・RGB・HSLを相互変換します。どのフィールドを編集しても他が自動更新されます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_color_converter.html" %}</template>
 
     <div class="color-picker-row">
         <input type="color" id="colorPicker" value="#e94560" title="カラーピッカー">
@@ -137,7 +138,7 @@
         if (rgb) fromRgb(rgb.r, rgb.g, rgb.b, 'hex');
     });
     document.getElementById('copyBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(cssOut.value);
+        toolCopy(cssOut.value);
     });
 })();
 </script>

@@ -1,0 +1,111 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 日付計算機</div>
+    <h1>日付計算機</h1>
+    <p class="tool-desc">2つの日付の差を計算したり、指定した日数後/前の日付を求められます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_date_calculator.html" %}</template>
+
+    <div class="dc-tabs">
+        <button class="dc-tab active" data-tab="diff">日付の差</button>
+        <button class="dc-tab" data-tab="add">N日後/前</button>
+    </div>
+
+    <div id="diffPanel" class="dc-card">
+        <div class="dc-row">
+            <label>開始日 <input type="date" id="diffStart"></label>
+            <label>終了日 <input type="date" id="diffEnd"></label>
+        </div>
+        <button id="diffBtn" type="button">計算</button>
+        <div id="diffResult" class="dc-result" style="display:none;"></div>
+    </div>
+
+    <div id="addPanel" class="dc-card" style="display:none;">
+        <div class="dc-row">
+            <label>基準日 <input type="date" id="addBase"></label>
+            <label>
+                <select id="addDir"><option value="1">後</option><option value="-1">前</option></select>
+                <input type="number" id="addDays" value="30" min="0"> 日
+            </label>
+        </div>
+        <button id="addBtn" type="button">計算</button>
+        <div id="addResult" class="dc-result" style="display:none;"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.dc-tabs { display: flex; gap: 0; margin-bottom: 1rem; }
+.dc-tab { flex: 1; padding: 0.7rem; border: 1px solid var(--color-border); background: var(--color-bg-subtle); cursor: pointer; font-size: 0.95rem; }
+.dc-tab:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.dc-tab:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.dc-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.dc-card { background: var(--color-bg-white); padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.dc-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.dc-row label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.dc-row input[type=date] { padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.dc-row input[type=number] { width: 80px; padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: center; }
+.dc-row select { padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.dc-card button { width: 100%; padding: 0.6rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 1rem; cursor: pointer; }
+.dc-result { margin-top: 1rem; padding: 1rem; background: var(--color-bg-subtle); border-radius: var(--radius-md); }
+.dc-result-main { font-size: 1.5rem; font-weight: bold; color: var(--color-primary); margin-bottom: 0.5rem; }
+.dc-result-detail { font-size: 0.9rem; color: var(--color-text-light); line-height: 1.6; }
+</style>
+<script>
+(function() {
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('diffStart').value = today;
+    document.getElementById('diffEnd').value = today;
+    document.getElementById('addBase').value = today;
+
+    document.querySelectorAll('.dc-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.dc-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('diffPanel').style.display = this.dataset.tab === 'diff' ? '' : 'none';
+            document.getElementById('addPanel').style.display = this.dataset.tab === 'add' ? '' : 'none';
+        });
+    });
+
+    const DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+    function fmtDate(d) { return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`; }
+
+    document.getElementById('diffBtn').addEventListener('click', function() {
+        const d1 = new Date(document.getElementById('diffStart').value);
+        const d2 = new Date(document.getElementById('diffEnd').value);
+        if (isNaN(d1) || isNaN(d2)) return;
+        const diff = Math.abs(d2 - d1);
+        const days = Math.round(diff / 86400000);
+        const weeks = Math.floor(days / 7);
+        const months = Math.abs((d2.getFullYear() - d1.getFullYear()) * 12 + d2.getMonth() - d1.getMonth());
+        const years = Math.abs(d2.getFullYear() - d1.getFullYear());
+
+        const result = document.getElementById('diffResult');
+        result.innerHTML = `
+            <div class="dc-result-main">${days} 日</div>
+            <div class="dc-result-detail">
+                ${fmtDate(d1 < d2 ? d1 : d2)} 〜 ${fmtDate(d1 < d2 ? d2 : d1)}<br>
+                ${weeks}週間 ${days % 7}日 / 約${months}ヶ月 / 約${years}年${months % 12}ヶ月<br>
+                ${(days * 24).toLocaleString()}時間 / ${(days * 1440).toLocaleString()}分
+            </div>
+        `;
+        result.style.display = '';
+    });
+
+    document.getElementById('addBtn').addEventListener('click', function() {
+        const base = new Date(document.getElementById('addBase').value);
+        if (isNaN(base)) return;
+        const days = parseInt(document.getElementById('addDays').value) || 0;
+        const dir = parseInt(document.getElementById('addDir').value);
+        const target = new Date(base);
+        target.setDate(target.getDate() + days * dir);
+
+        const result = document.getElementById('addResult');
+        result.innerHTML = `
+            <div class="dc-result-main">${fmtDate(target)}</div>
+            <div class="dc-result-detail">
+                ${fmtDate(base)} の ${days}日${dir > 0 ? '後' : '前'}<br>
+                ${target.toISOString().slice(0, 10)}
+            </div>
+        `;
+        result.style.display = '';
+    });
+})();
+</script>

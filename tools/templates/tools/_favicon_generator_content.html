@@ -1,0 +1,107 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; ファビコン生成</div>
+    <h1>ファビコン生成</h1>
+    <p class="tool-desc">画像をアップロードして各サイズのファビコン（PNG）を生成します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_favicon_generator.html" %}</template>
+
+    <div class="fav-drop" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+        <p>画像をドラッグ&ドロップ または <button type="button" class="fav-select-btn" id="selectBtn">ファイルを選択</button></p>
+        <p class="fav-hint">正方形の画像を推奨（512x512以上）</p>
+    </div>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="fav-preview" id="preview"></div>
+        <div class="fav-html">
+            <div class="fav-html-header"><span>HTMLタグ</span><button id="copyHtmlBtn" type="button" class="btn-sm">コピー</button></div>
+            <pre id="htmlCode" class="fav-code"></pre>
+        </div>
+        <button id="resetBtn" type="button" class="btn-secondary">リセット</button>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.fav-drop { border: 2px dashed var(--color-border); border-radius: var(--radius-lg); padding: 3rem 2rem; text-align: center; color: var(--color-text-muted); cursor: pointer; }
+.fav-drop:hover,.fav-drop.dragover { border-color: var(--color-primary); background: var(--color-bg-subtle); }
+.fav-select-btn { background: var(--color-primary); color: #fff; border: none; padding: 0.4rem 1rem; border-radius: var(--radius-md); cursor: pointer; }
+.fav-hint { font-size: 0.8rem; margin-top: 0.5rem; }
+.fav-preview { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; align-items: end; }
+.fav-item { text-align: center; }
+.fav-item canvas { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: #fff; }
+.fav-item .fav-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.2rem; }
+.fav-item button { margin-top: 0.3rem; padding: 0.2rem 0.5rem; font-size: 0.75rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); cursor: pointer; }
+.fav-html { margin: 1rem 0; }
+.fav-html-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--color-text-muted); }
+.btn-sm { padding: 0.2rem 0.6rem; font-size: 0.8rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
+.fav-code { padding: 1rem; background: #1e1e2e; color: #cdd6f4; border-radius: var(--radius-md); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; white-space: pre-wrap; overflow-x: auto; }
+.btn-secondary { padding: 0.5rem 1rem; background: var(--color-bg-subtle); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
+</style>
+<script>
+(function() {
+    const SIZES = [16, 32, 48, 64, 128, 180, 192, 512];
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    document.getElementById('selectBtn').addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', (e) => { if (!e.target.closest('.fav-select-btn')) fileInput.click(); });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+
+    function loadFile(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() { generateFavicons(img); };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function generateFavicons(img) {
+        const preview = document.getElementById('preview');
+        preview.innerHTML = '';
+        const htmlLines = [];
+
+        SIZES.forEach(size => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            canvas.getContext('2d').drawImage(img, 0, 0, size, size);
+
+            const div = document.createElement('div');
+            div.className = 'fav-item';
+            const displaySize = Math.min(size, 64);
+            canvas.style.width = displaySize + 'px'; canvas.style.height = displaySize + 'px';
+            div.appendChild(canvas);
+            div.innerHTML += `<div class="fav-label">${size}x${size}</div>`;
+            const btn = document.createElement('button');
+            btn.textContent = 'DL';
+            btn.addEventListener('click', () => {
+                canvas.toBlob(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `favicon-${size}x${size}.png`;
+                    a.click();
+                });
+            });
+            div.appendChild(btn);
+            preview.appendChild(div);
+
+            if (size === 32) htmlLines.push(`<link rel="icon" type="image/png" sizes="${size}x${size}" href="/favicon-${size}x${size}.png">`);
+            if (size === 16) htmlLines.push(`<link rel="icon" type="image/png" sizes="${size}x${size}" href="/favicon-${size}x${size}.png">`);
+            if (size === 180) htmlLines.push(`<link rel="apple-touch-icon" sizes="${size}x${size}" href="/favicon-${size}x${size}.png">`);
+            if (size === 192) htmlLines.push(`<link rel="icon" type="image/png" sizes="${size}x${size}" href="/favicon-${size}x${size}.png">`);
+        });
+
+        document.getElementById('htmlCode').textContent = htmlLines.join('\n');
+        dropZone.style.display = 'none';
+        document.getElementById('resultPanel').style.display = '';
+    }
+
+    document.getElementById('copyHtmlBtn').addEventListener('click', () => toolCopy(document.getElementById('htmlCode').textContent));
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        dropZone.style.display = ''; document.getElementById('resultPanel').style.display = 'none'; fileInput.value = '';
+    });
+})();
+</script>

@@ -1,0 +1,79 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; OGP画像プレビュー</div>
+    <h1>OGP画像プレビュー</h1>
+    <p class="tool-desc">URLを入力してOpen Graph（OGP）のタイトル・説明・画像をプレビューします。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_ogp_preview.html" %}</template>
+
+    <div class="tool-form">
+        <input type="url" id="urlInput" placeholder="https://example.com" value="">
+        <button id="fetchBtn" type="button">取得</button>
+    </div>
+    <div id="error" class="tool-error" style="display:none"></div>
+    <div id="loading" class="tool-loading" style="display:none">取得中...</div>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="ogp-card">
+            <div class="ogp-image-wrap"><img id="ogpImage" src="" alt="" class="ogp-image"></div>
+            <div class="ogp-body">
+                <div class="ogp-site" id="ogpSite"></div>
+                <div class="ogp-title" id="ogpTitle"></div>
+                <div class="ogp-desc" id="ogpDesc"></div>
+            </div>
+        </div>
+        <div class="ogp-details">
+            <h2>メタ情報一覧</h2>
+            <table class="tool-table" id="metaTable"><tbody></tbody></table>
+        </div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.ogp-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background: var(--color-bg-white); margin-bottom: 1.5rem; }
+.ogp-image-wrap { background: var(--color-bg-subtle); }
+.ogp-image { width: 100%; max-height: 300px; object-fit: cover; display: block; }
+.ogp-body { padding: 1rem; }
+.ogp-site { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; }
+.ogp-title { font-size: 1.1rem; font-weight: bold; margin: 0.3rem 0; color: var(--color-dark); }
+.ogp-desc { font-size: 0.9rem; color: var(--color-text-light); }
+.ogp-details h2 { font-size: 1rem; margin-bottom: 0.5rem; }
+</style>
+<script>
+(function() {
+    document.getElementById('fetchBtn').addEventListener('click', fetchOGP);
+    document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') fetchOGP(); });
+
+    async function fetchOGP() {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url) return;
+        const errorEl = document.getElementById('error');
+        const loadingEl = document.getElementById('loading');
+        errorEl.style.display = 'none';
+        loadingEl.style.display = '';
+        document.getElementById('resultPanel').style.display = 'none';
+
+        try {
+            const resp = await fetch('{% url "tools:api_ogp_preview" %}?url=' + encodeURIComponent(url));
+            const data = await resp.json();
+            if (data.error) { errorEl.textContent = data.error; errorEl.style.display = ''; loadingEl.style.display = 'none'; return; }
+
+            document.getElementById('ogpImage').src = data.image || '';
+            document.getElementById('ogpImage').style.display = data.image ? '' : 'none';
+            document.getElementById('ogpSite').textContent = data.site_name || new URL(url).hostname;
+            document.getElementById('ogpTitle').textContent = data.title || '(タイトルなし)';
+            document.getElementById('ogpDesc').textContent = data.description || '';
+
+            const tbody = document.querySelector('#metaTable tbody');
+            tbody.innerHTML = '';
+            const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+            Object.entries(data.meta || {}).forEach(([k, v]) => {
+                tbody.innerHTML += `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`;
+            });
+            document.getElementById('resultPanel').style.display = '';
+        } catch (e) {
+            errorEl.textContent = '取得に失敗しました: ' + e.message;
+            errorEl.style.display = '';
+        }
+        loadingEl.style.display = 'none';
+    }
+})();
+</script>

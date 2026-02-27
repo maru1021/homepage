@@ -1,0 +1,97 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 為替換算ツール</div>
+    <h1>為替換算ツール</h1>
+    <p class="tool-desc">リアルタイムの為替レートで通貨を変換します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_currency_converter.html" %}</template>
+
+    <div class="fx-card">
+        <div class="fx-row">
+            <input type="number" id="amount" value="1" min="0" step="any" class="fx-amount">
+            <select id="fromCurrency" class="fx-select"></select>
+        </div>
+        <div class="fx-swap"><button id="swapBtn" type="button" title="通貨を入れ替え">&#x21C5;</button></div>
+        <div class="fx-row">
+            <input type="number" id="result" readonly class="fx-amount fx-result">
+            <select id="toCurrency" class="fx-select"></select>
+        </div>
+        <div id="rateInfo" class="fx-rate"></div>
+        <div id="error" class="tool-error" style="display:none"></div>
+        <div id="loading" class="tool-loading" style="display:none">レート取得中...</div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.fx-card { background: var(--color-bg-white); padding: 2rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); max-width: 500px; margin: 0 auto; }
+.fx-row { display: flex; gap: 0.5rem; }
+.fx-amount { flex: 1; padding: 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 1.2rem; text-align: right; outline: none; }
+.fx-amount:focus { border-color: var(--color-primary); }
+.fx-result { background: var(--color-bg-subtle); font-weight: bold; color: var(--color-primary); }
+.fx-select { width: 100px; padding: 0.8rem 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 1rem; }
+.fx-swap { text-align: center; margin: 0.8rem 0; }
+.fx-swap button { background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; }
+.fx-swap button:hover { background: var(--color-bg-hover); }
+.fx-rate { margin-top: 1rem; font-size: 0.85rem; color: var(--color-text-muted); text-align: center; }
+</style>
+<script>
+(function() {
+    const CURRENCIES = {
+        JPY: '日本円 (JPY)', USD: '米ドル (USD)', EUR: 'ユーロ (EUR)', GBP: '英ポンド (GBP)',
+        CNY: '人民元 (CNY)', KRW: '韓国ウォン (KRW)', AUD: '豪ドル (AUD)', CAD: 'カナダドル (CAD)',
+        CHF: 'スイスフラン (CHF)', HKD: '香港ドル (HKD)', SGD: 'シンガポールドル (SGD)',
+        TWD: '台湾ドル (TWD)', THB: 'タイバーツ (THB)', INR: 'インドルピー (INR)',
+        NZD: 'NZドル (NZD)', BRL: 'ブラジルレアル (BRL)', MXN: 'メキシコペソ (MXN)',
+    };
+
+    const fromSel = document.getElementById('fromCurrency');
+    const toSel = document.getElementById('toCurrency');
+    Object.entries(CURRENCIES).forEach(([code, name]) => {
+        fromSel.add(new Option(name, code));
+        toSel.add(new Option(name, code));
+    });
+    fromSel.value = 'USD'; toSel.value = 'JPY';
+
+    let rates = {};
+    const amountEl = document.getElementById('amount');
+    const resultEl = document.getElementById('result');
+    const rateInfo = document.getElementById('rateInfo');
+    const errorEl = document.getElementById('error');
+    const loadingEl = document.getElementById('loading');
+
+    async function fetchRates(base) {
+        loadingEl.style.display = ''; errorEl.style.display = 'none';
+        try {
+            const resp = await fetch('https://api.exchangerate-api.com/v4/latest/' + base);
+            if (!resp.ok) throw new Error('取得失敗');
+            const data = await resp.json();
+            rates = data.rates;
+            rateInfo.textContent = `1 ${base} = ${rates[toSel.value]?.toFixed(4) || '?'} ${toSel.value} (${new Date().toLocaleString('ja-JP')})`;
+        } catch (e) {
+            errorEl.textContent = '為替レートの取得に失敗しました。しばらくしてから再度お試しください。';
+            errorEl.style.display = '';
+        }
+        loadingEl.style.display = 'none';
+    }
+
+    function convert() {
+        const from = fromSel.value, to = toSel.value;
+        const amt = parseFloat(amountEl.value) || 0;
+        if (rates[to] !== undefined) {
+            resultEl.value = (amt * rates[to]).toFixed(to === 'JPY' || to === 'KRW' ? 0 : 2);
+            rateInfo.textContent = `1 ${from} = ${rates[to]?.toFixed(4)} ${to}`;
+        }
+    }
+
+    fromSel.addEventListener('change', () => fetchRates(fromSel.value).then(convert));
+    toSel.addEventListener('change', convert);
+    amountEl.addEventListener('input', convert);
+
+    document.getElementById('swapBtn').addEventListener('click', () => {
+        const tmp = fromSel.value;
+        fromSel.value = toSel.value;
+        toSel.value = tmp;
+        fetchRates(fromSel.value).then(convert);
+    });
+
+    fetchRates('USD').then(convert);
+})();
+</script>

@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; SSL/TLS証明書チェッカー</div>
     <h1>SSL/TLS証明書チェッカー</h1>
     <p class="tool-desc">ドメイン名を入力してSSL/TLS証明書の情報を確認します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_ssl_checker.html" %}</template>
 
     <div class="tool-form">
         <input type="text" id="hostInput" placeholder="例: example.com または 219.94.232.146" autocomplete="off" spellcheck="false">

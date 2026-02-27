@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; JWTデコーダー</div>
     <h1>JWTデコーダー</h1>
     <p class="tool-desc">JWTトークンを貼り付けると、ヘッダーとペイロードの中身を確認できます。署名の検証は行いません。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_jwt_decoder.html" %}</template>
 
     <label class="tool-label">JWTトークン</label>
     <textarea id="jwtInput" class="tool-textarea" rows="5" placeholder="eyJhbGciOiJIUzI1NiIs..."></textarea>

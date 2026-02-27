@@ -1,3 +1,4 @@
+from django.conf import settings as django_settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -7,12 +8,15 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.views.decorators.http import require_GET
 
+from config.htmx import htmx_render
 from .models import Classification, Article
 from .forms import ClassificationForm
 
 ARTICLES_PER_PAGE = 12
 RELATED_ARTICLES_COUNT = 5
 SEARCH_RESULTS_LIMIT = 20
+
+SITE_NAME = django_settings.SITE_NAME
 
 
 def _published_articles():
@@ -22,12 +26,6 @@ def _published_articles():
         .filter(is_published=True)
         .select_related("classification__parent__parent")
     )
-
-
-def _render(request, full_template, partial_template, context):
-    """htmxリクエスト時は部分テンプレートのみ返す"""
-    template = partial_template if request.htmx else full_template
-    return render(request, template, context)
 
 
 def _paginate(queryset, request):
@@ -53,10 +51,12 @@ def _collect_descendant_ids(classification, id_list):
 def article_list(request):
     """トップページ: 最新記事（ページネーション対応）"""
     page_obj = _paginate(_published_articles().all(), request)
-    return _render(request, "blog/article_list.html", "blog/_article_list_content.html", {
+    page_num = page_obj.number
+    title = f"{page_num}ページ目 - {SITE_NAME} - Web開発・プログラミング技術ブログ" if page_num > 1 else f"{SITE_NAME} - Web開発・プログラミング技術ブログ"
+    return htmx_render(request, "blog/article_list.html", "blog/_article_list_content.html", {
         "articles": page_obj,
         "page_obj": page_obj,
-    })
+    }, title=title)
 
 
 def category_detail(request, path):
@@ -77,13 +77,18 @@ def category_detail(request, path):
 
     page_obj = _paginate(articles, request)
 
-    return _render(request, "blog/category_detail.html", "blog/_category_detail_content.html", {
+    page_num = page_obj.number
+    title = f"{classification.name}の記事一覧"
+    if page_num > 1:
+        title += f" ({page_num}ページ目)"
+    title += f" - {SITE_NAME}"
+    return htmx_render(request, "blog/category_detail.html", "blog/_category_detail_content.html", {
         "classification": classification,
         "articles": page_obj,
         "page_obj": page_obj,
         "ancestors": classification.get_ancestors(),
         "child_classifications": classification.children.all(),
-    })
+    }, title=title)
 
 
 def article_search(request):
@@ -95,10 +100,11 @@ def article_search(request):
         )[:SEARCH_RESULTS_LIMIT]
     else:
         articles = Article.objects.none()
-    return _render(request, "blog/search.html", "blog/_search_results.html", {
+    title = f'"{q}" の検索結果 - {SITE_NAME}' if q else f"検索 - {SITE_NAME}"
+    return htmx_render(request, "blog/search.html", "blog/_search_results.html", {
         "articles": articles,
         "query": q,
-    })
+    }, title=title)
 
 
 def article_detail(request, path):
@@ -121,11 +127,11 @@ def article_detail(request, path):
             .order_by("-published_at")[:RELATED_ARTICLES_COUNT]
         )
 
-    return _render(request, "blog/article_detail.html", "blog/_article_detail_content.html", {
+    return htmx_render(request, "blog/article_detail.html", "blog/_article_detail_content.html", {
         "article": article,
         "ancestors": ancestors,
         "related_articles": related_articles,
-    })
+    }, title=f"{article.title} - {SITE_NAME}")
 
 
 # --- 分類管理（staff のみ） ---

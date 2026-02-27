@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}文章校正チェッカー - 無料オンラインツール{% endblock %}
+{% block meta_description %}日本語文章の校正をチェックする無料ツール。二重否定、ら抜き言葉、冗長表現などを検出。{% endblock %}
+{% block og_title %}文章校正チェッカー - 無料オンラインツール{% endblock %}
+{% block og_description %}日本語文章の校正チェックができる無料ツール{% endblock %}
+{% block twitter_title %}文章校正チェッカー - 無料オンラインツール{% endblock %}
+{% block twitter_description %}日本語文章の校正チェックができる無料ツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "文章校正チェッカー",
+  "description": "日本語文章の校正をチェックする無料オンラインツール",
+  "url": "https://{{ request.get_host }}{% url 'tools:text_proofreader' %}",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "inLanguage": "ja",
+  "breadcrumb": { "@type": "BreadcrumbList", "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "便利ツール", "item": "https://{{ request.get_host }}{% url 'tools:index' %}" },
+    { "@type": "ListItem", "position": 2, "name": "文章校正チェッカー" }
+  ]}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_text_proofreader_content.html" %}
+{% endblock %}

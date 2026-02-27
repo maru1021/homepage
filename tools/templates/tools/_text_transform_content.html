@@ -1,0 +1,107 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; テキスト変換ツール</div>
+    <h1>テキスト変換ツール</h1>
+    <p class="tool-desc">テキストの大文字/小文字変換、ケース変換、全角半角変換ができます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_text_transform.html" %}</template>
+
+    <textarea id="textInput" class="tool-textarea" rows="6" placeholder="変換したいテキストを入力..."></textarea>
+
+    <div class="tt-section">
+        <h2>ケース変換</h2>
+        <div class="tt-btns">
+            <button type="button" data-fn="upper">UPPER CASE</button>
+            <button type="button" data-fn="lower">lower case</button>
+            <button type="button" data-fn="title">Title Case</button>
+            <button type="button" data-fn="sentence">Sentence case</button>
+            <button type="button" data-fn="camel">camelCase</button>
+            <button type="button" data-fn="pascal">PascalCase</button>
+            <button type="button" data-fn="snake">snake_case</button>
+            <button type="button" data-fn="kebab">kebab-case</button>
+            <button type="button" data-fn="constant">CONSTANT_CASE</button>
+        </div>
+    </div>
+
+    <div class="tt-section">
+        <h2>全角 ↔ 半角</h2>
+        <div class="tt-btns">
+            <button type="button" data-fn="toFull">半角 → 全角</button>
+            <button type="button" data-fn="toHalf">全角 → 半角</button>
+            <button type="button" data-fn="kataToHira">カタカナ → ひらがな</button>
+            <button type="button" data-fn="hiraToKata">ひらがな → カタカナ</button>
+        </div>
+    </div>
+
+    <div class="tt-section">
+        <h2>その他</h2>
+        <div class="tt-btns">
+            <button type="button" data-fn="reverse">文字列反転</button>
+            <button type="button" data-fn="trim">余白除去</button>
+            <button type="button" data-fn="dedup">重複行除去</button>
+            <button type="button" data-fn="sort">行ソート</button>
+        </div>
+    </div>
+
+    <div class="tt-output-wrap">
+        <div class="tt-output-header">
+            <span>変換結果</span>
+            <button id="copyBtn" type="button" class="btn-sm">コピー</button>
+        </div>
+        <div id="output" class="tt-output"></div>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.tool-textarea { width: 100%; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 14px; resize: vertical; outline: none; background: var(--color-bg-white); }
+.tool-textarea:focus { border-color: var(--color-primary); }
+.tt-section { margin: 1.2rem 0; }
+.tt-section h2 { font-size: 0.95rem; color: var(--color-dark); margin-bottom: 0.5rem; }
+.tt-btns { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tt-btns button { padding: 0.4rem 0.8rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+.tt-btns button:hover { border-color: var(--color-primary); background: var(--color-bg-subtle); }
+.tt-output-wrap { margin-top: 1rem; }
+.tt-output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--color-text-muted); }
+.btn-sm { padding: 0.2rem 0.6rem; font-size: 0.8rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
+.tt-output { min-height: 60px; padding: 1rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); white-space: pre-wrap; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; }
+</style>
+<script>
+(function() {
+    const input = document.getElementById('textInput');
+    const output = document.getElementById('output');
+
+    function splitWords(s) {
+        return s.replace(/([a-z])([A-Z])/g, '$1 $2')
+                .replace(/[_\-]+/g, ' ')
+                .split(/\s+/)
+                .filter(w => w);
+    }
+
+    const fns = {
+        upper: s => s.toUpperCase(),
+        lower: s => s.toLowerCase(),
+        title: s => s.replace(/\b\w/g, c => c.toUpperCase()),
+        sentence: s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(),
+        camel: s => { const w = splitWords(s); return w[0].toLowerCase() + w.slice(1).map(x => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()).join(''); },
+        pascal: s => splitWords(s).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(''),
+        snake: s => splitWords(s).map(w => w.toLowerCase()).join('_'),
+        kebab: s => splitWords(s).map(w => w.toLowerCase()).join('-'),
+        constant: s => splitWords(s).map(w => w.toUpperCase()).join('_'),
+        toFull: s => s.replace(/[\x21-\x7e]/g, c => String.fromCharCode(c.charCodeAt(0) + 0xfee0)).replace(/ /g, '\u3000'),
+        toHalf: s => s.replace(/[\uff01-\uff5e]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' '),
+        kataToHira: s => s.replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)),
+        hiraToKata: s => s.replace(/[\u3041-\u3096]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60)),
+        reverse: s => [...s].reverse().join(''),
+        trim: s => s.split('\n').map(l => l.trim()).join('\n').trim(),
+        dedup: s => [...new Set(s.split('\n'))].join('\n'),
+        sort: s => s.split('\n').sort().join('\n'),
+    };
+
+    document.querySelectorAll('[data-fn]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const fn = fns[btn.dataset.fn];
+            if (fn) output.textContent = fn(input.value);
+        });
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', () => toolCopy(output.textContent));
+})();
+</script>

@@ -2,6 +2,7 @@
     <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 年齢・入学卒業年 早見表</div>
     <h1>生まれ年から年齢・入学卒業年 早見表</h1>
     <p class="tool-desc">生まれ年を入力するだけで、現在の年齢・学校の入学卒業年・厄年・長寿祝いが一覧で確認できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_age_calculator.html" %}</template>
 
     <div class="age-form">
         <label class="tool-label">生まれ年（西暦）</label>

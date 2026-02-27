@@ -1,0 +1,109 @@
+<div class="tool-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; BMI計算機</div>
+    <h1>BMI計算機</h1>
+    <p class="tool-desc">身長と体重を入力してBMI（体格指数）と適正体重を計算します。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_bmi_calculator.html" %}</template>
+
+    <div class="bmi-card">
+        <div class="bmi-inputs">
+            <label>身長 <input type="number" id="height" value="170" min="100" max="250" step="0.1"> cm</label>
+            <label>体重 <input type="number" id="weight" value="65" min="20" max="300" step="0.1"> kg</label>
+        </div>
+        <button id="calcBtn" type="button">計算する</button>
+    </div>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="bmi-result-grid">
+            <div class="bmi-result-main" id="bmiResult"></div>
+            <div class="bmi-result-sub" id="idealWeight"></div>
+        </div>
+        <div class="bmi-bar-wrap">
+            <div class="bmi-bar">
+                <div class="bmi-zone" style="flex:3.5;background:#3b82f6;">低体重</div>
+                <div class="bmi-zone" style="flex:6.5;background:#22c55e;">普通体重</div>
+                <div class="bmi-zone" style="flex:5;background:#f59e0b;">肥満(1)</div>
+                <div class="bmi-zone" style="flex:5;background:#ef4444;">肥満(2)</div>
+                <div class="bmi-zone" style="flex:5;background:#991b1b;">肥満(3+)</div>
+            </div>
+            <div class="bmi-labels">
+                <span>18.5</span><span>25</span><span>30</span><span>35</span>
+            </div>
+            <div class="bmi-pointer" id="bmiPointer"></div>
+        </div>
+        <table class="tool-table bmi-table">
+            <thead><tr><th>BMI</th><th>判定</th><th>あなたの場合の体重</th></tr></thead>
+            <tbody id="bmiTableBody"></tbody>
+        </table>
+    </div>
+</div>
+{% include "tools/_tool_style.html" %}
+<style>
+.bmi-card { background: var(--color-bg-white); padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin-bottom: 1.5rem; }
+.bmi-inputs { display: flex; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.bmi-inputs label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; }
+.bmi-inputs input { width: 100px; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-align: right; font-size: 1.1rem; }
+.bmi-card button { width: 100%; padding: 0.7rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 1rem; cursor: pointer; }
+.bmi-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.bmi-result-main, .bmi-result-sub { text-align: center; padding: 1.5rem; background: var(--color-bg-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.bmi-result-main .bmi-val { font-size: 2.5rem; font-weight: bold; }
+.bmi-result-main .bmi-judge { font-size: 1rem; margin-top: 0.3rem; }
+.bmi-result-sub .bmi-sub-label { font-size: 0.85rem; color: var(--color-text-muted); }
+.bmi-result-sub .bmi-sub-val { font-size: 1.5rem; font-weight: bold; color: var(--color-primary); margin-top: 0.3rem; }
+.bmi-bar-wrap { position: relative; margin-bottom: 2rem; }
+.bmi-bar { display: flex; height: 24px; border-radius: var(--radius-md); overflow: hidden; }
+.bmi-zone { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; font-weight: 600; }
+.bmi-labels { display: flex; justify-content: space-between; padding: 0 14% 0 14%; font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.2rem; }
+.bmi-pointer { position: absolute; top: -6px; width: 3px; height: 36px; background: #1e1e2e; border-radius: 2px; transition: left 0.3s; }
+.bmi-table { margin-top: 0.5rem; }
+</style>
+<script>
+(function() {
+    const CATEGORIES = [
+        { min: 0, max: 18.5, label: '低体重（やせ）', color: '#3b82f6' },
+        { min: 18.5, max: 25, label: '普通体重', color: '#22c55e' },
+        { min: 25, max: 30, label: '肥満（1度）', color: '#f59e0b' },
+        { min: 30, max: 35, label: '肥満（2度）', color: '#ef4444' },
+        { min: 35, max: 100, label: '肥満（3度以上）', color: '#991b1b' },
+    ];
+
+    document.getElementById('calcBtn').addEventListener('click', function() {
+        const h = parseFloat(document.getElementById('height').value) / 100;
+        const w = parseFloat(document.getElementById('weight').value);
+        if (!h || !w) return;
+        const bmi = w / (h * h);
+        const cat = CATEGORIES.find(c => bmi >= c.min && bmi < c.max) || CATEGORIES[4];
+        const ideal = 22 * h * h;
+
+        document.getElementById('bmiResult').innerHTML = `
+            <div class="bmi-val" style="color:${cat.color}">${bmi.toFixed(1)}</div>
+            <div class="bmi-judge" style="color:${cat.color}">${cat.label}</div>
+        `;
+        document.getElementById('idealWeight').innerHTML = `
+            <div class="bmi-sub-label">適正体重（BMI 22）</div>
+            <div class="bmi-sub-val">${ideal.toFixed(1)} kg</div>
+            <div class="bmi-sub-label">${w > ideal ? '+' : ''}${(w - ideal).toFixed(1)} kg</div>
+        `;
+
+        // pointer
+        const pct = Math.min(Math.max((bmi - 15) / 25 * 100, 0), 100);
+        document.getElementById('bmiPointer').style.left = pct + '%';
+
+        // table
+        const tbody = document.getElementById('bmiTableBody');
+        tbody.innerHTML = CATEGORIES.map(c => {
+            const wMin = c.min * h * h;
+            const wMax = c.max * h * h;
+            const active = bmi >= c.min && bmi < c.max;
+            return `<tr style="${active ? 'background:var(--color-bg-subtle);font-weight:600;' : ''}">
+                <td>${c.min}〜${c.max < 100 ? c.max : ''}</td>
+                <td style="color:${c.color}">${c.label}</td>
+                <td>${wMin.toFixed(1)}〜${c.max < 100 ? wMax.toFixed(1) : ''} kg</td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('resultPanel').style.display = '';
+    });
+
+    document.getElementById('calcBtn').click();
+})();
+</script>
