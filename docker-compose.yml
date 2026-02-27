@@ -50,7 +50,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: python manage.py fetch_stock_prices
+    command: python manage.py run_stock_scheduler
     restart: unless-stopped
 
   nginx:
