@@ -13,7 +13,7 @@ MAX_CHART_TICKERS = 5       # チャート同時表示の最大銘柄数
 DEFAULT_DAILY_MONTHS = 6    # 長期チャートのデフォルト月数
 
 # バッチ取得設定
-BATCH_SIZE = 10             # 1回の yf.download() あたりの銘柄数
+BATCH_SIZE = 3              # 1回の yf.download() あたりの銘柄数
 BATCH_DELAY = 15            # バッチ間の待機秒数
 MAX_RETRIES = 4             # リトライ最大回数
 RETRY_BACKOFF_BASE = 30     # リトライ待機の基底秒数（指数バックオフ）
