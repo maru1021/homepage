@@ -8,16 +8,13 @@
 <div class="stock-monitor">
     <div class="stock-header">
         <h1>株価リアルタイムモニター</h1>
-        <div class="stock-status">
-            <span id="marketStatus" class="market-badge"></span>
-            <span id="fetchStatus" class="fetch-status"></span>
-        </div>
     </div>
 
     <div class="category-tabs" id="categoryTabs"></div>
 
     <div class="view-mode-toggle" id="viewModeToggle">
         <button class="view-mode-btn active" data-mode="prices">値動き</button>
+        <button class="view-mode-btn" data-mode="heatmap">ヒートマップ</button>
         <button class="view-mode-btn" data-mode="scores">スコア分析</button>
     </div>
 
@@ -56,6 +53,18 @@
         </div>
     </div>
 
+    <div class="heatmap-section" id="heatmapSection" style="display:none;">
+        <div class="heatmap-controls">
+            <span class="heatmap-legend">
+                <span class="hm-legend-item hm-up">上昇</span>
+                <span class="hm-legend-item hm-flat">横ばい</span>
+                <span class="hm-legend-item hm-down">下落</span>
+            </span>
+            <span class="heatmap-hint">クリックでチャートへ</span>
+        </div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+    </div>
+
     <div class="scores-section" id="scoresSection" style="display:none;">
         <div class="scores-controls">
             <select id="scoreSortBy">
@@ -64,27 +73,8 @@
                 <option value="long_term">長期スコア順</option>
             </select>
         </div>
-        <div class="scores-table-wrapper">
-            <table class="stock-table scores-table">
-                <thead>
-                    <tr>
-                        <th class="col-rank">#</th>
-                        <th class="col-name">銘柄</th>
-                        <th class="col-score">総合</th>
-                        <th class="col-score">短期</th>
-                        <th class="col-score">長期</th>
-                        <th class="col-signals">シグナル</th>
-                    </tr>
-                </thead>
-                <tbody id="scoresBody">
-                    <tr>
-                        <td colspan="6" class="loading-cell">
-                            <div class="loading-spinner"></div>
-                            銘柄を選択してスコア分析タブを開いてください
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="scores-list" id="scoresList">
+            <div class="scores-empty">銘柄を選択してスコア分析タブを開いてください</div>
         </div>
     </div>
 
@@ -95,6 +85,14 @@
             <div class="chart-type-toggle">
                 <button class="btn-chart-type active" data-type="line">折れ線</button>
                 <button class="btn-chart-type" data-type="candlestick">ろうそく足</button>
+            </div>
+            <div class="indicator-toggle">
+                <button class="btn-indicator" data-ind="bb">BB</button>
+                <button class="btn-indicator" data-ind="rsi">RSI</button>
+                <button class="btn-indicator" data-ind="macd">MACD</button>
+                <button class="btn-indicator" data-ind="stoch">STOCH</button>
+                <button class="btn-indicator" data-ind="ichimoku">一目</button>
+                <button class="btn-indicator" data-ind="vwap">VWAP</button>
             </div>
         </div>
         <div id="tickerSelectors" class="ticker-selectors"></div>
@@ -118,21 +116,6 @@
     margin-bottom: 1rem;
 }
 .stock-header h1 { font-size: 1.4rem; margin: 0; }
-.stock-status {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.85rem;
-}
-.market-badge {
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.8rem;
-}
-.market-open { background: #0d6832; color: #fff; }
-.market-closed { background: #6c757d; color: #fff; }
-.fetch-status { color: #888; }
 .stock-info { color: #888; font-size: 0.85rem; margin-bottom: 1rem; }
 
 /* カテゴリタブ */
@@ -202,8 +185,7 @@
 .overview-item:hover { background: rgba(255,255,255,0.03); }
 .overview-item-name { color: #ccc; font-weight: 500; min-width: 80px; }
 .overview-item-price { color: #eee; font-weight: 600; }
-.overview-item-diff { font-size: 0.8rem; min-width: 60px; text-align: right; }
-.overview-item-pct { font-size: 0.8rem; min-width: 60px; text-align: right; }
+.overview-item-diff, .overview-item-pct { font-size: 0.8rem; min-width: 60px; text-align: right; }
 .overview-item-nodata { color: #555; font-size: 0.8rem; }
 
 /* 値動きランキング */
@@ -271,25 +253,86 @@
     background: #1a1a2e; color: #eee; border: 1px solid #333;
     padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem;
 }
-.scores-table .col-score { width: 70px; text-align: center; }
-.scores-table .col-signals { text-align: left; }
-.scores-table th.col-score { text-align: center; }
-.scores-table th.col-signals { text-align: left; }
+.scores-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.scores-empty { color: #666; text-align: center; padding: 2rem 0; }
+.score-card {
+    background: #12121e; border-radius: 8px; padding: 0.6rem 0.8rem;
+}
+.score-card-header {
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+}
+.score-card-left {
+    display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;
+}
+.score-card-rank {
+    color: #666; font-size: 0.8rem; font-weight: 600; flex-shrink: 0; min-width: 1.2rem;
+}
+.score-card-name {
+    color: #eee; font-size: 0.9rem; font-weight: 600; white-space: nowrap;
+}
+.score-card-ticker {
+    color: #666; font-size: 0.75rem; flex-shrink: 0;
+}
+.score-card-scores {
+    display: flex; gap: 0.4rem; flex-shrink: 0;
+}
+.score-item {
+    display: flex; align-items: center; gap: 0.2rem; font-size: 0.7rem; color: #888;
+}
 .score-badge {
-    display: inline-block; padding: 0.15rem 0.5rem;
-    border-radius: 10px; font-weight: 600; font-size: 0.8rem;
-    min-width: 40px; text-align: center;
+    display: inline-block; padding: 0.1rem 0.4rem;
+    border-radius: 10px; font-weight: 600; font-size: 0.75rem;
+    min-width: 36px; text-align: center;
 }
 .score-high { background: rgba(0,200,83,0.2); color: #00c853; }
 .score-mid { background: rgba(255,212,59,0.2); color: #ffd43b; }
 .score-low { background: rgba(255,23,68,0.2); color: #ff1744; }
+.score-card-signals { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.3rem; }
 .signal-tag {
-    display: inline-block; font-size: 0.7rem; padding: 0.1rem 0.4rem;
-    border-radius: 3px; margin: 0.1rem; background: #2a2a3e; color: #aaa;
+    display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.35rem;
+    border-radius: 3px; background: #2a2a3e; color: #aaa;
 }
 .signal-bullish { background: rgba(0,200,83,0.15); color: #00c853; }
 .signal-bearish { background: rgba(255,23,68,0.15); color: #ff1744; }
 .signal-neutral { background: rgba(74,158,255,0.15); color: #4a9eff; }
+
+/* ヒートマップ */
+.heatmap-section { margin-bottom: 1rem; }
+.heatmap-controls {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 0.75rem; flex-wrap: wrap;
+}
+.heatmap-legend { display: flex; gap: 0.4rem; }
+.hm-legend-item {
+    display: inline-block; padding: 0.15rem 0.5rem;
+    border-radius: 3px; font-size: 0.75rem; color: #fff; font-weight: 600;
+}
+.hm-up { background: #0d8040; }
+.hm-flat { background: #555; }
+.hm-down { background: #b71c28; }
+.heatmap-hint { color: #666; font-size: 0.75rem; }
+.heatmap-grid { display: flex; flex-wrap: wrap; gap: 3px; overflow: hidden; }
+.heatmap-tile {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; border-radius: 4px; padding: 4px;
+    cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    overflow: hidden; min-width: 60px; min-height: 50px;
+}
+.heatmap-tile:hover { opacity: 0.85; transform: scale(1.03); z-index: 1; position: relative; }
+.heatmap-tile-name {
+    font-size: 0.65rem; color: rgba(255,255,255,0.85);
+    text-align: center; line-height: 1.2; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; width: 100%;
+}
+.heatmap-tile-ticker {
+    font-size: 0.55rem; color: rgba(255,255,255,0.55);
+    text-align: center; white-space: nowrap;
+}
+.heatmap-tile-pct {
+    font-size: 0.8rem; font-weight: 700; color: #fff;
+    text-align: center; margin-top: 2px;
+}
+.heatmap-empty { color: #666; text-align: center; padding: 3rem 0; width: 100%; }
 
 .chart-section { margin-top: 2rem; border-top: 1px solid #333; padding-top: 1.5rem; }
 .chart-header {
@@ -312,6 +355,15 @@
 .btn-chart-type:last-child { border-right: none; }
 .btn-chart-type.active { background: #4a9eff; color: #fff; }
 .btn-chart-type:hover:not(.active) { background: #2a2a3e; }
+.indicator-toggle { display: inline-flex; gap: 0.25rem; margin-left: 0.5rem; }
+.btn-indicator {
+    background: #1a1a2e; color: #888; border: 1px solid #333;
+    border-radius: 3px; padding: 0.2rem 0.5rem; cursor: pointer; font-size: 0.7rem;
+}
+.btn-indicator.active { background: #2a2a4e; color: #4a9eff; border-color: #4a9eff; }
+.btn-indicator:hover:not(.active) { background: #2a2a3e; }
+.chart-rsi-wrap, .chart-macd-wrap, .chart-stoch-wrap { height: 80px; position: relative; }
+.chart-rsi-wrap canvas, .chart-macd-wrap canvas, .chart-stoch-wrap canvas { width: 100% !important; height: 100% !important; }
 
 .ticker-selectors { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
 .ticker-selector-row { display: flex; align-items: center; gap: 0.3rem; }
@@ -339,9 +391,25 @@
 .chart-row {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
 }
-.chart-col { display: flex; flex-direction: column; gap: 0.25rem; }
+.chart-col { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; overflow: hidden; }
 .chart-col-label {
     color: #888; font-size: 0.75rem; text-align: center;
+}
+.intraday-header {
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.15rem;
+}
+.intraday-date-nav {
+    display: flex; align-items: center; gap: 0.3rem;
+}
+.btn-date-nav {
+    background: #1a1a2e; color: #aaa; border: 1px solid #333; border-radius: 3px;
+    padding: 0.3rem 0.6rem; cursor: pointer; font-size: 0.75rem; white-space: nowrap;
+    min-height: 32px; min-width: 44px; display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: rgba(74,158,255,0.3); touch-action: manipulation;
+}
+.btn-date-nav:hover, .btn-date-nav:active { background: #2a2a3e; color: #fff; }
+.intraday-date-label {
+    color: #ccc; font-size: 0.7rem; font-weight: bold;
 }
 .chart-price-wrap {
     position: relative; height: 250px;
@@ -367,14 +435,52 @@
 .chart-status { text-align: center; color: #888; font-size: 0.85rem; margin-top: 0.5rem; }
 
 @media (max-width: 768px) {
+    .stock-monitor { padding: 0.5rem; overflow-x: hidden; }
     .stock-header { flex-direction: column; align-items: flex-start; }
-    .category-tabs { flex-wrap: wrap; }
+    .stock-header h1 { font-size: 1.1rem; }
+    .category-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        gap: 4px;
+    }
+    .category-tab {
+        padding: 0.45rem 0.3rem;
+        font-size: 0.75rem;
+        border-right: none;
+        border-radius: 4px;
+        border: 1px solid #333;
+        text-align: center;
+    }
+    .category-tab .tab-count { display: none; }
+    .view-mode-btn { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
     .market-top-row { grid-template-columns: 1fr; }
-    .stock-table { font-size: 0.8rem; }
-    .stock-table th, .stock-table td { padding: 0.35rem 0.4rem; }
+    .market-overview { padding: 0.5rem; }
+    .overview-item { font-size: 0.75rem; padding: 0.25rem 0.2rem; }
+    .overview-item-name { min-width: 0; font-size: 0.7rem; }
+    .overview-item-price { font-size: 0.75rem; }
+    .overview-item-diff, .overview-item-pct { min-width: 0; font-size: 0.7rem; }
+    .stock-table { font-size: 0.75rem; table-layout: fixed; width: 100%; }
+    .stock-table th, .stock-table td { padding: 0.3rem 0.2rem; overflow: hidden; text-overflow: ellipsis; }
+    .stock-table th.col-rank, .stock-table td.col-rank { width: 24px; }
+    .stock-table th.col-name, .stock-table td.col-name { width: 40%; }
+    .stock-table .col-diff { display: none; }
+    .stock-table .ticker-code { display: none; }
+    .chart-section { padding-top: 1rem; margin-top: 1rem; }
+    .chart-header { gap: 0.4rem; }
+    .chart-header h2 { font-size: 1rem; }
+    .indicator-toggle { margin-left: 0; }
+    .btn-indicator { font-size: 0.65rem; padding: 0.2rem 0.4rem; }
     .chart-row { grid-template-columns: 1fr; }
+    .chart-block { padding: 0.5rem; }
     .chart-price-wrap { height: 200px; }
     .chart-volume-wrap { height: 60px; }
+    .heatmap-tile { min-width: 0; min-height: 40px; }
+    .heatmap-tile-name { font-size: 0.55rem; }
+    .heatmap-tile-pct { font-size: 0.65rem; }
+    .heatmap-tile-ticker { font-size: 0.5rem; }
 }
 </style>
 {% endblock %}
@@ -416,6 +522,12 @@
     background: #2a2a3e; color: #eee;
 }
 .select2-container { min-width: 220px; }
+@media (max-width: 768px) {
+    .select2-container { min-width: 0; width: 100% !important; max-width: calc(100vw - 80px); }
+    .ticker-selectors { gap: 0.3rem; }
+    .ticker-selector-row { flex-wrap: nowrap; width: 100%; }
+    .ticker-selector-row select { flex: 1; min-width: 0; }
+}
 </style>
 <script src="{% static 'vendor/jquery.min.js' %}"></script>
 <script src="{% static 'vendor/select2/select2.min.js' %}"></script>
@@ -431,6 +543,11 @@
     const API_CATEGORIES = "{% url 'stock_monitor:api_categories' %}";
     const API_SCORES = "{% url 'stock_monitor:api_stock_scores' %}";
     const CHART_COLORS = ['#4a9eff','#ff6b6b','#51cf66','#ffd43b','#cc5de8'];
+    const DAILY_PERIODS = [
+        { label: '3M', months: 3 }, { label: '6M', months: 6 }, { label: '1Y', months: 12 },
+        { label: '3Y', months: 36 }, { label: 'MAX', months: 0 },
+    ];
+    const intradayDates = {};  // ticker -> { date, has_prev, has_next }
 
     let countdown = REFRESH_SEC;
     let prevPrices = {};
@@ -438,6 +555,7 @@
     let allStocksData = null;
     let stockList = [];
     let chartType = 'line';
+    const activeIndicators = { bb: false, rsi: false, macd: false, stoch: false, ichimoku: false, vwap: false };
     let chartInstances = {};
     let lastIntradayData = null;
     let lastDailyData = {};
@@ -446,30 +564,65 @@
     let currentCategory = 'jp_stock';
     let categoryList = [];
     let currentViewMode = 'prices';
-    let scoresCache = {};
+    let heatmapData = null;
 
     function getDailyPeriod(ticker) {
         return dailyPeriods[ticker] !== undefined ? dailyPeriods[ticker] : DEFAULT_DAILY_PERIOD;
     }
 
     // ========== ユーティリティ ==========
-    function isMarketOpen() {
-        const now = new Date();
-        const day = now.getDay();
-        if (day === 0 || day === 6) return false;
-        const t = now.getHours() * 60 + now.getMinutes();
-        return (t >= 540 && t <= 690) || (t >= 750 && t <= 900);
+    function fetchJSON(url) {
+        return fetch(url).then(r => r.json());
     }
 
-    function updateMarketStatus() {
-        const el = document.getElementById('marketStatus');
-        if (isMarketOpen()) {
-            el.textContent = '市場開場中';
-            el.className = 'market-badge market-open';
-        } else {
-            el.textContent = '市場閉場';
-            el.className = 'market-badge market-closed';
-        }
+    function getChartBlock(ticker) {
+        return document.querySelector('.chart-block[data-ticker="' + ticker + '"]');
+    }
+
+    function getTickerColor(ticker) {
+        return CHART_COLORS[getTickerSelectorIndex(ticker) % CHART_COLORS.length];
+    }
+
+    function emptyChartHTML(msg) {
+        return '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">' + msg + '</div>';
+    }
+
+    function loadingHTML(msg) {
+        return '<div class="loading-spinner"></div>' + msg;
+    }
+
+    function subChartBaseOptions(yConfig, tooltipCb) {
+        return {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: tooltipCb } },
+            },
+            scales: {
+                x: { display: false },
+                y: Object.assign({ ticks: { color: '#666', font: { size: 8 } }, grid: { color: 'rgba(255,255,255,0.03)' } }, yConfig),
+            },
+        };
+    }
+
+    function destroyChart(key) {
+        if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
+    }
+
+    function shortTicker(t) { return t.replace('.T', ''); }
+
+    function categoryURL(base, extra) {
+        return base + '?category=' + currentCategory + (extra || '');
+    }
+
+    function updateChartStatus(msg) {
+        document.getElementById('chartStatus').textContent = msg;
+    }
+
+    function shortDate(ymd) {
+        var parts = ymd.split('-');
+        return parts[1] + '/' + parts[2];
     }
 
     function formatPrice(p) {
@@ -496,6 +649,120 @@
             let sum = 0;
             for (let j = i - period + 1; j <= i; j++) sum += data[j];
             result.push(Math.round((sum / period) * 10) / 10);
+        }
+        return result;
+    }
+
+    function calcEMA(data, period) {
+        const result = [];
+        const k = 2 / (period + 1);
+        let ema = null;
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] === null) { result.push(null); continue; }
+            if (ema === null) { ema = data[i]; } else { ema = data[i] * k + ema * (1 - k); }
+            result.push(Math.round(ema * 100) / 100);
+        }
+        return result;
+    }
+
+    function calcBB(closes, period, mult) {
+        const sma = calcMA(closes, period);
+        const upper = [], lower = [];
+        for (let i = 0; i < closes.length; i++) {
+            if (sma[i] === null) { upper.push(null); lower.push(null); continue; }
+            let sqSum = 0;
+            for (let j = i - period + 1; j <= i; j++) sqSum += (closes[j] - sma[i]) ** 2;
+            const std = Math.sqrt(sqSum / period);
+            upper.push(Math.round((sma[i] + mult * std) * 10) / 10);
+            lower.push(Math.round((sma[i] - mult * std) * 10) / 10);
+        }
+        return { sma: sma, upper: upper, lower: lower };
+    }
+
+    function calcRSI(closes, period) {
+        const result = Array(closes.length).fill(null);
+        if (closes.length < period + 1) return result;
+        let gainSum = 0, lossSum = 0;
+        for (let i = 1; i <= period; i++) {
+            const d = closes[i] - closes[i - 1];
+            if (d > 0) gainSum += d; else lossSum -= d;
+        }
+        let avgGain = gainSum / period;
+        let avgLoss = lossSum / period;
+        result[period] = avgLoss === 0 ? 100 : Math.round(100 - 100 / (1 + avgGain / avgLoss));
+        for (let i = period + 1; i < closes.length; i++) {
+            const d = closes[i] - closes[i - 1];
+            avgGain = (avgGain * (period - 1) + (d > 0 ? d : 0)) / period;
+            avgLoss = (avgLoss * (period - 1) + (d < 0 ? -d : 0)) / period;
+            result[i] = avgLoss === 0 ? 100 : Math.round(100 - 100 / (1 + avgGain / avgLoss));
+        }
+        return result;
+    }
+
+    function calcMACD(closes) {
+        const ema12 = calcEMA(closes, 12);
+        const ema26 = calcEMA(closes, 26);
+        const macd = ema12.map(function(v, i) {
+            return (v !== null && ema26[i] !== null) ? Math.round((v - ema26[i]) * 100) / 100 : null;
+        });
+        const signal = calcEMA(macd, 9);
+        const histogram = macd.map(function(v, i) {
+            return (v !== null && signal[i] !== null) ? Math.round((v - signal[i]) * 100) / 100 : null;
+        });
+        return { macd: macd, signal: signal, histogram: histogram };
+    }
+
+    function calcStochastic(highs, lows, closes, kPeriod, dPeriod) {
+        const rawK = [];
+        for (let i = 0; i < closes.length; i++) {
+            if (i < kPeriod - 1) { rawK.push(null); continue; }
+            let hh = -Infinity, ll = Infinity;
+            for (let j = i - kPeriod + 1; j <= i; j++) {
+                hh = Math.max(hh, highs[j]);
+                ll = Math.min(ll, lows[j]);
+            }
+            rawK.push(hh === ll ? 50 : Math.round((closes[i] - ll) / (hh - ll) * 10000) / 100);
+        }
+        const kLine = calcMA(rawK, 3);
+        const dLine = calcMA(kLine, dPeriod);
+        return { k: kLine, d: dLine };
+    }
+
+    function calcIchimoku(highs, lows, closes) {
+        const n = closes.length;
+        function midpoint(i, period) {
+            if (i < period - 1) return null;
+            let hh = -Infinity, ll = Infinity;
+            for (let j = i - period + 1; j <= i; j++) {
+                hh = Math.max(hh, highs[j]);
+                ll = Math.min(ll, lows[j]);
+            }
+            return Math.round((hh + ll) / 2 * 10) / 10;
+        }
+        const tenkan = [], kijun = [];
+        const senkouA = Array(n + 26).fill(null);
+        const senkouB = Array(n + 26).fill(null);
+        const chikou = Array(n).fill(null);
+        for (let i = 0; i < n; i++) {
+            tenkan.push(midpoint(i, 9));
+            kijun.push(midpoint(i, 26));
+            if (tenkan[i] !== null && kijun[i] !== null) {
+                senkouA[i + 26] = Math.round((tenkan[i] + kijun[i]) / 2 * 10) / 10;
+            }
+            const sb = midpoint(i, 52);
+            if (sb !== null) senkouB[i + 26] = sb;
+            if (i >= 26) chikou[i - 26] = closes[i];
+        }
+        return { tenkan, kijun, senkouA, senkouB, chikou };
+    }
+
+    function calcVWAP(closes, volumes) {
+        const result = [];
+        let cumPV = 0, cumV = 0;
+        for (let i = 0; i < closes.length; i++) {
+            cumPV += closes[i] * (volumes[i] || 0);
+            cumV += (volumes[i] || 0);
+            result.push(cumV > 0 ? Math.round(cumPV / cumV * 10) / 10 : null);
         }
         return result;
     }
@@ -534,11 +801,14 @@
     function onCategoryChange() {
         showAll = false;
         allStocksData = null;
+        heatmapData = null;
         prevPrices = {};
         document.getElementById('toggleAllStocks').textContent = 'もっと表示 ▼';
 
         if (currentViewMode === 'scores') {
             fetchScores();
+        } else if (currentViewMode === 'heatmap') {
+            fetchHeatmap();
         } else {
             fetchPrices();
             fetchMarketOverview();
@@ -547,8 +817,7 @@
     }
 
     function fetchStockListForCategory() {
-        fetch(API_STOCKS + '?category=' + currentCategory)
-            .then(r => r.json())
+        fetchJSON(categoryURL(API_STOCKS))
             .then(function(data) {
                 stockList = data.stocks;
                 // 既存の Select2 の選択肢を更新
@@ -582,9 +851,9 @@
             let fc = '';
             if (prev !== undefined) { fc = s.price > prev ? 'flash-up' : s.price < prev ? 'flash-down' : ''; }
             html += '<tr class="'+fc+'"><td class="col-rank">'+rank+'</td>';
-            html += '<td class="col-name">'+s.name+'<span class="ticker-code">'+s.ticker.replace('.T','')+'</span></td>';
+            html += '<td class="col-name">'+s.name+'<span class="ticker-code">'+shortTicker(s.ticker)+'</span></td>';
             html += '<td>'+formatPrice(s.price)+'</td>';
-            html += '<td class="'+diffClass(s.diff_day)+'">'+formatDiff(s.diff_day)+'</td>';
+            html += '<td class="col-diff '+diffClass(s.diff_day)+'">'+formatDiff(s.diff_day)+'</td>';
             html += '<td class="'+diffClass(s.pct_day)+'">'+formatPct(s.pct_day)+'</td></tr>';
             prevPrices[s.ticker] = s.price;
         });
@@ -621,10 +890,9 @@
             if (allStocksData) {
                 appendRemainingStocks();
             } else {
-                fetch(API_PRICES + '?category=' + currentCategory + '&all=1').then(r => r.json()).then(function(data) {
-                    allStocksData = data;
-                    appendRemainingStocks();
-                }).catch(console.error);
+                fetchJSON(categoryURL(API_PRICES, '&all=1'))
+                    .then(function(data) { allStocksData = data; appendRemainingStocks(); })
+                    .catch(console.error);
             }
         } else {
             const tbody = document.getElementById('stockBody');
@@ -634,25 +902,22 @@
     });
 
     function fetchPrices() {
-        const el = document.getElementById('fetchStatus');
-        el.textContent = '取得中...';
-        fetch(API_PRICES + '?category=' + currentCategory).then(r => r.json()).then(function(data) {
+        fetchJSON(categoryURL(API_PRICES)).then(function(data) {
             renderStocks(data);
-            el.textContent = '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
             countdown = REFRESH_SEC;
             if (showAll) {
-                fetch(API_PRICES + '?category=' + currentCategory + '&all=1').then(r => r.json()).then(function(d) {
-                    allStocksData = d;
-                }).catch(console.error);
+                fetchJSON(categoryURL(API_PRICES, '&all=1'))
+                    .then(d => { allStocksData = d; })
+                    .catch(console.error);
             }
-        }).catch(function() { el.textContent = 'エラー'; countdown = REFRESH_SEC; });
+        }).catch(function() { countdown = REFRESH_SEC; });
     }
 
     // ========== マーケット概況 ==========
     function fetchMarketOverview() {
-        fetch(API_MARKET_OVERVIEW + '?category=' + currentCategory).then(r => r.json()).then(function(data) {
-            renderDynamicOverview(data);
-        }).catch(console.error);
+        fetchJSON(categoryURL(API_MARKET_OVERVIEW))
+            .then(data => renderDynamicOverview(data))
+            .catch(console.error);
     }
 
     function renderDynamicOverview(data) {
@@ -687,7 +952,7 @@
                 html += '</div>';
                 return;
             }
-            const cls = item.diff > 0 ? 'price-up' : item.diff < 0 ? 'price-down' : 'price-flat';
+            const cls = diffClass(item.diff);
             html += '<div class="overview-item">';
             html += '<span class="overview-item-name">' + item.name + '</span>';
             html += '<span class="overview-item-price">' + formatPrice(item.price) + '</span>';
@@ -700,7 +965,6 @@
 
     function startTimer() {
         setInterval(function() {
-            if (!isMarketOpen()) return;
             countdown--;
             if (countdown <= 0) {
                 fetchPrices();
@@ -718,7 +982,7 @@
 
     function createSelectOptions() {
         let h = '<option value="">-- 銘柄を検索 --</option>';
-        stockList.forEach(s => { h += '<option value="'+s.ticker+'">'+s.name+' ('+s.ticker.replace('.T','')+')</option>'; });
+        stockList.forEach(s => { h += '<option value="'+s.ticker+'">'+s.name+' ('+shortTicker(s.ticker)+')</option>'; });
         return h;
     }
 
@@ -744,7 +1008,7 @@
             updateColorDots();
             if (removedTicker) removeChartBlock(removedTicker);
             if (getSelectedTickers().length === 0) {
-                document.getElementById('chartStatus').textContent = '銘柄を選択してください';
+                updateChartStatus('銘柄を選択してください');
             }
         });
         row.appendChild(dot); row.appendChild(sel); row.appendChild(btn);
@@ -775,6 +1039,16 @@
             document.querySelectorAll('.btn-chart-type').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             chartType = this.dataset.type;
+            renderAllCharts();
+        });
+    });
+
+    // ========== 指標トグル ==========
+    document.querySelectorAll('.btn-indicator').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const ind = this.dataset.ind;
+            activeIndicators[ind] = !activeIndicators[ind];
+            this.classList.toggle('active', activeIndicators[ind]);
             renderAllCharts();
         });
     });
@@ -854,32 +1128,61 @@
     }
 
     function volumeChartOptions() {
-        return {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            return '出来高: ' + formatVolume(ctx.parsed.y);
-                        }
-                    }
-                },
-            },
-            scales: {
-                x: { display: false },
-                y: { ticks: { color: '#666', callback: v => formatVolume(v), font: { size: 8 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
-            },
-        };
+        return subChartBaseOptions(
+            { ticks: { callback: v => formatVolume(v) } },
+            function(ctx) { return '出来高: ' + formatVolume(ctx.parsed.y); }
+        );
     }
 
+    // ========== 指標定義 ==========
+    const INDICATOR_DEFS = [
+        { ind: 'rsi', cls: 'chart-rsi-wrap', suffix: 'r', render: function(c, key, labels, data, color) { renderRSIChart(c, key, labels, data.close, color); } },
+        { ind: 'macd', cls: 'chart-macd-wrap', suffix: 'm', render: function(c, key, labels, data) { renderMACDChart(c, key, labels, data.close); } },
+        { ind: 'stoch', cls: 'chart-stoch-wrap', suffix: 's', render: function(c, key, labels, data) { renderStochChart(c, key, labels, data); } },
+    ];
+
     // ========== 個別チャートブロック ==========
+    function createChartCol() {
+        const col = document.createElement('div');
+        col.className = 'chart-col';
+        const priceWrap = document.createElement('div');
+        priceWrap.className = 'chart-price-wrap';
+        priceWrap.appendChild(document.createElement('canvas'));
+        col.appendChild(priceWrap);
+        appendIndicatorWraps(col);
+        const volWrap = document.createElement('div');
+        volWrap.className = 'chart-volume-wrap';
+        volWrap.appendChild(document.createElement('canvas'));
+        col.appendChild(volWrap);
+        return col;
+    }
+
+    function appendIndicatorWraps(col) {
+        INDICATOR_DEFS.forEach(function(def) {
+            if (activeIndicators[def.ind]) {
+                const w = document.createElement('div'); w.className = def.cls;
+                w.appendChild(document.createElement('canvas'));
+                col.appendChild(w);
+            }
+        });
+    }
+
+    function fillCol(col, ticker, prefix, labels, data, color, renderPriceFn, emptyMsg) {
+        const priceWrap = col.querySelector('.chart-price-wrap');
+        const volWrap = col.querySelector('.chart-volume-wrap');
+        if (data) {
+            refreshCanvasAndRender(priceWrap, function(c) { renderPriceFn(c, ticker, data, color); });
+            renderIndicatorsForCol(col, ticker, prefix, labels, data, color);
+            refreshCanvasAndRender(volWrap, function(c) { renderVolumeChart(c, ticker + prefix + 'v', labels, data.volume, color); });
+        } else {
+            priceWrap.innerHTML = emptyChartHTML(emptyMsg);
+            volWrap.innerHTML = '';
+        }
+    }
+
     function addChartBlock(ticker) {
         const grid = document.getElementById('chartGrid');
-        const selectorIdx = getTickerSelectorIndex(ticker);
-        const color = CHART_COLORS[selectorIdx % CHART_COLORS.length];
+        const color = getTickerColor(ticker);
         const intraday = lastIntradayData && lastIntradayData.charts[ticker];
         const daily = lastDailyData[ticker];
         const period = getDailyPeriod(ticker);
@@ -892,40 +1195,32 @@
         title.className = 'chart-block-title';
         const stockInfo = stockList.find(s => s.ticker === ticker);
         const name = stockInfo ? stockInfo.name : (intraday ? intraday.name : (daily ? daily.name : ticker));
-        title.textContent = name + ' (' + ticker.replace('.T','') + ')';
+        title.textContent = name + ' (' + shortTicker(ticker) + ')';
         block.appendChild(title);
 
         const row = document.createElement('div');
         row.className = 'chart-row';
 
-        const leftCol = document.createElement('div');
-        leftCol.className = 'chart-col';
+        // 左カラム（分足）
+        const leftCol = createChartCol();
+        const leftHeader = document.createElement('div');
+        leftHeader.className = 'intraday-header';
         const leftLabel = document.createElement('div');
         leftLabel.className = 'chart-col-label';
         leftLabel.textContent = '日中（分足）';
-        leftCol.appendChild(leftLabel);
-
-        const leftPriceWrap = document.createElement('div');
-        leftPriceWrap.className = 'chart-price-wrap';
-        const leftPriceCanvas = document.createElement('canvas');
-        leftPriceWrap.appendChild(leftPriceCanvas);
-        leftCol.appendChild(leftPriceWrap);
-
-        const leftVolWrap = document.createElement('div');
-        leftVolWrap.className = 'chart-volume-wrap';
-        const leftVolCanvas = document.createElement('canvas');
-        leftVolWrap.appendChild(leftVolCanvas);
-        leftCol.appendChild(leftVolWrap);
-
+        leftHeader.appendChild(leftLabel);
+        const dateNav = document.createElement('div');
+        dateNav.className = 'intraday-date-nav';
+        dateNav.dataset.ticker = ticker;
+        leftHeader.appendChild(dateNav);
+        leftCol.insertBefore(leftHeader, leftCol.firstChild);
         row.appendChild(leftCol);
 
-        const rightCol = document.createElement('div');
-        rightCol.className = 'chart-col';
-
+        // 右カラム（日足）
+        const rightCol = createChartCol();
         const periodBtns = document.createElement('div');
         periodBtns.className = 'daily-period-btns';
-        [{ label: '3M', months: 3 }, { label: '6M', months: 6 }, { label: '1Y', months: 12 },
-         { label: '3Y', months: 36 }, { label: 'MAX', months: 0 }].forEach(function(p) {
+        DAILY_PERIODS.forEach(function(p) {
             const btn = document.createElement('button');
             btn.className = 'btn-period' + (p.months === period ? ' active' : '');
             btn.textContent = p.label;
@@ -937,47 +1232,23 @@
             });
             periodBtns.appendChild(btn);
         });
-        rightCol.appendChild(periodBtns);
-
-        const rightPriceWrap = document.createElement('div');
-        rightPriceWrap.className = 'chart-price-wrap';
-        const rightPriceCanvas = document.createElement('canvas');
-        rightPriceWrap.appendChild(rightPriceCanvas);
-        rightCol.appendChild(rightPriceWrap);
-
-        const rightVolWrap = document.createElement('div');
-        rightVolWrap.className = 'chart-volume-wrap';
-        const rightVolCanvas = document.createElement('canvas');
-        rightVolWrap.appendChild(rightVolCanvas);
-        rightCol.appendChild(rightVolWrap);
-
+        rightCol.insertBefore(periodBtns, rightCol.firstChild);
         row.appendChild(rightCol);
+
         block.appendChild(row);
         grid.appendChild(block);
 
-        if (intraday) {
-            renderIntradayPrice(leftPriceCanvas, ticker, intraday, color);
-            renderVolumeChart(leftVolCanvas, ticker + '_iv', intraday.timestamps, intraday.volume, color);
-        } else {
-            leftPriceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">日中データなし</div>';
-            leftVolWrap.innerHTML = '';
-        }
-
-        if (daily) {
-            renderDailyPrice(rightPriceCanvas, ticker, daily, color);
-            renderVolumeChart(rightVolCanvas, ticker + '_dv', daily.dates, daily.volume, color);
-        } else {
-            rightPriceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">長期データ取得中...</div>';
-            rightVolWrap.innerHTML = '';
-        }
+        fillCol(leftCol, ticker, '_i', intraday ? intraday.timestamps : [], intraday, color, renderIntradayPrice, '日中データなし');
+        fillCol(rightCol, ticker, '_d', daily ? daily.dates : [], daily, color, renderDailyPrice, '長期データ取得中...');
     }
 
+    const CHART_SUFFIXES = ['_ip', '_iv', '_dp', '_dv'].concat(
+        INDICATOR_DEFS.flatMap(function(d) { return ['_i' + d.suffix, '_d' + d.suffix]; })
+    );
+
     function removeChartBlock(ticker) {
-        ['_ip', '_iv', '_dp', '_dv'].forEach(function(suffix) {
-            const key = ticker + suffix;
-            if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
-        });
-        const block = document.querySelector('.chart-block[data-ticker="' + ticker + '"]');
+        CHART_SUFFIXES.forEach(suffix => destroyChart(ticker + suffix));
+        const block = getChartBlock(ticker);
         if (block) block.remove();
         if (lastIntradayData && lastIntradayData.charts) delete lastIntradayData.charts[ticker];
         delete lastDailyData[ticker];
@@ -991,13 +1262,11 @@
         grid.innerHTML = '';
 
         if (tickers.length === 0) {
-            document.getElementById('chartStatus').textContent = '銘柄を選択してください';
+            updateChartStatus('銘柄を選択してください');
             return;
         }
 
         tickers.forEach(ticker => addChartBlock(ticker));
-        document.getElementById('chartStatus').textContent =
-            '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
     }
 
     // MA 線の共通定義
@@ -1007,7 +1276,11 @@
         { color: '#ff9f43', dash: [8, 4] },
     ];
 
-    function buildPriceDatasets(data, color, maPeriods, lineWidth) {
+    function overlayLine(label, lineData, lineColor, width, extra) {
+        return Object.assign({ label: label, data: lineData, borderColor: lineColor, borderWidth: width, pointRadius: 0, fill: false }, extra || {});
+    }
+
+    function buildPriceDatasets(data, color, maPeriods, lineWidth, isIntraday) {
         const datasets = [];
         const ohlc = data.close.map((_, i) => ({
             o: data.open[i], h: data.high[i], l: data.low[i], c: data.close[i],
@@ -1037,6 +1310,32 @@
             });
         });
 
+        if (activeIndicators.bb) {
+            const bb2 = calcBB(data.close, 20, 2);
+            const bb1 = calcBB(data.close, 20, 1);
+            const w6 = lineWidth * 0.6, w5 = lineWidth * 0.5;
+            datasets.push(overlayLine('+2σ', bb2.upper, 'rgba(100,181,246,0.5)', w6, { fill: '+4', backgroundColor: 'rgba(100,181,246,0.05)' }));
+            datasets.push(overlayLine('+1σ', bb1.upper, 'rgba(100,181,246,0.3)', w5, { borderDash: [2, 2], fill: '+2', backgroundColor: 'rgba(100,181,246,0.08)' }));
+            datasets.push(overlayLine('BB中', bb2.sma, 'rgba(100,181,246,0.7)', w6, { borderDash: [3, 3] }));
+            datasets.push(overlayLine('-1σ', bb1.lower, 'rgba(100,181,246,0.3)', w5, { borderDash: [2, 2] }));
+            datasets.push(overlayLine('-2σ', bb2.lower, 'rgba(100,181,246,0.5)', w6));
+        }
+
+        if (activeIndicators.ichimoku) {
+            const ichi = calcIchimoku(data.high, data.low, data.close);
+            const n = data.close.length;
+            const w6 = lineWidth * 0.6, w5 = lineWidth * 0.5;
+            datasets.push(overlayLine('転換線', ichi.tenkan, '#e74c3c', w6));
+            datasets.push(overlayLine('基準線', ichi.kijun, '#3498db', w6));
+            datasets.push(overlayLine('先行A', ichi.senkouA.slice(0, n), 'rgba(0,200,83,0.4)', w5, { fill: '+1', backgroundColor: 'rgba(0,200,83,0.06)' }));
+            datasets.push(overlayLine('先行B', ichi.senkouB.slice(0, n), 'rgba(255,23,68,0.4)', w5));
+            datasets.push(overlayLine('遅行', ichi.chikou, '#9b59b6', w5, { borderDash: [3, 3] }));
+        }
+
+        if (activeIndicators.vwap && isIntraday && data.volume) {
+            datasets.push(overlayLine('VWAP', calcVWAP(data.close, data.volume), 'rgba(255,255,255,0.6)', lineWidth * 0.9));
+        }
+
         return datasets;
     }
 
@@ -1048,17 +1347,72 @@
         });
     }
 
+    function renderOscillatorChart(canvas, key, labels, seriesDatasets, refLines, yConfig, tooltipCb) {
+        const datasets = seriesDatasets.concat(refLines.map(function(ref) {
+            return { data: Array(labels.length).fill(ref.value), borderColor: ref.color, borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false };
+        }));
+        chartInstances[key] = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: subChartBaseOptions(yConfig, tooltipCb),
+        });
+    }
+
+    function renderRSIChart(canvas, key, labels, closes, color) {
+        renderOscillatorChart(canvas, key, labels,
+            [{ data: calcRSI(closes, 14), borderColor: color, borderWidth: 1.5, pointRadius: 0, fill: false }],
+            [{ value: 70, color: '#ff174466' }, { value: 30, color: '#00c85366' }],
+            { min: 0, max: 100, ticks: { stepSize: 30 } },
+            function(ctx) { return 'RSI: ' + ctx.parsed.y; }
+        );
+    }
+
+    function renderMACDChart(canvas, key, labels, closes) {
+        const m = calcMACD(closes);
+        const histColors = m.histogram.map(function(v) {
+            return v === null ? 'transparent' : (v >= 0 ? '#00c85380' : '#ff174480');
+        });
+        chartInstances[key] = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { type: 'line', data: m.macd, borderColor: '#4a9eff', borderWidth: 1.5, pointRadius: 0, fill: false, order: 1 },
+                    { type: 'line', data: m.signal, borderColor: '#ff9f43', borderWidth: 1.5, pointRadius: 0, fill: false, order: 2 },
+                    { data: m.histogram, backgroundColor: histColors, borderWidth: 0, order: 3 },
+                ],
+            },
+            options: subChartBaseOptions({}, function(ctx) {
+                const lbl = ['MACD', 'Signal', 'Hist'][ctx.datasetIndex] || '';
+                return lbl + ': ' + (ctx.parsed.y != null ? ctx.parsed.y : '--');
+            }),
+        });
+    }
+
+    function renderStochChart(canvas, key, labels, data) {
+        const st = calcStochastic(data.high, data.low, data.close, 14, 3);
+        renderOscillatorChart(canvas, key, labels,
+            [
+                { label: '%K', data: st.k, borderColor: '#4a9eff', borderWidth: 1.5, pointRadius: 0, fill: false },
+                { label: '%D', data: st.d, borderColor: '#ffd43b', borderWidth: 1.5, pointRadius: 0, fill: false },
+            ],
+            [{ value: 80, color: '#ff174466' }, { value: 20, color: '#00c85366' }],
+            { min: 0, max: 100, ticks: { stepSize: 25 } },
+            function(ctx) {
+                const lbl = ctx.datasetIndex === 0 ? '%K' : ctx.datasetIndex === 1 ? '%D' : '';
+                return lbl + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : '--');
+            }
+        );
+    }
+
     function renderIntradayPrice(canvas, ticker, data, color) {
-        const datasets = buildPriceDatasets(data, color, [5, 25], 2);
+        const datasets = buildPriceDatasets(data, color, [5, 25], 2, true);
         renderPriceChart(canvas, ticker + '_ip', data.timestamps, datasets);
     }
 
     function renderDailyPrice(canvas, ticker, data, color) {
-        const labels = data.dates.map(d => {
-            const parts = d.split('-');
-            return parts[1] + '/' + parts[2];
-        });
-        const datasets = buildPriceDatasets(data, color, [25, 75, 200], 1.5);
+        const labels = data.dates.map(shortDate);
+        const datasets = buildPriceDatasets(data, color, [25, 75, 200], 1.5, false);
         renderPriceChart(canvas, ticker + '_dp', labels, datasets);
     }
 
@@ -1092,27 +1446,71 @@
             fetchDailyDataForTicker(newTicker);
         }
         if (getSelectedTickers().length === 0) {
-            document.getElementById('chartStatus').textContent = '銘柄を選択してください';
+            updateChartStatus('銘柄を選択してください');
         }
     }
 
-    function fetchIntradayDataForTicker(ticker) {
-        fetch(API_CHART + '?tickers=' + ticker)
-            .then(r => r.json())
+    function fetchIntradayDataForTicker(ticker, date) {
+        let url = API_CHART + '?tickers=' + ticker;
+        if (date) url += '&date=' + date;
+        fetchJSON(url)
             .then(function(data) {
                 if (!lastIntradayData) lastIntradayData = { charts: {} };
                 if (data.charts[ticker]) {
                     lastIntradayData.charts[ticker] = data.charts[ticker];
                 }
+                intradayDates[ticker] = {
+                    date: data.date || null,
+                    has_prev: data.has_prev || false,
+                    has_next: data.has_next || false,
+                };
                 updateIntradayChartForTicker(ticker);
+                updateIntradayDateNav(ticker);
             })
             .catch(console.error);
     }
 
+    function createDateNavBtn(label, ticker, dayOffset) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-date-nav';
+        btn.textContent = label;
+        btn.addEventListener('click', function() {
+            const d = new Date(intradayDates[ticker].date + 'T00:00:00');
+            d.setDate(d.getDate() + dayOffset);
+            fetchIntradayDataForTicker(ticker, fmtDate(d));
+        });
+        return btn;
+    }
+
+    function updateIntradayDateNav(ticker) {
+        const block = getChartBlock(ticker);
+        if (!block) return;
+        const nav = block.querySelector('.intraday-date-nav');
+        if (!nav) return;
+        const info = intradayDates[ticker];
+        if (!info || !info.date) { nav.innerHTML = ''; return; }
+
+        nav.innerHTML = '';
+        if (info.has_prev) nav.appendChild(createDateNavBtn('\u25C0 前日', ticker, -1));
+
+        const dateLabel = document.createElement('span');
+        dateLabel.className = 'intraday-date-label';
+        dateLabel.textContent = shortDate(info.date);
+        nav.appendChild(dateLabel);
+
+        if (info.has_next) nav.appendChild(createDateNavBtn('翌日 \u25B6', ticker, 1));
+    }
+
+    function fmtDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + dd;
+    }
+
     function fetchDailyDataForTicker(ticker) {
         const period = getDailyPeriod(ticker);
-        fetch(API_DAILY_CHART + '?tickers=' + ticker + '&months=' + period)
-            .then(r => r.json())
+        fetchJSON(API_DAILY_CHART + '?tickers=' + ticker + '&months=' + period)
             .then(function(data) {
                 if (data.charts[ticker]) {
                     lastDailyData[ticker] = data.charts[ticker];
@@ -1122,63 +1520,60 @@
             .catch(console.error);
     }
 
-    function updateIntradayChartForTicker(ticker) {
-        const block = document.querySelector('.chart-block[data-ticker="' + ticker + '"]');
+    function ensureIndicatorWrap(col, className, active) {
+        let wrap = col.querySelector('.' + className);
+        if (active && !wrap) {
+            wrap = document.createElement('div'); wrap.className = className;
+            wrap.appendChild(document.createElement('canvas'));
+            col.insertBefore(wrap, col.querySelector('.chart-volume-wrap'));
+        } else if (!active && wrap) { wrap.remove(); wrap = null; }
+        return wrap;
+    }
+
+    function renderIndicatorsForCol(col, ticker, prefix, labels, data, color) {
+        INDICATOR_DEFS.forEach(function(def) {
+            const key = ticker + prefix + def.suffix;
+            destroyChart(key);
+            const wrap = ensureIndicatorWrap(col, def.cls, activeIndicators[def.ind]);
+            if (wrap) refreshCanvasAndRender(wrap, function(c) { def.render(c, key, labels, data, color); });
+        });
+    }
+
+    function updateChartCol(ticker, colIndex, prefix, data, labels, renderPriceFn, emptyMsg) {
+        const block = getChartBlock(ticker);
         if (!block) return;
-        const data = lastIntradayData && lastIntradayData.charts[ticker];
-        const color = CHART_COLORS[getTickerSelectorIndex(ticker) % CHART_COLORS.length];
-        destroyChartPair(ticker, '_ip', '_iv');
-        const col = block.querySelectorAll('.chart-col')[0];
+        const col = block.querySelectorAll('.chart-col')[colIndex];
         if (!col) return;
-        const priceWrap = col.querySelector('.chart-price-wrap');
-        const volWrap = col.querySelector('.chart-volume-wrap');
-        if (data) {
-            refreshCanvasAndRender(priceWrap, function(c) { renderIntradayPrice(c, ticker, data, color); });
-            refreshCanvasAndRender(volWrap, function(c) { renderVolumeChart(c, ticker + '_iv', data.timestamps, data.volume, color); });
-        } else {
-            priceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">日中データなし</div>';
-            volWrap.innerHTML = '';
-        }
+        destroyChartPair(ticker, prefix + 'p', prefix + 'v');
+        fillCol(col, ticker, prefix, labels, data, getTickerColor(ticker), renderPriceFn, emptyMsg);
+    }
+
+    function updateIntradayChartForTicker(ticker) {
+        const data = lastIntradayData && lastIntradayData.charts[ticker];
+        updateChartCol(ticker, 0, '_i', data, data ? data.timestamps : [], renderIntradayPrice, '日中データなし');
     }
 
     function updateDailyChartForTicker(ticker) {
-        const block = document.querySelector('.chart-block[data-ticker="' + ticker + '"]');
-        if (!block) return;
         const data = lastDailyData[ticker];
-        const color = CHART_COLORS[getTickerSelectorIndex(ticker) % CHART_COLORS.length];
-        destroyChartPair(ticker, '_dp', '_dv');
-        const col = block.querySelectorAll('.chart-col')[1];
-        if (!col) return;
-        const priceWrap = col.querySelector('.chart-price-wrap');
-        const volWrap = col.querySelector('.chart-volume-wrap');
-        if (data) {
-            refreshCanvasAndRender(priceWrap, function(c) { renderDailyPrice(c, ticker, data, color); });
-            refreshCanvasAndRender(volWrap, function(c) { renderVolumeChart(c, ticker + '_dv', data.dates, data.volume, color); });
-        } else {
-            priceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">長期データ取得中...</div>';
-            volWrap.innerHTML = '';
-        }
+        updateChartCol(ticker, 1, '_d', data, data ? data.dates : [], renderDailyPrice, '長期データ取得中...');
     }
 
     function fetchIntradayData() {
         const tickers = getSelectedTickers();
         if (tickers.length === 0) return;
-        fetch(API_CHART + '?tickers=' + tickers.join(','))
-            .then(r => r.json())
+        fetchJSON(API_CHART + '?tickers=' + tickers.join(','))
             .then(function(data) {
                 lastIntradayData = data;
                 updateIntradayChartsOnly();
             })
             .catch(function() {
-                document.getElementById('chartStatus').textContent = '日中データ取得エラー';
+                updateChartStatus('日中データ取得エラー');
             });
     }
 
     function destroyChartPair(ticker, priceSuffix, volSuffix) {
-        [priceSuffix, volSuffix].forEach(function(s) {
-            const key = ticker + s;
-            if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
-        });
+        destroyChart(ticker + priceSuffix);
+        destroyChart(ticker + volSuffix);
     }
 
     function refreshCanvasAndRender(wrap, renderFn) {
@@ -1188,40 +1583,11 @@
         renderFn(canvas);
     }
 
-    function updateChartsForSide(colIndex, priceSuffix, volSuffix, getDataFn, renderPriceFn, renderVolFn, emptyMsg) {
-        document.querySelectorAll('.chart-block').forEach(function(block) {
-            const ticker = block.dataset.ticker;
-            if (!ticker) return;
-            const data = getDataFn(ticker);
-            const color = CHART_COLORS[getTickerSelectorIndex(ticker) % CHART_COLORS.length];
-
-            destroyChartPair(ticker, priceSuffix, volSuffix);
-
-            const col = block.querySelectorAll('.chart-col')[colIndex];
-            if (!col) return;
-            const priceWrap = col.querySelector('.chart-price-wrap');
-            const volWrap = col.querySelector('.chart-volume-wrap');
-
-            if (data) {
-                refreshCanvasAndRender(priceWrap, function(c) { renderPriceFn(c, ticker, data, color); });
-                refreshCanvasAndRender(volWrap, function(c) { renderVolFn(c, ticker, data, color); });
-            } else {
-                priceWrap.innerHTML = '<div style="color:#666;text-align:center;padding-top:100px;font-size:0.8rem;">' + emptyMsg + '</div>';
-                volWrap.innerHTML = '';
-            }
-        });
-    }
-
     function updateIntradayChartsOnly() {
-        updateChartsForSide(
-            0, '_ip', '_iv',
-            function(t) { return lastIntradayData && lastIntradayData.charts[t]; },
-            renderIntradayPrice,
-            function(c, t, d, color) { renderVolumeChart(c, t + '_iv', d.timestamps, d.volume, color); },
-            '日中データなし'
-        );
-        document.getElementById('chartStatus').textContent =
-            '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
+        document.querySelectorAll('.chart-block').forEach(function(block) {
+            const t = block.dataset.ticker;
+            if (t) updateIntradayChartForTicker(t);
+        });
     }
 
     // ========== ビューモード切替 & スコア分析 ==========
@@ -1232,18 +1598,25 @@
             document.querySelectorAll('.view-mode-btn').forEach(function(b) { b.classList.remove('active'); });
             this.classList.add('active');
 
-            var priceSection = document.querySelector('.market-top-row');
-            var scoreSection = document.getElementById('scoresSection');
-            var toggleBtn = document.querySelector('.stock-all-toggle');
-            if (currentViewMode === 'scores') {
-                priceSection.style.display = 'none';
-                if (toggleBtn) toggleBtn.style.display = 'none';
-                scoreSection.style.display = 'block';
-                fetchScores();
-            } else {
+            const priceSection = document.querySelector('.market-top-row');
+            const scoreSection = document.getElementById('scoresSection');
+            const heatmapSection = document.getElementById('heatmapSection');
+            const toggleBtn = document.querySelector('.stock-all-toggle');
+
+            priceSection.style.display = 'none';
+            scoreSection.style.display = 'none';
+            heatmapSection.style.display = 'none';
+            if (toggleBtn) toggleBtn.style.display = 'none';
+
+            if (currentViewMode === 'prices') {
                 priceSection.style.display = '';
                 if (toggleBtn) toggleBtn.style.display = '';
-                scoreSection.style.display = 'none';
+            } else if (currentViewMode === 'heatmap') {
+                heatmapSection.style.display = 'block';
+                fetchHeatmap();
+            } else if (currentViewMode === 'scores') {
+                scoreSection.style.display = 'block';
+                fetchScores();
             }
         });
     });
@@ -1253,19 +1626,17 @@
     });
 
     function fetchScores() {
-        var sortBy = document.getElementById('scoreSortBy').value;
-        var tbody = document.getElementById('scoresBody');
-        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell"><div class="loading-spinner"></div>スコア計算中...</td></tr>';
+        const sortBy = document.getElementById('scoreSortBy').value;
+        const list = document.getElementById('scoresList');
+        list.innerHTML = '<div class="scores-empty">' + loadingHTML('スコア計算中...') + '</div>';
 
-        fetch(API_SCORES + '?category=' + currentCategory + '&sort=' + sortBy)
-            .then(function(r) { return r.json(); })
+        fetchJSON(categoryURL(API_SCORES, '&sort=' + sortBy))
             .then(function(data) {
-                scoresCache[currentCategory] = data;
                 renderScores(data.scores);
             })
             .catch(function(e) {
                 console.error(e);
-                tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">スコア取得エラー</td></tr>';
+                list.innerHTML = '<div class="scores-empty">スコア取得エラー</div>';
             });
     }
 
@@ -1275,43 +1646,130 @@
         return 'score-low';
     }
 
+    function scoreBadgeHTML(label, score) {
+        return '<span class="score-item">' + label + ' <span class="score-badge ' + scoreClass(score) + '">' + score.toFixed(1) + '</span></span>';
+    }
+
     function renderScores(scores) {
-        var tbody = document.getElementById('scoresBody');
+        const list = document.getElementById('scoresList');
         if (!scores || scores.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">データがありません</td></tr>';
+            list.innerHTML = '<div class="scores-empty">データがありません</div>';
             return;
         }
-        var html = '';
+        let html = '';
         scores.forEach(function(s, i) {
-            html += '<tr>';
-            html += '<td class="col-rank">' + (i + 1) + '</td>';
-            html += '<td class="col-name">' + s.name + '<span class="ticker-code">' + s.ticker.replace('.T','') + '</span></td>';
-            html += '<td class="col-score"><span class="score-badge ' + scoreClass(s.combined_score) + '">' + s.combined_score.toFixed(1) + '</span></td>';
-            html += '<td class="col-score"><span class="score-badge ' + scoreClass(s.short_term_score) + '">' + s.short_term_score.toFixed(1) + '</span></td>';
-            html += '<td class="col-score"><span class="score-badge ' + scoreClass(s.long_term_score) + '">' + s.long_term_score.toFixed(1) + '</span></td>';
-            html += '<td class="col-signals">';
-            (s.signals || []).forEach(function(sig) {
-                var cls = sig.type === 'bullish' ? 'signal-bullish' : sig.type === 'bearish' ? 'signal-bearish' : 'signal-neutral';
-                html += '<span class="signal-tag ' + cls + '">' + sig.text + '</span>';
-            });
-            html += '</td></tr>';
+            html += '<div class="score-card">';
+            html += '<div class="score-card-header">';
+            html += '<div class="score-card-left">';
+            html += '<span class="score-card-rank">' + (i + 1) + '</span>';
+            html += '<span class="score-card-name">' + s.name + '</span>';
+            html += '<span class="score-card-ticker">' + shortTicker(s.ticker) + '</span>';
+            html += '</div>';
+            html += '<div class="score-card-scores">';
+            html += scoreBadgeHTML('総合', s.combined_score);
+            html += scoreBadgeHTML('短期', s.short_term_score);
+            html += scoreBadgeHTML('長期', s.long_term_score);
+            html += '</div>';
+            html += '</div>';
+            const signals = s.signals || [];
+            if (signals.length > 0) {
+                html += '<div class="score-card-signals">';
+                signals.forEach(function(sig) {
+                    const cls = sig.type === 'bullish' ? 'signal-bullish' : sig.type === 'bearish' ? 'signal-bearish' : 'signal-neutral';
+                    html += '<span class="signal-tag ' + cls + '">' + sig.text + '</span>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
         });
-        tbody.innerHTML = html;
+        list.innerHTML = html;
+        // 最大幅に揃える
+        const lefts = list.querySelectorAll('.score-card-left');
+        let maxW = 0;
+        lefts.forEach(function(el) { maxW = Math.max(maxW, el.offsetWidth); });
+        lefts.forEach(function(el) { el.style.width = maxW + 'px'; });
+    }
+
+    // ========== ヒートマップ ==========
+    function heatmapColor(pct) {
+        const c = Math.max(-8, Math.min(8, pct));
+        if (c >= 0) {
+            const t = c / 8;
+            return 'rgb(' + Math.round(40*(1-t)) + ',' + Math.round(40+160*t) + ',' + Math.round(40*(1-t)) + ')';
+        } else {
+            const t = -c / 8;
+            return 'rgb(' + Math.round(40+175*t) + ',' + Math.round(40*(1-t)) + ',' + Math.round(40*(1-t)) + ')';
+        }
+    }
+
+    function renderHeatmap(stocks) {
+        const grid = document.getElementById('heatmapGrid');
+        if (!stocks || stocks.length === 0) {
+            grid.innerHTML = '<div class="heatmap-empty">データがありません</div>';
+            return;
+        }
+        const containerW = grid.clientWidth || grid.parentElement.clientWidth || 300;
+        const gap = 3;
+        const minTileW = containerW < 500 ? 50 : 60;
+        const targetCols = Math.max(3, Math.min(12, Math.floor((containerW + gap) / (minTileW + gap))));
+        const tileW = Math.floor((containerW - gap * (targetCols - 1)) / targetCols);
+        const tileH = Math.max(45, Math.min(80, Math.round(tileW * 0.75)));
+
+        let html = '';
+        stocks.forEach(function(s) {
+            const bg = heatmapColor(s.pct_day);
+            const pctStr = (s.pct_day >= 0 ? '+' : '') + s.pct_day.toFixed(2) + '%';
+            html += '<div class="heatmap-tile" style="background:' + bg + ';width:' + tileW + 'px;height:' + tileH + 'px;" '
+                + 'title="' + s.name + ' ' + pctStr + '" data-ticker="' + s.ticker + '">'
+                + '<div class="heatmap-tile-name">' + s.name + '</div>'
+                + '<div class="heatmap-tile-pct">' + pctStr + '</div>'
+                + '<div class="heatmap-tile-ticker">' + shortTicker(s.ticker) + '</div>'
+                + '</div>';
+        });
+        grid.innerHTML = html;
+
+        grid.querySelectorAll('.heatmap-tile').forEach(function(tile) {
+            tile.addEventListener('click', function() {
+                const ticker = this.dataset.ticker;
+                document.querySelector('[data-mode="prices"]').click();
+                setTimeout(function() {
+                    const selects = document.querySelectorAll('.ticker-select');
+                    let found = false;
+                    selects.forEach(function(sel) {
+                        if (!$(sel).val() && !found) { $(sel).val(ticker).trigger('change'); found = true; }
+                    });
+                    if (!found && selects.length < 5) {
+                        document.getElementById('addTicker').click();
+                        setTimeout(function() {
+                            const newSels = document.querySelectorAll('.ticker-select');
+                            $(newSels[newSels.length - 1]).val(ticker).trigger('change');
+                        }, 100);
+                    }
+                    document.querySelector('.chart-section').scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+            });
+        });
+    }
+
+    function fetchHeatmap() {
+        const grid = document.getElementById('heatmapGrid');
+        grid.innerHTML = '<div class="heatmap-empty">' + loadingHTML('データを取得中...') + '</div>';
+        fetchJSON(categoryURL(API_PRICES, '&all=1'))
+            .then(function(data) { heatmapData = data.stocks; renderHeatmap(heatmapData); })
+            .catch(function() { grid.innerHTML = '<div class="heatmap-empty">データ取得エラー</div>'; });
     }
 
     // ========== 初期化 ==========
-    fetch(API_CATEGORIES).then(r => r.json()).then(function(data) {
+    fetchJSON(API_CATEGORIES).then(function(data) {
         categoryList = data.categories;
         renderCategoryTabs(data.categories);
     });
 
-    fetch(API_STOCKS + '?category=' + currentCategory).then(r => r.json()).then(function(data) {
+    fetchJSON(categoryURL(API_STOCKS)).then(function(data) {
         stockList = data.stocks;
         addTickerSelector();
     });
 
-    updateMarketStatus();
-    setInterval(updateMarketStatus, 60000);
     fetchPrices();
     fetchMarketOverview();
     startTimer();

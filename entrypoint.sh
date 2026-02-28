@@ -4,11 +4,14 @@ set -e
 echo "Creating log directory..."
 mkdir -p /app/log
 
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
+# SKIP_MIGRATE=1 のワーカーコンテナでは migrate/collectstatic をスキップ
+if [ "$SKIP_MIGRATE" != "1" ]; then
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput
 
-echo "Running migrations..."
-python manage.py migrate --noinput
+    echo "Running migrations..."
+    python manage.py migrate --noinput
+fi
 
 # 初回起動時のみデータをロード（テーブルが空の場合）
 if python manage.py shell -c "from blog.models import Article; exit(0 if Article.objects.exists() else 1)" 2>/dev/null; then

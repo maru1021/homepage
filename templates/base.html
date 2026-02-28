@@ -83,7 +83,7 @@
         <aside class="sidebar" id="sidebar">
             {% include "blog/_sidebar.html" %}
         </aside>
-        <main id="main-content">
+        <main id="main-content" hx-history-elt>
             {% block content %}{% endblock %}
             <footer>
                 <p>&copy; 2026 {{ SITE_NAME }}</p>

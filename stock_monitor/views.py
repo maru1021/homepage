@@ -5,7 +5,8 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from .config import (
-    CATEGORY_JP_STOCK, CATEGORY_LABELS, DEFAULT_DAILY_MONTHS, JST,
+    CATEGORY_JP_STOCK, CATEGORY_LABELS, DEFAULT_DAILY_MONTHS,
+    INTRADAY_RETENTION_DAYS, JST,
     MAX_CHART_TICKERS, STOCKS, STOCKS_BY_CATEGORY,
     get_market_overview_for_category, get_stocks_for_category,
 )
@@ -99,9 +100,8 @@ def api_prices(request):
     trading_date = _get_latest_trading_date()
     if not trading_date:
         return JsonResponse({
-            'stocks': [], 'has_prev': False,
+            'stocks': [],
             'total_tracked': len(category_stocks), 'fetched': 0,
-            'timestamp': timezone.now().timestamp(),
         })
 
     day_start = _make_day_start(trading_date)
@@ -125,29 +125,50 @@ def api_prices(request):
 
     return JsonResponse({
         'stocks': result_stocks,
-        'has_prev': False,
         'total_tracked': len(category_stocks),
         'fetched': len(stocks),
-        'timestamp': timezone.now().timestamp(),
     })
 
 
+
 def api_chart_data(request):
-    """DB から最新取引日の OHLC 分足データを返却"""
+    """DB から指定日の OHLC 分足データを返却。
+
+    パラメータ:
+        tickers: カンマ区切りの銘柄コード
+        date: 取引日 (YYYY-MM-DD)。省略時は最新取引日
+    """
     tickers = _parse_tickers_param(request)
     if not tickers:
         return JsonResponse({'charts': {}})
 
-    trading_date = _get_latest_trading_date()
-    if not trading_date:
-        return JsonResponse({'charts': {}})
+    date_param = request.GET.get('date')
+
+    if date_param:
+        from datetime import date as date_type
+        try:
+            trading_date = date_type.fromisoformat(date_param)
+        except ValueError:
+            return JsonResponse({'charts': {}})
+    else:
+        trading_date = _get_latest_trading_date()
+        if not trading_date:
+            return JsonResponse({'charts': {}})
 
     day_start = _make_day_start(trading_date)
+    day_end = day_start + timezone.timedelta(days=1)
 
     charts = {}
+
+    # 前日・翌日ボタン: 保持日数の範囲内なら表示
+    today = timezone.now().astimezone(JST).date()
+    oldest_date = today - timezone.timedelta(days=INTRADAY_RETENTION_DAYS)
+    has_prev = trading_date > oldest_date
+    has_next = trading_date < today
+
     for ticker in tickers:
         prices = StockPrice.objects.filter(
-            ticker=ticker, timestamp__gte=day_start,
+            ticker=ticker, timestamp__gte=day_start, timestamp__lt=day_end,
         ).order_by('timestamp')
 
         if not prices.exists():
@@ -163,7 +184,12 @@ def api_chart_data(request):
             'volume': volumes,
         }
 
-    return JsonResponse({'charts': charts})
+    return JsonResponse({
+        'charts': charts,
+        'date': str(trading_date),
+        'has_prev': has_prev,
+        'has_next': has_next,
+    })
 
 
 def api_daily_chart_data(request):

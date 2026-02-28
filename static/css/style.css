@@ -421,7 +421,8 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
 .article-content .flow:has(.flow-item) { flex-direction: column; gap: 24px; margin: 24px 0; }
 
 /* 記事内: テーブル */
-.article-content .table-wrap { overflow: visible; margin-bottom: 24px; }
+.article-content .table-wrap { overflow-x: auto; margin-bottom: 24px; }
+.article-content img { max-width: 100%; height: auto; }
 .article-content table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 0.9rem; }
 .article-content th { background: #edf2f7; color: #2d3748; text-align: left; padding: 10px 14px; font-weight: 600; font-size: 0.85rem; border-bottom: 2px solid #cbd5e0; }
 .article-content td { padding: 10px 14px; border-bottom: 1px solid #edf2f7; vertical-align: top; }

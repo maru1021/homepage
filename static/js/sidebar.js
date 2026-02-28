@@ -89,16 +89,22 @@ function initSearch() {
 
 // --- モバイルサイドバートグル ---
 
-function initMobileToggle() {
-    const btn = document.getElementById("sidebarToggle");
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("sidebarOverlay");
-    if (!btn || !sidebar || !overlay) return;
+function closeMobileSidebar() {
+    document.getElementById("sidebar")?.classList.remove("open");
+    document.getElementById("sidebarOverlay")?.classList.remove("open");
+}
 
-    const toggle = () => { sidebar.classList.toggle("open"); overlay.classList.toggle("open"); };
-    const close = () => { sidebar.classList.remove("open"); overlay.classList.remove("open"); };
-    btn.addEventListener("click", toggle);
-    overlay.addEventListener("click", close);
+function initMobileToggle() {
+    document.addEventListener("click", (e) => {
+        if (e.target.closest("#sidebarToggle")) {
+            document.getElementById("sidebar")?.classList.toggle("open");
+            document.getElementById("sidebarOverlay")?.classList.toggle("open");
+            return;
+        }
+        if (e.target.closest("#sidebarOverlay") || e.target.closest("#sidebar a")) {
+            closeMobileSidebar();
+        }
+    });
 }
 
 // --- コードタブ ---

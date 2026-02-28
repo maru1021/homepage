@@ -229,14 +229,6 @@ def wikipedia(request):
     return htmx_render(request, "tools/wikipedia.html", "tools/_wikipedia_content.html", title="Wikipedia検索 - 無料オンラインツール")
 
 
-def trivia_quiz(request):
-    return htmx_render(request, "tools/trivia_quiz.html", "tools/_trivia_quiz_content.html", title="クイズゲーム - 無料オンラインツール")
-
-
-
-def cocktail_recipe(request):
-    return htmx_render(request, "tools/cocktail_recipe.html", "tools/_cocktail_recipe_content.html", title="カクテルレシピ - 無料オンラインツール")
-
 
 def geocoding(request):
     return htmx_render(request, "tools/geocoding.html", "tools/_geocoding_content.html", title="ジオコーディング - 無料オンラインツール")
@@ -585,25 +577,71 @@ def api_port_scan(request):
 
 
 # 天気予報 API
-_CITIES = {
-    "tokyo": {"name": "東京", "lat": 35.6762, "lon": 139.6503},
-    "osaka": {"name": "大阪", "lat": 34.6937, "lon": 135.5023},
-    "nagoya": {"name": "名古屋", "lat": 35.1815, "lon": 136.9066},
-    "fukuoka": {"name": "福岡", "lat": 33.5904, "lon": 130.4017},
-    "sapporo": {"name": "札幌", "lat": 43.0618, "lon": 141.3545},
-    "sendai": {"name": "仙台", "lat": 38.2682, "lon": 140.8694},
-    "hiroshima": {"name": "広島", "lat": 34.3853, "lon": 132.4553},
-    "naha": {"name": "那覇", "lat": 26.2124, "lon": 127.6809},
-    "niigata": {"name": "新潟", "lat": 37.9026, "lon": 139.0236},
-    "kanazawa": {"name": "金沢", "lat": 36.5613, "lon": 136.6562},
-}
+from tools.weather_cities import CITIES as _CITIES
+from tools.models import WeatherForecast
+
+
+def _build_city_response(city_key, forecasts):
+    """DB の WeatherForecast queryset から1都市分のレスポンスを組み立てる。"""
+    today_row = next((f for f in forecasts if f.temperature is not None), None)
+    current = {}
+    if today_row:
+        current = {
+            "temperature_2m": today_row.temperature,
+            "relative_humidity_2m": today_row.humidity,
+            "weather_code": today_row.current_weather_code,
+            "wind_speed_10m": today_row.wind_speed,
+        }
+    return {
+        "current": current,
+        "daily": {
+            "time": [str(f.forecast_date) for f in forecasts],
+            "weather_code": [f.weather_code for f in forecasts],
+            "temperature_2m_max": [f.temp_max for f in forecasts],
+            "temperature_2m_min": [f.temp_min for f in forecasts],
+            "precipitation_probability_max": [f.precipitation_prob for f in forecasts],
+        },
+    }
+
+
+def _fetch_from_api_fallback(city_key):
+    """DB にデータがない場合、外部 API から直接取得する（フォールバック）。"""
+    city = _CITIES[city_key]
+    url = (
+        f"https://api.open-meteo.com/v1/forecast?"
+        f"latitude={city['lat']}&longitude={city['lon']}"
+        f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+        f"&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+        f"&timezone=Asia%2FTokyo&forecast_days=7"
+    )
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode())
 
 
 def api_weather(request):
+    from datetime import date
     city_key = request.GET.get("city", "").strip().lower()
 
     # 全都市一括取得
     if city_key == "all":
+        today = date.today()
+        all_forecasts = WeatherForecast.objects.filter(
+            forecast_date__gte=today,
+        ).order_by('city_key', 'forecast_date')
+
+        # DB にデータがあればそこから返す
+        if all_forecasts.exists():
+            cities = {}
+            for key in _CITIES:
+                fc_list = [f for f in all_forecasts if f.city_key == key]
+                if fc_list:
+                    resp = _build_city_response(key, fc_list)
+                    resp["name"] = _CITIES[key]["name"]
+                    cities[key] = resp
+            return JsonResponse({"cities": cities})
+
+        # フォールバック: 外部 API から直接取得
         keys = list(_CITIES.keys())
         lats = ",".join(str(_CITIES[k]["lat"]) for k in keys)
         lons = ",".join(str(_CITIES[k]["lon"]) for k in keys)
@@ -635,23 +673,26 @@ def api_weather(request):
     if city_key not in _CITIES:
         return JsonResponse({"error": "都市を選択してください"}, status=400)
 
-    city = _CITIES[city_key]
+    today = date.today()
+    forecasts = list(WeatherForecast.objects.filter(
+        city_key=city_key,
+        forecast_date__gte=today,
+    ).order_by('forecast_date'))
+
+    # DB にデータがあればそこから返す
+    if forecasts:
+        resp = _build_city_response(city_key, forecasts)
+        resp["city"] = _CITIES[city_key]["name"]
+        return JsonResponse(resp)
+
+    # フォールバック: 外部 API から直接取得
     try:
-        url = (
-            f"https://api.open-meteo.com/v1/forecast?"
-            f"latitude={city['lat']}&longitude={city['lon']}"
-            f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
-            f"&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
-            f"&timezone=Asia%2FTokyo&forecast_days=7"
-        )
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode())
+        data = _fetch_from_api_fallback(city_key)
     except (urllib.error.URLError, TimeoutError):
         return JsonResponse({"error": "天気情報の取得に失敗しました"}, status=502)
 
     return JsonResponse({
-        "city": city["name"],
+        "city": _CITIES[city_key]["name"],
         "current": data.get("current", {}),
         "daily": data.get("daily", {}),
     })

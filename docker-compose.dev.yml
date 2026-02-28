@@ -46,10 +46,31 @@ services:
       - DATABASE_USER=blog
       - DATABASE_HOST=db
       - DATABASE_PORT=5432
+      - SKIP_MIGRATE=1
     depends_on:
-      db:
-        condition: service_healthy
+      web:
+        condition: service_started
     command: python manage.py run_stock_scheduler
+    restart: unless-stopped
+
+  weather_fetcher:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - DEBUG=true
+      - DATABASE_NAME=blog
+      - DATABASE_USER=blog
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - SKIP_MIGRATE=1
+    depends_on:
+      web:
+        condition: service_started
+    command: python manage.py run_weather_scheduler
     restart: unless-stopped
 
 volumes:

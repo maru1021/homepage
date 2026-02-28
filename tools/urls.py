@@ -60,8 +60,6 @@ urlpatterns = [
     path("zip-code/", views.zip_code, name="zip_code"),
     path("holidays/", views.holidays, name="holidays"),
     path("wikipedia/", views.wikipedia, name="wikipedia"),
-    path("trivia-quiz/", views.trivia_quiz, name="trivia_quiz"),
-    path("cocktail-recipe/", views.cocktail_recipe, name="cocktail_recipe"),
     path("geocoding/", views.geocoding, name="geocoding"),
     # API
     path("api/ogp-preview/", views.api_ogp_preview, name="api_ogp_preview"),

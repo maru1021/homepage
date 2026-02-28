@@ -398,11 +398,6 @@ CRYPTO_COINGECKO_MAP = {
 
 # ========== ヘルパー関数 ==========
 
-def is_market_open():
-    """いずれかの市場が開いているかどうかを返す"""
-    return bool(get_active_categories())
-
-
 def get_active_categories():
     """現在取得すべきカテゴリのリストを返す"""
     from django.utils import timezone
