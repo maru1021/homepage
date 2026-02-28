@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: blog
+      POSTGRES_USER: blog
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blog"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8000"
+    volumes:
+      - ./media:/app/media
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./log:/app/log
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - ALLOWED_HOSTS=maruomosquit.com,www.maruomosquit.com,localhost,127.0.0.1
+      - CSRF_TRUSTED_ORIGINS=https://maruomosquit.com,https://www.maruomosquit.com
+      - DATABASE_NAME=blog
+      - DATABASE_USER=blog
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    restart: unless-stopped
+
+  stock_fetcher:
+    build: .
+    volumes:
+      - ./media:/app/media
+      - ./log:/app/log
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - DATABASE_NAME=blog
+      - DATABASE_USER=blog
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python manage.py fetch_stock_prices
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
