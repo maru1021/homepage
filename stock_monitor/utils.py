@@ -26,7 +26,7 @@ def fetch_yahoo_chart(ticker, range_='5d', interval='1d'):
         空リスト on error
     """
     url = (
-        f'https://query2.finance.yahoo.com/v8/finance/chart/{ticker}'
+        f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}'
         f'?range={range_}&interval={interval}'
     )
     try:
