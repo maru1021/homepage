@@ -28,13 +28,12 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         scheduler = BlockingScheduler(timezone=JST)
 
-        # 分足取得: 3時間間隔（起動直後にも1回実行）
+        # 分足取得: 3時間間隔
         scheduler.add_job(
             self._run_intraday,
             IntervalTrigger(hours=3),
             id='intraday_fetch',
             name='分足データ取得',
-            next_run_time=None,  # 起動直後には実行しない（下で手動実行）
         )
 
         # 日足取得: 平日 15:10 JST
@@ -54,9 +53,6 @@ class Command(BaseCommand):
         ))
         self.stdout.write('  分足: 3時間間隔')
         self.stdout.write('  日足: 平日 15:10 JST')
-
-        # 起動時に1回分足取得を実行
-        self._run_intraday()
 
         try:
             scheduler.start()
