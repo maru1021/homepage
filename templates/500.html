@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex">
-    <title>ページが見つかりません</title>
+    <title>サーバーエラー</title>
     <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -26,7 +26,7 @@
         .error-code {
             font-size: 6rem;
             font-weight: 700;
-            color: #ffc107;
+            color: #dc3545;
             line-height: 1;
             margin-bottom: 0.5rem;
         }
@@ -57,11 +57,11 @@
 </head>
 <body>
     <div class="error-container">
-        <div class="error-code">404</div>
-        <h1 class="error-title">ページが見つかりません</h1>
+        <div class="error-code">500</div>
+        <h1 class="error-title">サーバーエラー</h1>
         <p class="error-message">
-            お探しのページは見つかりませんでした。<br>
-            URLが正しいかご確認ください。
+            サーバーで問題が発生しました。<br>
+            時間をおいて再度お試しください。
         </p>
         <a href="/" class="back-link">トップページへ戻る</a>
     </div>
