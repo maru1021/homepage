@@ -15,29 +15,49 @@ _YF_HEADERS = {
     ),
 }
 
+# Yahoo Finance の複数エンドポイントをラウンドロビンで分散
+_YF_HOSTS = [
+    'query1.finance.yahoo.com',
+    'query2.finance.yahoo.com',
+]
+_yf_host_index = 0
+
 
 def fetch_yahoo_chart(ticker, range_='5d', interval='1d'):
     """Yahoo Finance Chart API から OHLCV データを取得。
 
-    yfinance を使わず直接 API を叩くことでレートリミットを回避。
+    複数のエンドポイントホストをラウンドロビンで使い分け、
+    レートリミットを分散させる。
 
     Returns:
         list of dict: [{date, open, high, low, close, volume}, ...]
         空リスト on error
     """
-    url = (
-        f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}'
-        f'?range={range_}&interval={interval}'
-    )
-    try:
-        resp = requests.get(url, headers=_YF_HEADERS, timeout=15)
-        if resp.status_code == 429:
-            logger.warning('%s: Yahoo API rate limited (429)', ticker)
+    global _yf_host_index
+
+    # 全ホストを試行（ラウンドロビン + フォールバック）
+    for attempt in range(len(_YF_HOSTS)):
+        host = _YF_HOSTS[_yf_host_index % len(_YF_HOSTS)]
+        _yf_host_index += 1
+        url = (
+            f'https://{host}/v8/finance/chart/{ticker}'
+            f'?range={range_}&interval={interval}'
+        )
+        try:
+            resp = requests.get(url, headers=_YF_HEADERS, timeout=15)
+            if resp.status_code == 429:
+                logger.warning('%s: %s rate limited (429)', ticker, host)
+                continue  # 次のホストを試行
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except Exception as e:
+            logger.warning('%s: %s error: %s', ticker, host, e)
+            if attempt < len(_YF_HOSTS) - 1:
+                continue
             return []
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        logger.warning('%s: Yahoo API error: %s', ticker, e)
+    else:
+        logger.warning('%s: 全ホストがレートリミット', ticker)
         return []
 
     try:
