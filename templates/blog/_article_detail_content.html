@@ -18,7 +18,7 @@
         </div>
     </header>
     <div class="article-content">
-        {{ article.content|glossary_tooltip }}
+        {{ article.content|glossary_tooltip|auto_internal_links:article }}
     </div>
 </article>
 
