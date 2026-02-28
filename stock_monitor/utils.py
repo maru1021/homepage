@@ -1,122 +1,71 @@
 """stock_monitor の共通ユーティリティ"""
 import logging
-import time
+from datetime import datetime, timezone as dt_timezone
 
-import pandas as pd
 import requests
-
-from .config import BATCH_DELAY, BATCH_SIZE, MAX_RETRIES, RETRY_BACKOFF_BASE
 
 logger = logging.getLogger(__name__)
 
 
-def to_series(col):
-    """DataFrame カラムを Series に変換（yfinance のマルチレベルカラム対策）"""
-    if isinstance(col, pd.DataFrame):
-        return col.iloc[:, 0]
-    return col
+_YF_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/120.0.0.0 Safari/537.36'
+    ),
+}
 
 
-def parse_ohlcv(ticker_data):
-    """yfinance の DataFrame から OHLCV データを抽出。
+def fetch_yahoo_chart(ticker, range_='5d', interval='1d'):
+    """Yahoo Finance Chart API から OHLCV データを取得。
+
+    yfinance を使わず直接 API を叩くことでレートリミットを回避。
 
     Returns:
-        (open, high, low, close, volume, valid_index)
+        list of dict: [{date, open, high, low, close, volume}, ...]
+        空リスト on error
     """
-    o = to_series(ticker_data['Open'])
-    h = to_series(ticker_data['High'])
-    l = to_series(ticker_data['Low'])
-    c = to_series(ticker_data['Close'])
-    v = to_series(ticker_data['Volume'])
+    url = (
+        f'https://query2.finance.yahoo.com/v8/finance/chart/{ticker}'
+        f'?range={range_}&interval={interval}'
+    )
+    try:
+        resp = requests.get(url, headers=_YF_HEADERS, timeout=15)
+        if resp.status_code == 429:
+            logger.warning('%s: Yahoo API rate limited (429)', ticker)
+            return []
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.warning('%s: Yahoo API error: %s', ticker, e)
+        return []
 
-    mask = o.notna() & h.notna() & l.notna() & c.notna()
-    valid_idx = mask[mask].index
+    try:
+        result = data['chart']['result'][0]
+        timestamps = result.get('timestamp') or []
+        quote = result['indicators']['quote'][0]
+    except (KeyError, IndexError, TypeError):
+        return []
 
-    return o, h, l, c, v, valid_idx
+    records = []
+    for i, ts in enumerate(timestamps):
+        o = quote['open'][i]
+        h = quote['high'][i]
+        l = quote['low'][i]
+        c = quote['close'][i]
+        v = quote['volume'][i]
+        if o is None or h is None or l is None or c is None:
+            continue
+        records.append({
+            'date': datetime.fromtimestamp(ts, tz=dt_timezone.utc),
+            'open': round(float(o), 1),
+            'high': round(float(h), 1),
+            'low': round(float(l), 1),
+            'close': round(float(c), 1),
+            'volume': int(v) if v else 0,
+        })
+    return records
 
-
-def batch_download(tickers_list, **yf_kwargs):
-    """ティッカーを BATCH_SIZE ずつ分割して yf.download() を実行。
-
-    429 エラー時は指数バックオフでリトライ。
-    結果を pd.concat(axis=1) で結合して返却。
-    """
-    import yfinance as yf
-
-    batches = [
-        tickers_list[i:i + BATCH_SIZE]
-        for i in range(0, len(tickers_list), BATCH_SIZE)
-    ]
-
-    all_data = []
-    for batch_idx, batch in enumerate(batches):
-        tickers_str = ' '.join(batch)
-        success = False
-
-        for attempt in range(MAX_RETRIES):
-            try:
-                data = yf.download(
-                    tickers_str, progress=False, threads=True,
-                    group_by='ticker', **yf_kwargs,
-                )
-                if not data.empty:
-                    # 1銘柄のみの場合、マルチレベルカラムにならないので補正
-                    if len(batch) == 1 and not isinstance(
-                        data.columns, pd.MultiIndex,
-                    ):
-                        data.columns = pd.MultiIndex.from_product(
-                            [batch, data.columns],
-                        )
-                    all_data.append(data)
-                    success = True
-                    break
-                # yfinance はレートリミット時に例外を投げず空データを返す
-                wait = RETRY_BACKOFF_BASE * (2 ** attempt)
-                logger.warning(
-                    'Batch %d/%d: empty data (likely rate limited), '
-                    'retry in %ds... (attempt %d/%d)',
-                    batch_idx + 1, len(batches), wait,
-                    attempt + 1, MAX_RETRIES,
-                )
-                time.sleep(wait)
-            except Exception as e:
-                err_str = str(e)
-                if '429' in err_str or 'Too Many Requests' in err_str:
-                    wait = RETRY_BACKOFF_BASE * (2 ** attempt)
-                    logger.warning(
-                        'Rate limited (batch %d/%d), retry in %ds...',
-                        batch_idx + 1, len(batches), wait,
-                    )
-                    time.sleep(wait)
-                else:
-                    logger.error('Batch %d/%d error: %s',
-                                 batch_idx + 1, len(batches), e)
-                    break
-
-        if not success:
-            logger.warning('Batch %d/%d skipped', batch_idx + 1, len(batches))
-
-        # 最後のバッチ以外は待機
-        if batch_idx < len(batches) - 1:
-            time.sleep(BATCH_DELAY)
-
-    if not all_data:
-        return pd.DataFrame()
-    if len(all_data) == 1:
-        return all_data[0]
-    return pd.concat(all_data, axis=1)
-
-
-def build_ohlcv_defaults(name, o, h, l, c, v, ts):
-    """1レコード分の defaults dict を生成"""
-    return {
-        'name': name,
-        'open': round(float(o[ts]), 1),
-        'high': round(float(h[ts]), 1),
-        'low': round(float(l[ts]), 1),
-        'close': round(float(c[ts]), 1),
-        'volume': int(v[ts]) if pd.notna(v[ts]) else 0,
-    }
 
 
 def fetch_crypto_from_coingecko(ticker_to_cg_map):

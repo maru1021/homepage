@@ -1,33 +1,31 @@
 """
-日足データを yfinance から取得し DB に保存する管理コマンド。
+日足データを Yahoo Finance API から取得し DB に保存する管理コマンド。
 
 使い方:
   python manage.py fetch_daily_stock_prices --once   # 1回だけ実行
 
-初回（DBにデータなし）: 全期間を1銘柄ずつ取得（レートリミット回避のため間隔を空ける）
-2回目以降: 全銘柄一括で直近5日分を取得
+初回（DBにデータなし）: 全期間を1銘柄ずつ取得
+2回目以降: 直近5日分を取得
+仮想通貨: CoinGecko API から取得
 """
 import time
 import logging
 
 from django.core.management.base import BaseCommand
 
-import yfinance as yf
-
 from stock_monitor.config import (
     CRYPTO_COINGECKO_MAP, DAILY_FETCH_DELAY, STOCKS,
 )
 from stock_monitor.models import DailyStockPrice, StockFetchLog
 from stock_monitor.utils import (
-    batch_download, build_ohlcv_defaults, fetch_crypto_from_coingecko,
-    parse_ohlcv,
+    fetch_crypto_from_coingecko, fetch_yahoo_chart,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = '日足の株価データを yfinance から取得して DB に保存する'
+    help = '日足の株価データを取得して DB に保存する'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -47,12 +45,9 @@ class Command(BaseCommand):
         }
 
         if not existing_tickers:
-            # 完全初回: 全銘柄を1つずつ取得
             self._fetch_initial(STOCKS)
         else:
-            # 既存銘柄は直近5日分をバッチ更新
             self._fetch_bulk_update()
-            # 新規銘柄があれば全期間を1つずつ取得
             if new_tickers:
                 self.stdout.write(
                     f'新規銘柄 {len(new_tickers)}件 の過去データを取得します...'
@@ -62,7 +57,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('日足データ取得完了'))
 
     def _fetch_bulk_update(self):
-        """2回目以降: 仮想通貨は CoinGecko、他は1銘柄ずつ yfinance で取得"""
+        """2回目以降: 仮想通貨は CoinGecko、他は Yahoo API で取得"""
         from django.utils import timezone
         from stock_monitor.config import (
             CATEGORY_CRYPTO, JST, STOCKS_BY_CATEGORY,
@@ -96,34 +91,37 @@ class Command(BaseCommand):
                     total_records += 1
             self.stdout.write(f'  CoinGecko: {len(cg_data)}銘柄取得')
 
-        # --- その他: yfinance で1銘柄ずつ取得 ---
+        # --- その他: Yahoo Finance API で1銘柄ずつ取得 ---
         yf_stocks = {
             t: n for t, n in STOCKS.items() if t not in crypto_tickers
         }
         items = list(yf_stocks.items())
-        self.stdout.write(f'  yfinance: {len(items)}銘柄を1つずつ取得')
+        self.stdout.write(f'  Yahoo API: {len(items)}銘柄を1つずつ取得')
 
         for i, (ticker, name) in enumerate(items):
-            try:
-                data = yf.download(
-                    ticker, period='5d', interval='1d',
-                    progress=False, threads=False,
+            records = fetch_yahoo_chart(ticker, range_='5d', interval='1d')
+
+            if not records:
+                if i < len(items) - 1:
+                    time.sleep(DAILY_FETCH_DELAY)
+                continue
+
+            for rec in records:
+                date_val = rec['date'].date()
+                DailyStockPrice.objects.update_or_create(
+                    ticker=ticker,
+                    date=date_val,
+                    defaults={
+                        'name': name,
+                        'open': rec['open'],
+                        'high': rec['high'],
+                        'low': rec['low'],
+                        'close': rec['close'],
+                        'volume': rec['volume'],
+                    },
                 )
-            except Exception as e:
-                logger.warning(f'{ticker} ダウンロードエラー: {e}')
-                time.sleep(DAILY_FETCH_DELAY)
-                continue
-
-            if data.empty:
-                time.sleep(DAILY_FETCH_DELAY)
-                continue
-
-            try:
-                records = self._save_ticker_data(data, ticker, name)
-                total_records += records
-                saved_count += 1
-            except Exception as e:
-                logger.warning(f'{ticker} 保存エラー: {e}')
+                total_records += 1
+            saved_count += 1
 
             if i < len(items) - 1:
                 time.sleep(DAILY_FETCH_DELAY)
@@ -135,40 +133,56 @@ class Command(BaseCommand):
         self.stdout.write(f'{saved_count}銘柄, {total_records}件を更新')
 
     def _fetch_initial(self, stocks_dict):
-        """1銘柄ずつ全期間取得（レートリミット回避）"""
-        self.stdout.write(f'初回取得モード: {len(stocks_dict)}銘柄を1つずつ取得します')
+        """1銘柄ずつ全期間取得"""
+        from stock_monitor.config import (
+            CATEGORY_CRYPTO, STOCKS_BY_CATEGORY,
+        )
 
+        self.stdout.write(
+            f'初回取得モード: {len(stocks_dict)}銘柄を1つずつ取得します'
+        )
+
+        crypto_tickers = STOCKS_BY_CATEGORY.get(CATEGORY_CRYPTO, {})
         total_saved = 0
         total_records = 0
         items = list(stocks_dict.items())
 
         for i, (ticker, name) in enumerate(items):
-            self.stdout.write(f'[{i+1}/{len(items)}] {name}({ticker}) を取得中...')
+            self.stdout.write(
+                f'[{i+1}/{len(items)}] {name}({ticker}) を取得中...'
+            )
 
-            try:
-                data = yf.download(
-                    ticker, period='max', interval='1d',
-                    progress=False, threads=False,
-                )
-            except Exception as e:
-                logger.warning(f'{ticker} ダウンロードエラー: {e}')
-                self.stderr.write(f'  エラー: {e}')
-                time.sleep(DAILY_FETCH_DELAY)
+            # 仮想通貨はスキップ（CoinGeckoで取得済み or _fetch_bulk_updateで対応）
+            if ticker in crypto_tickers:
                 continue
 
-            if data.empty:
+            records = fetch_yahoo_chart(
+                ticker, range_='max', interval='1d',
+            )
+
+            if not records:
                 self.stderr.write(f'  データ空')
-                time.sleep(DAILY_FETCH_DELAY)
+                if i < len(items) - 1:
+                    time.sleep(DAILY_FETCH_DELAY)
                 continue
 
-            try:
-                records = self._save_ticker_data(data, ticker, name)
-                total_records += records
-                total_saved += 1
-                self.stdout.write(f'  {records}件保存')
-            except Exception as e:
-                logger.warning(f'{ticker} 保存エラー: {e}')
-                self.stderr.write(f'  保存エラー: {e}')
+            for rec in records:
+                date_val = rec['date'].date()
+                DailyStockPrice.objects.update_or_create(
+                    ticker=ticker,
+                    date=date_val,
+                    defaults={
+                        'name': name,
+                        'open': rec['open'],
+                        'high': rec['high'],
+                        'low': rec['low'],
+                        'close': rec['close'],
+                        'volume': rec['volume'],
+                    },
+                )
+                total_records += 1
+            total_saved += 1
+            self.stdout.write(f'  {len(records)}件保存')
 
             if i < len(items) - 1:
                 time.sleep(DAILY_FETCH_DELAY)
@@ -180,19 +194,3 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'合計: {total_saved}銘柄, {total_records}件の日足データを保存しました'
         ))
-
-    def _save_ticker_data(self, td, ticker, name):
-        """DataFrameから日足データを保存し、保存件数を返す"""
-        o, h, l, c, v, valid_idx = parse_ohlcv(td)
-
-        count = 0
-        for ts in valid_idx:
-            dt = ts.to_pydatetime()
-            date_val = dt.date() if hasattr(dt, 'date') else dt
-            DailyStockPrice.objects.update_or_create(
-                ticker=ticker,
-                date=date_val,
-                defaults=build_ohlcv_defaults(name, o, h, l, c, v, ts),
-            )
-            count += 1
-        return count

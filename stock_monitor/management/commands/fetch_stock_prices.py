@@ -9,8 +9,6 @@
 import time
 import logging
 
-import yfinance as yf
-
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -21,9 +19,7 @@ from stock_monitor.config import (
     STOCKS_BY_CATEGORY, get_active_categories,
 )
 from stock_monitor.models import StockFetchLog, StockPrice
-from stock_monitor.utils import (
-    build_ohlcv_defaults, fetch_crypto_from_coingecko, parse_ohlcv,
-)
+from stock_monitor.utils import fetch_crypto_from_coingecko, fetch_yahoo_chart
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +103,7 @@ class Command(BaseCommand):
             else:
                 self.stderr.write('  CoinGecko: 取得失敗')
 
-        # --- その他: yfinance で1銘柄ずつ取得 ---
+        # --- その他: Yahoo Finance API で1銘柄ずつ取得 ---
         yf_tickers = {
             t: n for t, n in all_tickers.items()
             if t not in crypto_tickers
@@ -118,7 +114,7 @@ class Command(BaseCommand):
             return
 
         items = list(yf_tickers.items())
-        self.stdout.write(f'  yfinance: {len(items)}銘柄を1つずつ取得')
+        self.stdout.write(f'  Yahoo API: {len(items)}銘柄を1つずつ取得')
 
         # 銘柄ごとのDB最新タイムスタンプを一括取得
         from django.db.models import Max
@@ -134,38 +130,34 @@ class Command(BaseCommand):
             cutoff_map[row['ticker']] = row['latest'] - overlap
 
         for i, (ticker, name) in enumerate(items):
-            try:
-                data = yf.download(
-                    ticker, period='1d', interval='1m',
-                    progress=False, threads=False,
+            records = fetch_yahoo_chart(
+                ticker, range_='1d', interval='1m',
+            )
+
+            if not records:
+                if i < len(items) - 1:
+                    time.sleep(INTRADAY_FETCH_DELAY)
+                continue
+
+            cutoff_ts = cutoff_map.get(ticker)
+            for rec in records:
+                ts_dt = rec['date']
+                if cutoff_ts and ts_dt < cutoff_ts:
+                    continue
+                StockPrice.objects.update_or_create(
+                    ticker=ticker,
+                    timestamp=ts_dt,
+                    defaults={
+                        'name': name,
+                        'open': rec['open'],
+                        'high': rec['high'],
+                        'low': rec['low'],
+                        'close': rec['close'],
+                        'volume': rec['volume'],
+                    },
                 )
-            except Exception as e:
-                logger.warning(f'{ticker} ダウンロードエラー: {e}')
-                time.sleep(INTRADAY_FETCH_DELAY)
-                continue
-
-            if data.empty:
-                time.sleep(INTRADAY_FETCH_DELAY)
-                continue
-
-            try:
-                o, h, l, c, v, valid_idx = parse_ohlcv(data)
-                cutoff_ts = cutoff_map.get(ticker)
-                for ts in valid_idx:
-                    ts_dt = ts.to_pydatetime()
-                    if cutoff_ts and ts_dt < cutoff_ts:
-                        continue
-                    StockPrice.objects.update_or_create(
-                        ticker=ticker,
-                        timestamp=ts_dt,
-                        defaults=build_ohlcv_defaults(
-                            name, o, h, l, c, v, ts,
-                        ),
-                    )
-                    new_records += 1
-                saved_count += 1
-            except (KeyError, IndexError) as e:
-                logger.warning(f'{ticker} のデータ解析エラー: {e}')
+                new_records += 1
+            saved_count += 1
 
             if i < len(items) - 1:
                 time.sleep(INTRADAY_FETCH_DELAY)
