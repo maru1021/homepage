@@ -822,9 +822,9 @@ html, body { overflow: hidden; height: 100%; }
     // ========== ビューモード定義 ==========
     var VIEW_MODES = {
         prices:       { el: '.market-top-row', toggle: true },
-        heatmap:      { el: '#heatmapSection',  fetch: function() { fetchHeatmap(); } },
-        scores:       { el: '#scoresSection',   fetch: function() { fetchScores(); } },
-        fundamentals: { el: '#fundamentalsSection', fetch: function() { fetchFundamentals(); } },
+        heatmap:      { el: '#heatmapSection',  fetch: fetchHeatmap },
+        scores:       { el: '#scoresSection',   fetch: fetchScores },
+        fundamentals: { el: '#fundamentalsSection', fetch: fetchFundamentals },
     };
 
     function activateViewMode(mode) {
@@ -1537,11 +1537,13 @@ html, body { overflow: hidden; height: 100%; }
                 if (!lastIntradayData) lastIntradayData = { charts: {} };
                 if (data.charts[ticker]) {
                     lastIntradayData.charts[ticker] = data.charts[ticker];
+                } else {
+                    delete lastIntradayData.charts[ticker];
                 }
                 intradayDates[ticker] = {
                     date: data.date || null,
-                    has_prev: data.has_prev || false,
-                    has_next: data.has_next || false,
+                    prev_date: data.prev_date || null,
+                    next_date: data.next_date || null,
                 };
                 updateIntradayChartForTicker(ticker);
                 updateIntradayDateNav(ticker);
@@ -1549,14 +1551,12 @@ html, body { overflow: hidden; height: 100%; }
             .catch(console.error);
     }
 
-    function createDateNavBtn(label, ticker, dayOffset) {
+    function createDateNavBtn(label, ticker, targetDate) {
         const btn = document.createElement('button');
         btn.className = 'btn-date-nav';
         btn.textContent = label;
         btn.addEventListener('click', function() {
-            const d = new Date(intradayDates[ticker].date + 'T00:00:00');
-            d.setDate(d.getDate() + dayOffset);
-            fetchIntradayDataForTicker(ticker, fmtDate(d));
+            fetchIntradayDataForTicker(ticker, targetDate);
         });
         return btn;
     }
@@ -1570,21 +1570,14 @@ html, body { overflow: hidden; height: 100%; }
         if (!info || !info.date) { nav.innerHTML = ''; return; }
 
         nav.innerHTML = '';
-        if (info.has_prev) nav.appendChild(createDateNavBtn('\u25C0 前日', ticker, -1));
+        if (info.prev_date) nav.appendChild(createDateNavBtn('\u25C0 前日', ticker, info.prev_date));
 
         const dateLabel = document.createElement('span');
         dateLabel.className = 'intraday-date-label';
         dateLabel.textContent = shortDate(info.date);
         nav.appendChild(dateLabel);
 
-        if (info.has_next) nav.appendChild(createDateNavBtn('翌日 \u25B6', ticker, 1));
-    }
-
-    function fmtDate(d) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return y + '-' + m + '-' + dd;
+        if (info.next_date) nav.appendChild(createDateNavBtn('翌日 \u25B6', ticker, info.next_date));
     }
 
     function fetchDailyDataForTicker(ticker) {
@@ -1695,13 +1688,8 @@ html, body { overflow: hidden; height: 100%; }
         list.innerHTML = '<div class="scores-empty">' + loadingHTML('スコア計算中...') + '</div>';
 
         fetchJSON(categoryURL(API_SCORES, '&sort=' + sortBy))
-            .then(function(data) {
-                renderScores(data.scores);
-            })
-            .catch(function(e) {
-                console.error(e);
-                list.innerHTML = '<div class="scores-empty">スコア取得エラー</div>';
-            });
+            .then(data => renderScores(data.scores))
+            .catch(function() { list.innerHTML = '<div class="scores-empty">スコア取得エラー</div>'; });
     }
 
     function scoreClass(score) {
@@ -1722,7 +1710,7 @@ html, body { overflow: hidden; height: 100%; }
         }
         let html = '';
         scores.forEach(function(s, i) {
-            html += '<div class="score-card">';
+            html += '<div class="score-card" data-ticker="' + s.ticker + '" style="cursor:pointer;">';
             html += '<div class="score-card-header">';
             html += '<div class="score-card-left">';
             html += '<span class="score-card-rank">' + (i + 1) + '</span>';
@@ -1752,6 +1740,32 @@ html, body { overflow: hidden; height: 100%; }
         let maxW = 0;
         lefts.forEach(function(el) { maxW = Math.max(maxW, el.offsetWidth); });
         lefts.forEach(function(el) { el.style.width = maxW + 'px'; });
+
+        // カードクリックで銘柄選択 → チャートへスクロール
+        list.querySelectorAll('.score-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+                selectTickerAndScroll(this.dataset.ticker);
+            });
+        });
+    }
+
+    // ========== 銘柄選択 → チャートスクロール共通 ==========
+    function selectTickerAndScroll(ticker) {
+        const selects = document.querySelectorAll('.ticker-select');
+        let found = false;
+        selects.forEach(function(sel) {
+            if (!$(sel).val() && !found) { $(sel).val(ticker).trigger('change'); found = true; }
+        });
+        if (!found && selects.length < 5) {
+            document.getElementById('addTicker').click();
+            setTimeout(function() {
+                const newSels = document.querySelectorAll('.ticker-select');
+                $(newSels[newSels.length - 1]).val(ticker).trigger('change');
+                document.querySelector('.chart-section').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        } else {
+            document.querySelector('.chart-section').scrollIntoView({ behavior: 'smooth' });
+        }
     }
 
     // ========== ヒートマップ ==========
@@ -1794,23 +1808,7 @@ html, body { overflow: hidden; height: 100%; }
 
         grid.querySelectorAll('.heatmap-tile').forEach(function(tile) {
             tile.addEventListener('click', function() {
-                const ticker = this.dataset.ticker;
-                document.querySelector('[data-mode="prices"]').click();
-                setTimeout(function() {
-                    const selects = document.querySelectorAll('.ticker-select');
-                    let found = false;
-                    selects.forEach(function(sel) {
-                        if (!$(sel).val() && !found) { $(sel).val(ticker).trigger('change'); found = true; }
-                    });
-                    if (!found && selects.length < 5) {
-                        document.getElementById('addTicker').click();
-                        setTimeout(function() {
-                            const newSels = document.querySelectorAll('.ticker-select');
-                            $(newSels[newSels.length - 1]).val(ticker).trigger('change');
-                        }, 100);
-                    }
-                    document.querySelector('.chart-section').scrollIntoView({ behavior: 'smooth' });
-                }, 50);
+                selectTickerAndScroll(this.dataset.ticker);
             });
         });
     }
@@ -1894,14 +1892,8 @@ html, body { overflow: hidden; height: 100%; }
         list.innerHTML = '<div class="fund-empty">' + loadingHTML('ファンダメンタルズを取得中...') + '</div>';
 
         fetchJSON(categoryURL(API_FUNDAMENTALS, '&sort=' + sortBy))
-            .then(function(data) {
-                fundamentalsData = data.fundamentals;
-                renderFundamentals(fundamentalsData);
-            })
-            .catch(function(e) {
-                console.error(e);
-                list.innerHTML = '<div class="fund-empty">データ取得エラー</div>';
-            });
+            .then(function(data) { fundamentalsData = data.fundamentals; renderFundamentals(fundamentalsData); })
+            .catch(function() { list.innerHTML = '<div class="fund-empty">データ取得エラー</div>'; });
     }
 
     // ========== 初期化 ==========

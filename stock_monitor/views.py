@@ -1,20 +1,19 @@
-import logging
+from datetime import date as date_type
+from itertools import groupby
 
+from dateutil.relativedelta import relativedelta
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 
 from .config import (
-    CATEGORY_JP_STOCK, CATEGORY_LABELS, DEFAULT_DAILY_MONTHS,
-    INTRADAY_RETENTION_DAYS, JST,
+    CATEGORY_JP_STOCK, CATEGORY_LABELS, DEFAULT_DAILY_MONTHS, JST,
     MAX_CHART_TICKERS, STOCKS, STOCKS_BY_CATEGORY,
     get_market_overview_for_category, get_stocks_for_category,
 )
 from .models import (
     DailyStockPrice, StockFundamentals, StockPrice,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -25,10 +24,15 @@ def index(request):
 
 def _get_latest_trading_date():
     """DB に保存されている最新の取引日を返す"""
-    latest = StockPrice.objects.order_by('-timestamp').first()
-    if not latest:
+    ts = (
+        StockPrice.objects
+        .order_by('-timestamp')
+        .values_list('timestamp', flat=True)
+        .first()
+    )
+    if not ts:
         return None
-    return latest.timestamp.astimezone(JST).date()
+    return ts.astimezone(JST).date()
 
 
 def _make_day_start(trading_date):
@@ -38,34 +42,54 @@ def _make_day_start(trading_date):
     )
 
 
-def _calc_intraday_change(ticker, day_start):
-    """指定ティッカーの当日始値→終値の変動を計算。データなしなら None を返す"""
-    prices = StockPrice.objects.filter(
-        ticker=ticker, timestamp__gte=day_start,
-    ).order_by('timestamp')
+def _calc_intraday_changes_batch(ticker_list, day_start):
+    """複数銘柄の当日始値→終値の変動を一括計算する（2クエリ）。
 
-    if not prices.exists():
-        return None
+    PostgreSQL の DISTINCT ON を使い、銘柄ごとの最初/最後のレコードを
+    1クエリずつで取得する。
 
-    first = prices.first()
-    last = prices.last()
-    open_price = first.open
-    current_price = last.close
-    diff = round(current_price - open_price, 2)
-    pct = round((diff / open_price) * 100, 2) if open_price else 0
-    return {'price': current_price, 'diff': diff, 'pct': pct}
+    Returns:
+        dict: {ticker: {'price': float, 'diff': float, 'pct': float}}
+    """
+    if not ticker_list:
+        return {}
+
+    base_qs = StockPrice.objects.filter(
+        ticker__in=ticker_list, timestamp__gte=day_start,
+    )
+
+    # 各銘柄の最初のレコード（始値）— 1クエリ
+    first_prices = {}
+    for sp in base_qs.order_by('ticker', 'timestamp').distinct('ticker'):
+        first_prices[sp.ticker] = sp.open
+
+    # 各銘柄の最後のレコード（終値）— 1クエリ
+    last_prices = {}
+    for sp in base_qs.order_by('ticker', '-timestamp').distinct('ticker'):
+        last_prices[sp.ticker] = sp.close
+
+    result = {}
+    for ticker in ticker_list:
+        if ticker not in first_prices:
+            continue
+        open_price = first_prices[ticker]
+        current_price = last_prices[ticker]
+        diff = round(current_price - open_price, 2)
+        pct = round((diff / open_price) * 100, 2) if open_price else 0
+        result[ticker] = {'price': current_price, 'diff': diff, 'pct': pct}
+
+    return result
 
 
-def _serialize_ohlcv(queryset, time_field, time_format):
-    """QuerySet から OHLCV + タイムスタンプ配列を生成"""
+def _build_ohlcv_dict(records, time_field, time_format='%Y-%m-%d'):
+    """モデルインスタンスのリストから OHLCV 配列を構築する"""
     timestamps, opens, highs, lows, closes, volumes = [], [], [], [], [], []
-    for p in queryset:
+    for p in records:
         raw = getattr(p, time_field)
-        if time_format:
-            ts = (raw.astimezone(JST).strftime(time_format)
-                  if hasattr(raw, 'astimezone') else raw.strftime(time_format))
+        if hasattr(raw, 'astimezone'):
+            ts = raw.astimezone(JST).strftime(time_format)
         else:
-            ts = raw.strftime('%Y-%m-%d')
+            ts = raw.strftime(time_format)
         timestamps.append(ts)
         opens.append(p.open)
         highs.append(p.high)
@@ -73,6 +97,36 @@ def _serialize_ohlcv(queryset, time_field, time_format):
         closes.append(p.close)
         volumes.append(p.volume)
     return timestamps, opens, highs, lows, closes, volumes
+
+
+def _find_adjacent_trading_date(tickers, boundary, direction):
+    """指定境界の前後でデータが存在する取引日を検索する。
+
+    Args:
+        tickers: 対象銘柄リスト
+        boundary: 境界の datetime（前日検索なら day_start、翌日検索なら day_end）
+        direction: 'prev' or 'next'
+
+    Returns:
+        str (ISO date) or None
+    """
+    if direction == 'prev':
+        ts = (
+            StockPrice.objects
+            .filter(ticker__in=tickers, timestamp__lt=boundary)
+            .order_by('-timestamp')
+            .values_list('timestamp', flat=True)
+            .first()
+        )
+    else:
+        ts = (
+            StockPrice.objects
+            .filter(ticker__in=tickers, timestamp__gte=boundary)
+            .order_by('timestamp')
+            .values_list('timestamp', flat=True)
+            .first()
+        )
+    return ts.astimezone(JST).date().isoformat() if ts else None
 
 
 def _parse_tickers_param(request):
@@ -107,10 +161,13 @@ def api_prices(request):
         })
 
     day_start = _make_day_start(trading_date)
+    changes = _calc_intraday_changes_batch(
+        list(category_stocks.keys()), day_start,
+    )
 
     stocks = []
     for ticker, name in category_stocks.items():
-        change = _calc_intraday_change(ticker, day_start)
+        change = changes.get(ticker)
         if not change:
             continue
         stocks.append({
@@ -132,7 +189,6 @@ def api_prices(request):
     })
 
 
-
 def api_chart_data(request):
     """DB から指定日の OHLC 分足データを返却。
 
@@ -147,7 +203,6 @@ def api_chart_data(request):
     date_param = request.GET.get('date')
 
     if date_param:
-        from datetime import date as date_type
         try:
             trading_date = date_type.fromisoformat(date_param)
         except ValueError:
@@ -160,24 +215,18 @@ def api_chart_data(request):
     day_start = _make_day_start(trading_date)
     day_end = day_start + timezone.timedelta(days=1)
 
+    # 全ティッカーの分足を一括取得（1クエリ）→ ticker でグループ化
+    all_prices = list(
+        StockPrice.objects
+        .filter(ticker__in=tickers, timestamp__gte=day_start, timestamp__lt=day_end)
+        .order_by('ticker', 'timestamp')
+    )
+
     charts = {}
-
-    # 前日・翌日ボタン: 保持日数の範囲内なら表示
-    today = timezone.now().astimezone(JST).date()
-    oldest_date = today - timezone.timedelta(days=INTRADAY_RETENTION_DAYS)
-    has_prev = trading_date > oldest_date
-    has_next = trading_date < today
-
-    for ticker in tickers:
-        prices = StockPrice.objects.filter(
-            ticker=ticker, timestamp__gte=day_start, timestamp__lt=day_end,
-        ).order_by('timestamp')
-
-        if not prices.exists():
-            continue
-
-        timestamps, opens, highs, lows, closes, volumes = _serialize_ohlcv(
-            prices, 'timestamp', '%H:%M',
+    for ticker, group in groupby(all_prices, key=lambda p: p.ticker):
+        records = list(group)
+        timestamps, opens, highs, lows, closes, volumes = _build_ohlcv_dict(
+            records, 'timestamp', '%H:%M',
         )
         charts[ticker] = {
             'name': STOCKS.get(ticker, ticker),
@@ -186,11 +235,15 @@ def api_chart_data(request):
             'volume': volumes,
         }
 
+    # 前日・翌日: 選択中の銘柄でデータが存在する取引日を検索（各1クエリ）
+    prev_date = _find_adjacent_trading_date(tickers, day_start, 'prev')
+    next_date = _find_adjacent_trading_date(tickers, day_end, 'next')
+
     return JsonResponse({
         'charts': charts,
         'date': str(trading_date),
-        'has_prev': has_prev,
-        'has_next': has_next,
+        'prev_date': prev_date,
+        'next_date': next_date,
     })
 
 
@@ -203,22 +256,20 @@ def api_daily_chart_data(request):
     months = int(request.GET.get('months', str(DEFAULT_DAILY_MONTHS)))
     start_date = None
     if months > 0:
-        from dateutil.relativedelta import relativedelta
         start_date = (timezone.now().astimezone(JST).date()
                       - relativedelta(months=months))
 
+    # 全ティッカーの日足を一括取得（1クエリ）→ ticker でグループ化
+    qs = DailyStockPrice.objects.filter(ticker__in=tickers)
+    if start_date:
+        qs = qs.filter(date__gte=start_date)
+    all_prices = list(qs.order_by('ticker', 'date'))
+
     charts = {}
-    for ticker in tickers:
-        qs = DailyStockPrice.objects.filter(ticker=ticker)
-        if start_date:
-            qs = qs.filter(date__gte=start_date)
-        prices = qs.order_by('date')
-
-        if not prices.exists():
-            continue
-
-        dates, opens, highs, lows, closes, volumes = _serialize_ohlcv(
-            prices, 'date', None,
+    for ticker, group in groupby(all_prices, key=lambda p: p.ticker):
+        records = list(group)
+        dates, opens, highs, lows, closes, volumes = _build_ohlcv_dict(
+            records, 'date',
         )
         charts[ticker] = {
             'name': STOCKS.get(ticker, ticker),
@@ -238,35 +289,32 @@ def api_market_overview(request):
     no_data = {'price': None, 'diff': None, 'pct': None}
 
     if not trading_date:
-        result = {}
-        for section_name, items in overview.items():
-            result[section_name] = [
+        return JsonResponse({
+            section_name: [
                 {'ticker': t, 'name': n, **no_data} for t, n in items
             ]
-        return JsonResponse(result)
+            for section_name, items in overview.items()
+        })
 
     day_start = _make_day_start(trading_date)
 
-    # 全ティッカーの変動を一括計算
-    all_tickers = {}
-    for items in overview.values():
-        for ticker, name in items:
-            all_tickers[ticker] = name
+    # 全ティッカーの変動を一括計算（2クエリ）
+    all_tickers = {
+        ticker: name
+        for items in overview.values()
+        for ticker, name in items
+    }
 
-    overview_data = {}
-    for ticker in all_tickers:
-        change = _calc_intraday_change(ticker, day_start)
-        overview_data[ticker] = change or no_data
+    changes = _calc_intraday_changes_batch(list(all_tickers.keys()), day_start)
 
     # セクション別に整形
-    result = {}
-    for section_name, items in overview.items():
-        result[section_name] = []
-        for ticker, name in items:
-            d = overview_data.get(ticker, no_data)
-            result[section_name].append({
-                'ticker': ticker, 'name': name, **d,
-            })
+    result = {
+        section_name: [
+            {'ticker': t, 'name': n, **changes.get(t, no_data)}
+            for t, n in items
+        ]
+        for section_name, items in overview.items()
+    }
 
     return JsonResponse(result)
 
@@ -356,10 +404,15 @@ def api_fundamentals(request):
 
     # ソート（null は末尾へ）
     sort_field = sort_by if sort_by in fields else 'market_cap'
-    reverse = sort_by != 'per' and sort_by != 'pbr'
-    fundamentals.sort(
-        key=lambda x: (x.get(sort_field) is None, -(x.get(sort_field) or 0) if reverse else (x.get(sort_field) or float('inf'))),
-    )
+    descending = sort_by not in ('per', 'pbr')
+
+    def _sort_key(x):
+        val = x.get(sort_field)
+        if val is None:
+            return (1, 0)
+        return (0, -val) if descending else (0, val)
+
+    fundamentals.sort(key=_sort_key)
 
     return JsonResponse({
         'fundamentals': fundamentals,

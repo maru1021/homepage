@@ -2,13 +2,16 @@
 分足データを取得して DB に保存する管理コマンド。
 
 使い方:
-  python manage.py fetch_stock_prices --once   # 1回だけ実行
+  python manage.py fetch_stock_prices --once                # 全市場（アクティブなもの）
+  python manage.py fetch_stock_prices --once --crypto-only  # 仮想通貨のみ
+  python manage.py fetch_stock_prices --once --exclude-crypto  # 仮想通貨を除外
 
 ※ 定期実行は run_stock_scheduler コマンド（APScheduler）で管理。
 """
 import logging
 
 from django.core.management.base import BaseCommand
+from django.db.models import Max
 from django.utils import timezone
 
 from stock_monitor.config import (
@@ -31,12 +34,25 @@ class Command(BaseCommand):
             '--once', action='store_true',
             help='1回だけ実行して終了（互換性のため残存）',
         )
+        parser.add_argument(
+            '--crypto-only', action='store_true',
+            help='仮想通貨のみ取得（高頻度取得用）',
+        )
+        parser.add_argument(
+            '--exclude-crypto', action='store_true',
+            help='仮想通貨を除外（仮想通貨は別ジョブで取得）',
+        )
 
     def handle(self, *args, **options):
-        active = get_active_categories()
-        if not active:
-            self.stdout.write('全市場が閉場中のため分足取得をスキップします')
-            return
+        if options['crypto_only']:
+            active = [CATEGORY_CRYPTO]
+        else:
+            active = get_active_categories()
+            if options['exclude_crypto']:
+                active = [c for c in active if c != CATEGORY_CRYPTO]
+            if not active:
+                self.stdout.write('全市場が閉場中のため分足取得をスキップします')
+                return
 
         active_labels = ', '.join(
             CATEGORY_LABELS.get(c, c) for c in active
@@ -46,7 +62,7 @@ class Command(BaseCommand):
         try:
             self._fetch_intraday(active)
         except Exception as e:
-            logger.error(f'分足取得エラー: {e}')
+            logger.error('分足取得エラー: %s', e)
             StockFetchLog.objects.create(
                 tickers_count=0, success=False, message=str(e),
             )
@@ -116,7 +132,6 @@ class Command(BaseCommand):
         self.stdout.write(f'  yf.download(): {len(ticker_list)}銘柄を一括取得')
 
         # 銘柄ごとのDB最新タイムスタンプを一括取得
-        from django.db.models import Max
         cutoff_map = {}
         latest_by_ticker = (
             StockPrice.objects

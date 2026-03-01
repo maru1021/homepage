@@ -38,9 +38,9 @@ def _request_with_retry(url, label='', default=None):
         成功時: レスポンスの JSON (dict/list)
         失敗時: default 引数の値
     """
+    session = _create_cffi_session()
     for attempt in range(MAX_RETRIES + 1):
         try:
-            session = _create_cffi_session()
             resp = session.get(url, headers=_YF_HEADERS, timeout=15)
             if resp.status_code == 429:
                 if attempt < MAX_RETRIES:
