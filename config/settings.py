@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'dkc_drive',
     'stock_monitor',
     'tools',
+    'vulnerability',
 ]
 
 MIDDLEWARE = [

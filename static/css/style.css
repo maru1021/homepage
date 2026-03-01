@@ -833,3 +833,24 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
 
     .manage-header { flex-wrap: wrap; gap: 0.5rem; }
 }
+
+/* ============================================================
+   脆弱性検索ページ
+   ============================================================ */
+
+.vuln-page { max-width: 960px; }
+.vuln-page h1 { font-size: 1.6rem; color: var(--color-dark); }
+.vuln-cve-link { font-weight: 700; color: var(--color-dark); font-size: 1rem; }
+.vuln-cve-link:hover { color: var(--color-primary); }
+.vuln-card-hover { transition: box-shadow 0.2s, transform 0.2s; }
+.vuln-card-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+.vuln-page .card-title { font-size: 1.1rem; color: var(--color-dark); margin-bottom: 0.8rem; }
+.vuln-page .card-title i { color: var(--color-primary); }
+.vuln-page .btn-primary { background: var(--color-primary); border-color: var(--color-primary); }
+.vuln-page .btn-primary:hover { opacity: 0.9; background: var(--color-primary); border-color: var(--color-primary); }
+.vuln-page .btn-outline-primary { background: transparent; color: #0d6efd; border: 2px solid #0d6efd; }
+.vuln-page .btn-outline-primary:hover { background: #0d6efd; color: #fff; }
+.vuln-page .page-item.active .page-link { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #2563eb; font-weight: 600; }
+.vuln-page .page-link { color: #555; }
+.vuln-page .page-link:hover { color: #2563eb; background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.3); }
+.vuln-page .page-link:focus { box-shadow: none; }

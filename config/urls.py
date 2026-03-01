@@ -49,6 +49,7 @@ urlpatterns = [
     path('world/', include('world.urls')),
     path('stocks/', include('stock_monitor.urls')),
     path('tools/', include('tools.urls')),
+    path('vulnerability/', include('vulnerability.urls')),
     path('', include('blog.urls')),
 ]
 
