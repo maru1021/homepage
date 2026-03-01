@@ -4,21 +4,20 @@
 使い方:
   python manage.py fetch_daily_stock_prices --once   # 1回だけ実行
 
-初回（DBにデータなし）: 全期間を1銘柄ずつ取得
-2回目以降: 直近5日分を取得
+初回（DBにデータなし）: 全期間を yf.download() で一括取得
+2回目以降: 直近5日分を yf.download() で一括取得
 仮想通貨: CoinGecko API から取得
 """
-import time
 import logging
 
 from django.core.management.base import BaseCommand
 
 from stock_monitor.config import (
-    CRYPTO_COINGECKO_MAP, DAILY_FETCH_DELAY, STOCKS,
+    CRYPTO_COINGECKO_MAP, STOCKS,
 )
 from stock_monitor.models import DailyStockPrice, StockFetchLog
 from stock_monitor.utils import (
-    fetch_crypto_from_coingecko, fetch_yahoo_chart,
+    fetch_crypto_from_coingecko, fetch_yahoo_chart_batch,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,13 +56,13 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('日足データ取得完了'))
 
     def _fetch_bulk_update(self):
-        """2回目以降: 仮想通貨は CoinGecko、他は Yahoo API で取得"""
+        """2回目以降: 仮想通貨は CoinGecko、他は yf.download() で一括取得"""
         from django.utils import timezone
         from stock_monitor.config import (
             CATEGORY_CRYPTO, JST, STOCKS_BY_CATEGORY,
         )
 
-        self.stdout.write('更新モード: 直近5日分を取得')
+        self.stdout.write('更新モード: 直近5日分を一括取得')
 
         saved_count = 0
         total_records = 0
@@ -91,21 +90,19 @@ class Command(BaseCommand):
                     total_records += 1
             self.stdout.write(f'  CoinGecko: {len(cg_data)}銘柄取得')
 
-        # --- その他: Yahoo Finance API で1銘柄ずつ取得 ---
+        # --- その他: yf.download() で一括取得 ---
         yf_stocks = {
             t: n for t, n in STOCKS.items() if t not in crypto_tickers
         }
-        items = list(yf_stocks.items())
-        self.stdout.write(f'  Yahoo API: {len(items)}銘柄を1つずつ取得')
+        ticker_list = list(yf_stocks.keys())
+        self.stdout.write(f'  yf.download(): {len(ticker_list)}銘柄を一括取得')
 
-        for i, (ticker, name) in enumerate(items):
-            records = fetch_yahoo_chart(ticker, range_='5d', interval='1d')
+        batch_result = fetch_yahoo_chart_batch(
+            ticker_list, range_='5d', interval='1d',
+        )
 
-            if not records:
-                if i < len(items) - 1:
-                    time.sleep(DAILY_FETCH_DELAY)
-                continue
-
+        for ticker, records in batch_result.items():
+            name = yf_stocks.get(ticker, ticker)
             for rec in records:
                 date_val = rec['date'].date()
                 DailyStockPrice.objects.update_or_create(
@@ -123,49 +120,42 @@ class Command(BaseCommand):
                 total_records += 1
             saved_count += 1
 
-            if i < len(items) - 1:
-                time.sleep(DAILY_FETCH_DELAY)
-
         StockFetchLog.objects.create(
             tickers_count=saved_count, success=True,
             message=f'日足更新: {saved_count}銘柄, {total_records}件',
         )
+        self.stdout.write(
+            f'  yf.download(): {len(batch_result)}銘柄のデータを取得'
+        )
         self.stdout.write(f'{saved_count}銘柄, {total_records}件を更新')
 
     def _fetch_initial(self, stocks_dict):
-        """1銘柄ずつ全期間取得"""
+        """初回: yf.download() で全期間をバッチ取得"""
         from stock_monitor.config import (
             CATEGORY_CRYPTO, STOCKS_BY_CATEGORY,
         )
 
+        crypto_tickers = STOCKS_BY_CATEGORY.get(CATEGORY_CRYPTO, {})
+        yf_stocks = {
+            t: n for t, n in stocks_dict.items() if t not in crypto_tickers
+        }
+
+        if not yf_stocks:
+            return
+
         self.stdout.write(
-            f'初回取得モード: {len(stocks_dict)}銘柄を1つずつ取得します'
+            f'初回取得モード: {len(yf_stocks)}銘柄を一括取得します'
         )
 
-        crypto_tickers = STOCKS_BY_CATEGORY.get(CATEGORY_CRYPTO, {})
+        ticker_list = list(yf_stocks.keys())
+        batch_result = fetch_yahoo_chart_batch(
+            ticker_list, range_='max', interval='1d',
+        )
+
         total_saved = 0
         total_records = 0
-        items = list(stocks_dict.items())
-
-        for i, (ticker, name) in enumerate(items):
-            self.stdout.write(
-                f'[{i+1}/{len(items)}] {name}({ticker}) を取得中...'
-            )
-
-            # 仮想通貨はスキップ（CoinGeckoで取得済み or _fetch_bulk_updateで対応）
-            if ticker in crypto_tickers:
-                continue
-
-            records = fetch_yahoo_chart(
-                ticker, range_='max', interval='1d',
-            )
-
-            if not records:
-                self.stderr.write(f'  データ空')
-                if i < len(items) - 1:
-                    time.sleep(DAILY_FETCH_DELAY)
-                continue
-
+        for ticker, records in batch_result.items():
+            name = yf_stocks.get(ticker, ticker)
             for rec in records:
                 date_val = rec['date'].date()
                 DailyStockPrice.objects.update_or_create(
@@ -182,10 +172,6 @@ class Command(BaseCommand):
                 )
                 total_records += 1
             total_saved += 1
-            self.stdout.write(f'  {len(records)}件保存')
-
-            if i < len(items) - 1:
-                time.sleep(DAILY_FETCH_DELAY)
 
         StockFetchLog.objects.create(
             tickers_count=total_saved, success=True,

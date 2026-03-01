@@ -4,8 +4,6 @@ from zoneinfo import ZoneInfo
 JST = ZoneInfo('Asia/Tokyo')
 
 # データ取得設定
-DAILY_FETCH_DELAY = 30      # 日足取得時の銘柄間待機（秒）
-INTRADAY_FETCH_DELAY = 30   # 分足取得時の銘柄間待機（秒）
 INTRADAY_RETENTION_DAYS = 3 # 分足データの保持日数
 INTRADAY_OVERLAP_MINUTES = 5  # 重複許容バッファ（直近N分は再保存）
 DAILY_CLOSE_MINUTES = 910   # 閉場後の日足取得トリガー（15:10 = 15*60+10）

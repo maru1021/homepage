@@ -6,7 +6,6 @@
 
 ※ 定期実行は run_stock_scheduler コマンド（APScheduler）で管理。
 """
-import time
 import logging
 
 from django.core.management.base import BaseCommand
@@ -14,12 +13,12 @@ from django.utils import timezone
 
 from stock_monitor.config import (
     CATEGORY_CRYPTO, CATEGORY_LABELS, CRYPTO_COINGECKO_MAP,
-    INTRADAY_FETCH_DELAY, INTRADAY_RETENTION_DAYS,
+    INTRADAY_RETENTION_DAYS,
     INTRADAY_OVERLAP_MINUTES, MARKET_OVERVIEW_BY_CATEGORY,
     STOCKS_BY_CATEGORY, get_active_categories,
 )
 from stock_monitor.models import StockFetchLog, StockPrice
-from stock_monitor.utils import fetch_crypto_from_coingecko, fetch_yahoo_chart
+from stock_monitor.utils import fetch_crypto_from_coingecko, fetch_yahoo_chart_batch
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +102,7 @@ class Command(BaseCommand):
             else:
                 self.stderr.write('  CoinGecko: 取得失敗')
 
-        # --- その他: Yahoo Finance API で1銘柄ずつ取得 ---
+        # --- その他: yf.download() で一括取得 ---
         yf_tickers = {
             t: n for t, n in all_tickers.items()
             if t not in crypto_tickers
@@ -113,15 +112,15 @@ class Command(BaseCommand):
             self._finalize_intraday(saved_count, new_records)
             return
 
-        items = list(yf_tickers.items())
-        self.stdout.write(f'  Yahoo API: {len(items)}銘柄を1つずつ取得')
+        ticker_list = list(yf_tickers.keys())
+        self.stdout.write(f'  yf.download(): {len(ticker_list)}銘柄を一括取得')
 
         # 銘柄ごとのDB最新タイムスタンプを一括取得
         from django.db.models import Max
         cutoff_map = {}
         latest_by_ticker = (
             StockPrice.objects
-            .filter(ticker__in=yf_tickers.keys())
+            .filter(ticker__in=ticker_list)
             .values('ticker')
             .annotate(latest=Max('timestamp'))
         )
@@ -129,16 +128,13 @@ class Command(BaseCommand):
         for row in latest_by_ticker:
             cutoff_map[row['ticker']] = row['latest'] - overlap
 
-        for i, (ticker, name) in enumerate(items):
-            records = fetch_yahoo_chart(
-                ticker, range_='1d', interval='1m',
-            )
+        # 一括取得
+        batch_result = fetch_yahoo_chart_batch(
+            ticker_list, range_='1d', interval='1m',
+        )
 
-            if not records:
-                if i < len(items) - 1:
-                    time.sleep(INTRADAY_FETCH_DELAY)
-                continue
-
+        for ticker, records in batch_result.items():
+            name = yf_tickers.get(ticker, ticker)
             cutoff_ts = cutoff_map.get(ticker)
             for rec in records:
                 ts_dt = rec['date']
@@ -159,9 +155,9 @@ class Command(BaseCommand):
                 new_records += 1
             saved_count += 1
 
-            if i < len(items) - 1:
-                time.sleep(INTRADAY_FETCH_DELAY)
-
+        self.stdout.write(
+            f'  yf.download(): {len(batch_result)}銘柄のデータを取得'
+        )
         self._finalize_intraday(saved_count, new_records)
 
     def _finalize_intraday(self, saved_count, new_records):
