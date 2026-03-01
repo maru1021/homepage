@@ -59,6 +59,39 @@ class DailyStockPrice(BaseStockPrice):
         return f'{self.name}({self.ticker}) {self.date} C={self.close}'
 
 
+class StockFundamentals(models.Model):
+    """ファンダメンタルズデータ（日次スナップショット）"""
+    ticker = models.CharField('ティッカー', max_length=20, db_index=True)
+    date = models.DateField('日付', db_index=True)
+    market_cap = models.BigIntegerField('時価総額', null=True, blank=True)
+    per = models.FloatField('PER', null=True, blank=True)
+    pbr = models.FloatField('PBR', null=True, blank=True)
+    dividend_yield = models.FloatField('配当利回り(%)', null=True, blank=True)
+    eps = models.FloatField('EPS', null=True, blank=True)
+    roe = models.FloatField('ROE(%)', null=True, blank=True)
+    revenue = models.BigIntegerField('売上高', null=True, blank=True)
+    profit_margin = models.FloatField('利益率(%)', null=True, blank=True)
+    fifty_two_week_high = models.FloatField('52週高値', null=True, blank=True)
+    fifty_two_week_low = models.FloatField('52週安値', null=True, blank=True)
+
+    class Meta:
+        ordering = ['ticker', '-date']
+        indexes = [
+            models.Index(fields=['ticker', 'date']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['ticker', 'date'],
+                name='unique_fundamentals_ticker_date',
+            ),
+        ]
+        verbose_name = 'ファンダメンタルズ'
+        verbose_name_plural = 'ファンダメンタルズ'
+
+    def __str__(self):
+        return f'{self.ticker} {self.date} PER={self.per} PBR={self.pbr}'
+
+
 class StockFetchLog(models.Model):
     """取得ログ（最終取得時刻の管理用）"""
     fetched_at = models.DateTimeField('取得日時', auto_now_add=True)

@@ -10,7 +10,9 @@ from .config import (
     MAX_CHART_TICKERS, STOCKS, STOCKS_BY_CATEGORY,
     get_market_overview_for_category, get_stocks_for_category,
 )
-from .models import DailyStockPrice, StockPrice
+from .models import (
+    DailyStockPrice, StockFundamentals, StockPrice,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -314,4 +316,53 @@ def api_stock_scores(request):
         'category': category,
         'scores': results,
         'count': len(results),
+    })
+
+
+def api_fundamentals(request):
+    """カテゴリ内の最新ファンダメンタルズデータを返却"""
+    category = _parse_category(request)
+    category_stocks = get_stocks_for_category(category)
+    sort_by = request.GET.get('sort', 'market_cap')
+
+    empty = {'fundamentals': [], 'date': None, 'count': 0}
+
+    # 最新日付のデータを取得
+    try:
+        latest = StockFundamentals.objects.filter(
+            ticker__in=category_stocks.keys(),
+        ).order_by('-date').first()
+    except Exception:
+        return JsonResponse(empty)
+
+    if not latest:
+        return JsonResponse(empty)
+
+    target_date = latest.date
+    qs = StockFundamentals.objects.filter(
+        ticker__in=category_stocks.keys(),
+        date=target_date,
+    )
+
+    fields = [
+        'ticker', 'market_cap', 'per', 'pbr', 'dividend_yield',
+        'eps', 'roe', 'revenue', 'profit_margin',
+        'fifty_two_week_high', 'fifty_two_week_low',
+    ]
+    fundamentals = []
+    for f in qs.values(*fields):
+        f['name'] = category_stocks.get(f['ticker'], f['ticker'])
+        fundamentals.append(f)
+
+    # ソート（null は末尾へ）
+    sort_field = sort_by if sort_by in fields else 'market_cap'
+    reverse = sort_by != 'per' and sort_by != 'pbr'
+    fundamentals.sort(
+        key=lambda x: (x.get(sort_field) is None, -(x.get(sort_field) or 0) if reverse else (x.get(sort_field) or float('inf'))),
+    )
+
+    return JsonResponse({
+        'fundamentals': fundamentals,
+        'date': str(target_date),
+        'count': len(fundamentals),
     })

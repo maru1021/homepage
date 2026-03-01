@@ -16,6 +16,7 @@
         <button class="view-mode-btn active" data-mode="prices">値動き</button>
         <button class="view-mode-btn" data-mode="heatmap">ヒートマップ</button>
         <button class="view-mode-btn" data-mode="scores">スコア分析</button>
+        <button class="view-mode-btn" data-mode="fundamentals">ファンダメンタルズ</button>
     </div>
 
     <div class="stock-info">
@@ -75,6 +76,21 @@
         </div>
         <div class="scores-list" id="scoresList">
             <div class="scores-empty">銘柄を選択してスコア分析タブを開いてください</div>
+        </div>
+    </div>
+
+    <div class="fundamentals-section" id="fundamentalsSection" style="display:none;">
+        <div class="fund-controls">
+            <select id="fundSortBy">
+                <option value="market_cap">時価総額順</option>
+                <option value="per">PER順（低い順）</option>
+                <option value="pbr">PBR順（低い順）</option>
+                <option value="dividend_yield">配当利回り順</option>
+                <option value="roe">ROE順</option>
+            </select>
+        </div>
+        <div class="fund-list" id="fundList">
+            <div class="fund-empty">カテゴリを選択してファンダメンタルズタブを開いてください</div>
         </div>
     </div>
 
@@ -247,16 +263,16 @@ html, body { overflow: hidden; height: 100%; }
 .view-mode-btn:hover:not(.active) { background: #2a2a3e; }
 
 /* スコア分析 */
-.scores-section { margin-bottom: 1rem; }
-.scores-controls {
+.scores-section, .fundamentals-section, .heatmap-section { margin-bottom: 1rem; }
+.scores-controls, .fund-controls {
     display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center;
 }
-.scores-controls select {
+.scores-controls select, .fund-controls select {
     background: #1a1a2e; color: #eee; border: 1px solid #333;
     padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem;
 }
-.scores-list { display: flex; flex-direction: column; gap: 0.5rem; }
-.scores-empty { color: #666; text-align: center; padding: 2rem 0; }
+.scores-list, .fund-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.scores-empty, .fund-empty { color: #666; text-align: center; padding: 2rem 0; }
 .score-card {
     background: #12121e; border-radius: 8px; padding: 0.6rem 0.8rem;
 }
@@ -266,13 +282,13 @@ html, body { overflow: hidden; height: 100%; }
 .score-card-left {
     display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;
 }
-.score-card-rank {
+.score-card-rank, .fund-card-rank {
     color: #666; font-size: 0.8rem; font-weight: 600; flex-shrink: 0; min-width: 1.2rem;
 }
-.score-card-name {
+.score-card-name, .fund-card-name {
     color: #eee; font-size: 0.9rem; font-weight: 600; white-space: nowrap;
 }
-.score-card-ticker {
+.score-card-ticker, .fund-card-ticker {
     color: #666; font-size: 0.75rem; flex-shrink: 0;
 }
 .score-card-scores {
@@ -298,8 +314,25 @@ html, body { overflow: hidden; height: 100%; }
 .signal-bearish { background: rgba(255,23,68,0.15); color: #ff1744; }
 .signal-neutral { background: rgba(74,158,255,0.15); color: #4a9eff; }
 
+/* ファンダメンタルズ */
+.fund-card { background: #12121e; border-radius: 8px; padding: 0.7rem 0.9rem; }
+.fund-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.fund-card-metrics {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem;
+}
+.fund-metric {
+    background: #1a1a2e; border-radius: 4px; padding: 0.35rem 0.5rem;
+}
+.fund-metric-label {
+    font-size: 0.65rem; color: #888; margin-bottom: 0.15rem;
+}
+.fund-metric-value {
+    font-size: 0.85rem; color: #eee; font-weight: 600;
+}
+.fund-metric-value.positive { color: #00c853; }
+.fund-metric-value.negative { color: #ff1744; }
+
 /* ヒートマップ */
-.heatmap-section { margin-bottom: 1rem; }
 .heatmap-controls {
     display: flex; align-items: center; gap: 1rem;
     margin-bottom: 0.75rem; flex-wrap: wrap;
@@ -483,6 +516,9 @@ html, body { overflow: hidden; height: 100%; }
     .heatmap-tile-name { font-size: 0.55rem; }
     .heatmap-tile-pct { font-size: 0.65rem; }
     .heatmap-tile-ticker { font-size: 0.5rem; }
+    .fund-card-metrics { grid-template-columns: repeat(2, 1fr); }
+    .fund-card-header { flex-wrap: wrap; }
+    .fund-metric-value { font-size: 0.8rem; }
 }
 </style>
 {% endblock %}
@@ -544,6 +580,7 @@ html, body { overflow: hidden; height: 100%; }
     const API_MARKET_OVERVIEW = "{% url 'stock_monitor:api_market_overview' %}";
     const API_CATEGORIES = "{% url 'stock_monitor:api_categories' %}";
     const API_SCORES = "{% url 'stock_monitor:api_stock_scores' %}";
+    const API_FUNDAMENTALS = "{% url 'stock_monitor:api_fundamentals' %}";
     const CHART_COLORS = ['#4a9eff','#ff6b6b','#51cf66','#ffd43b','#cc5de8'];
     const DAILY_PERIODS = [
         { label: '3M', months: 3 }, { label: '6M', months: 6 }, { label: '1Y', months: 12 },
@@ -567,6 +604,8 @@ html, body { overflow: hidden; height: 100%; }
     let categoryList = [];
     let currentViewMode = 'prices';
     let heatmapData = null;
+    let fundamentalsData = null;
+    const FUND_CATEGORIES = ['jp_stock', 'us_stock'];
 
     function getDailyPeriod(ticker) {
         return dailyPeriods[ticker] !== undefined ? dailyPeriods[ticker] : DEFAULT_DAILY_PERIOD;
@@ -780,6 +819,33 @@ html, body { overflow: hidden; height: 100%; }
         return cat ? cat.label : '';
     }
 
+    // ========== ビューモード定義 ==========
+    var VIEW_MODES = {
+        prices:       { el: '.market-top-row', toggle: true },
+        heatmap:      { el: '#heatmapSection',  fetch: function() { fetchHeatmap(); } },
+        scores:       { el: '#scoresSection',   fetch: function() { fetchScores(); } },
+        fundamentals: { el: '#fundamentalsSection', fetch: function() { fetchFundamentals(); } },
+    };
+
+    function activateViewMode(mode) {
+        var toggleBtn = document.querySelector('.stock-all-toggle');
+        // 全セクション非表示
+        Object.keys(VIEW_MODES).forEach(function(key) {
+            var cfg = VIEW_MODES[key];
+            var section = document.querySelector(cfg.el);
+            if (section) section.style.display = 'none';
+        });
+        if (toggleBtn) toggleBtn.style.display = 'none';
+
+        // 選択されたセクションを表示
+        var active = VIEW_MODES[mode];
+        if (!active) return;
+        var el = document.querySelector(active.el);
+        if (el) el.style.display = active.toggle ? '' : 'block';
+        if (active.toggle && toggleBtn) toggleBtn.style.display = '';
+        if (active.fetch) active.fetch();
+    }
+
     // ========== カテゴリタブ ==========
     function renderCategoryTabs(categories) {
         const container = document.getElementById('categoryTabs');
@@ -800,17 +866,28 @@ html, body { overflow: hidden; height: 100%; }
         });
     }
 
+    function updateFundamentalsTabVisibility() {
+        var fundBtn = document.querySelector('.view-mode-btn[data-mode="fundamentals"]');
+        if (fundBtn) {
+            fundBtn.style.display = FUND_CATEGORIES.indexOf(currentCategory) >= 0 ? '' : 'none';
+        }
+        if (currentViewMode === 'fundamentals' && FUND_CATEGORIES.indexOf(currentCategory) < 0) {
+            document.querySelector('.view-mode-btn[data-mode="prices"]').click();
+        }
+    }
+
     function onCategoryChange() {
         showAll = false;
         allStocksData = null;
         heatmapData = null;
+        fundamentalsData = null;
         prevPrices = {};
         document.getElementById('toggleAllStocks').textContent = 'もっと表示 ▼';
+        updateFundamentalsTabVisibility();
 
-        if (currentViewMode === 'scores') {
-            fetchScores();
-        } else if (currentViewMode === 'heatmap') {
-            fetchHeatmap();
+        var activeCfg = VIEW_MODES[currentViewMode];
+        if (activeCfg && activeCfg.fetch) {
+            activeCfg.fetch();
         } else {
             fetchPrices();
             fetchMarketOverview();
@@ -1599,32 +1676,17 @@ html, body { overflow: hidden; height: 100%; }
             currentViewMode = this.dataset.mode;
             document.querySelectorAll('.view-mode-btn').forEach(function(b) { b.classList.remove('active'); });
             this.classList.add('active');
-
-            const priceSection = document.querySelector('.market-top-row');
-            const scoreSection = document.getElementById('scoresSection');
-            const heatmapSection = document.getElementById('heatmapSection');
-            const toggleBtn = document.querySelector('.stock-all-toggle');
-
-            priceSection.style.display = 'none';
-            scoreSection.style.display = 'none';
-            heatmapSection.style.display = 'none';
-            if (toggleBtn) toggleBtn.style.display = 'none';
-
-            if (currentViewMode === 'prices') {
-                priceSection.style.display = '';
-                if (toggleBtn) toggleBtn.style.display = '';
-            } else if (currentViewMode === 'heatmap') {
-                heatmapSection.style.display = 'block';
-                fetchHeatmap();
-            } else if (currentViewMode === 'scores') {
-                scoreSection.style.display = 'block';
-                fetchScores();
-            }
+            activateViewMode(currentViewMode);
         });
     });
 
     document.getElementById('scoreSortBy').addEventListener('change', function() {
         fetchScores();
+    });
+
+    document.getElementById('fundSortBy').addEventListener('change', function() {
+        fundamentalsData = null;
+        fetchFundamentals();
     });
 
     function fetchScores() {
@@ -1761,10 +1823,92 @@ html, body { overflow: hidden; height: 100%; }
             .catch(function() { grid.innerHTML = '<div class="heatmap-empty">データ取得エラー</div>'; });
     }
 
+    // ========== ファンダメンタルズ ==========
+    function formatLargeNum(val) {
+        if (val == null) return '-';
+        if (currentCategory === 'jp_stock') {
+            if (val >= 1e12) return (val / 1e12).toFixed(2) + '兆';
+            if (val >= 1e8) return (val / 1e8).toFixed(0) + '億';
+            if (val >= 1e4) return (val / 1e4).toFixed(0) + '万';
+            return val.toLocaleString();
+        }
+        if (val >= 1e12) return '$' + (val / 1e12).toFixed(2) + 'T';
+        if (val >= 1e9) return '$' + (val / 1e9).toFixed(1) + 'B';
+        if (val >= 1e6) return '$' + (val / 1e6).toFixed(0) + 'M';
+        return '$' + val.toLocaleString();
+    }
+
+    function formatNum(val, digits) {
+        if (val == null) return '-';
+        return val.toFixed(digits !== undefined ? digits : 2);
+    }
+
+    function fmtPct(val) {
+        if (val == null) return '-';
+        return val.toFixed(2) + '%';
+    }
+
+    function fundMetricHTML(label, value, cls) {
+        return '<div class="fund-metric"><div class="fund-metric-label">' + label
+            + '</div><div class="fund-metric-value' + (cls ? ' ' + cls : '') + '">' + value + '</div></div>';
+    }
+
+    function renderFundamentals(items) {
+        var list = document.getElementById('fundList');
+        if (!items || items.length === 0) {
+            list.innerHTML = '<div class="fund-empty">データがありません</div>';
+            return;
+        }
+        var html = '';
+        items.forEach(function(f, i) {
+            html += '<div class="fund-card">';
+            html += '<div class="fund-card-header">';
+            html += '<span class="fund-card-rank">' + (i + 1) + '</span>';
+            html += '<span class="fund-card-name">' + f.name + '</span>';
+            html += '<span class="fund-card-ticker">' + shortTicker(f.ticker) + '</span>';
+            html += '</div>';
+            html += '<div class="fund-card-metrics">';
+            html += fundMetricHTML('時価総額', formatLargeNum(f.market_cap));
+            html += fundMetricHTML('PER', formatNum(f.per, 1) + (f.per != null ? '倍' : ''));
+            html += fundMetricHTML('PBR', formatNum(f.pbr, 2) + (f.pbr != null ? '倍' : ''));
+            html += fundMetricHTML('配当利回り', fmtPct(f.dividend_yield), f.dividend_yield != null && f.dividend_yield >= 3 ? 'positive' : '');
+            html += fundMetricHTML('EPS', formatNum(f.eps, 1));
+            html += fundMetricHTML('ROE', fmtPct(f.roe), f.roe != null ? (f.roe >= 10 ? 'positive' : f.roe < 0 ? 'negative' : '') : '');
+            html += fundMetricHTML('売上高', formatLargeNum(f.revenue));
+            html += fundMetricHTML('利益率', fmtPct(f.profit_margin), f.profit_margin != null ? (f.profit_margin >= 10 ? 'positive' : f.profit_margin < 0 ? 'negative' : '') : '');
+            html += '</div>';
+            if (f.fifty_two_week_high != null || f.fifty_two_week_low != null) {
+                html += '<div class="fund-card-metrics" style="margin-top:0.3rem;">';
+                html += fundMetricHTML('52週高値', formatNum(f.fifty_two_week_high, 1));
+                html += fundMetricHTML('52週安値', formatNum(f.fifty_two_week_low, 1));
+                html += '</div>';
+            }
+            html += '</div>';
+        });
+        list.innerHTML = html;
+    }
+
+    function fetchFundamentals() {
+        var sortBy = document.getElementById('fundSortBy').value;
+        var list = document.getElementById('fundList');
+        list.innerHTML = '<div class="fund-empty">' + loadingHTML('ファンダメンタルズを取得中...') + '</div>';
+
+        fetchJSON(categoryURL(API_FUNDAMENTALS, '&sort=' + sortBy))
+            .then(function(data) {
+                fundamentalsData = data.fundamentals;
+                renderFundamentals(fundamentalsData);
+            })
+            .catch(function(e) {
+                console.error(e);
+                list.innerHTML = '<div class="fund-empty">データ取得エラー</div>';
+            });
+    }
+
     // ========== 初期化 ==========
     fetchJSON(API_CATEGORIES).then(function(data) {
         categoryList = data.categories;
         renderCategoryTabs(data.categories);
+        updateFundamentalsTabVisibility();
     });
 
     fetchJSON(categoryURL(API_STOCKS)).then(function(data) {
