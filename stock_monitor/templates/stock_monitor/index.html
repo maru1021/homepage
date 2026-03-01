@@ -929,7 +929,7 @@ html, body { overflow: hidden; height: 100%; }
             const prev = prevPrices[s.ticker];
             let fc = '';
             if (prev !== undefined) { fc = s.price > prev ? 'flash-up' : s.price < prev ? 'flash-down' : ''; }
-            html += '<tr class="'+fc+'"><td class="col-rank">'+rank+'</td>';
+            html += '<tr class="'+fc+'" data-ticker="'+s.ticker+'" style="cursor:pointer"><td class="col-rank">'+rank+'</td>';
             html += '<td class="col-name">'+s.name+'<span class="ticker-code">'+shortTicker(s.ticker)+'</span></td>';
             html += '<td>'+formatPrice(s.price)+'</td>';
             html += '<td class="col-diff '+diffClass(s.diff_day)+'">'+formatDiff(s.diff_day)+'</td>';
@@ -961,6 +961,19 @@ html, body { overflow: hidden; height: 100%; }
             tbody.innerHTML += renderStockRows(remaining, 10);
         }
     }
+
+    // クリック → チャート選択: イベントデリゲーションで一括処理
+    [
+        ['stockBody',      'tr[data-ticker]'],
+        ['marketOverview',  '.overview-item[data-ticker]'],
+        ['heatmapGrid',    '.heatmap-tile[data-ticker]'],
+        ['scoresList',     '.score-card[data-ticker]'],
+    ].forEach(function(pair) {
+        document.getElementById(pair[0]).addEventListener('click', function(e) {
+            var el = e.target.closest(pair[1]);
+            if (el) selectTickerAndScroll(el.dataset.ticker);
+        });
+    });
 
     document.getElementById('toggleAllStocks').addEventListener('click', function() {
         showAll = !showAll;
@@ -1001,43 +1014,30 @@ html, body { overflow: hidden; height: 100%; }
 
     function renderDynamicOverview(data) {
         const container = document.getElementById('marketOverview');
-        container.innerHTML = '';
-        Object.keys(data).forEach(function(sectionName) {
-            const section = document.createElement('div');
-            section.className = 'overview-section';
-            const title = document.createElement('h3');
-            title.className = 'overview-section-title';
-            title.textContent = sectionName;
-            section.appendChild(title);
-            const itemsDiv = document.createElement('div');
-            itemsDiv.className = 'overview-items';
-            renderOverviewItems(itemsDiv, data[sectionName]);
-            section.appendChild(itemsDiv);
-            container.appendChild(section);
-        });
-    }
-
-    function renderOverviewItems(container, items) {
-        if (!items || items.length === 0) {
-            container.innerHTML = '<div class="overview-loading">データなし</div>';
-            return;
-        }
         let html = '';
-        items.forEach(function(item) {
-            if (item.price == null) {
-                html += '<div class="overview-item">';
-                html += '<span class="overview-item-name">' + item.name + '</span>';
-                html += '<span class="overview-item-nodata">--</span>';
-                html += '</div>';
-                return;
+        Object.keys(data).forEach(function(sectionName) {
+            const items = data[sectionName];
+            html += '<div class="overview-section">';
+            html += '<h3 class="overview-section-title">' + sectionName + '</h3>';
+            html += '<div class="overview-items">';
+            if (!items || items.length === 0) {
+                html += '<div class="overview-loading">データなし</div>';
+            } else {
+                items.forEach(function(item) {
+                    html += '<div class="overview-item" data-ticker="' + item.ticker + '" style="cursor:pointer">';
+                    html += '<span class="overview-item-name">' + item.name + '</span>';
+                    if (item.price == null) {
+                        html += '<span class="overview-item-nodata">--</span>';
+                    } else {
+                        const cls = diffClass(item.diff);
+                        html += '<span class="overview-item-price">' + formatPrice(item.price) + '</span>';
+                        html += '<span class="overview-item-diff ' + cls + '">' + formatDiff(item.diff) + '</span>';
+                        html += '<span class="overview-item-pct ' + cls + '">' + formatPct(item.pct) + '</span>';
+                    }
+                    html += '</div>';
+                });
             }
-            const cls = diffClass(item.diff);
-            html += '<div class="overview-item">';
-            html += '<span class="overview-item-name">' + item.name + '</span>';
-            html += '<span class="overview-item-price">' + formatPrice(item.price) + '</span>';
-            html += '<span class="overview-item-diff ' + cls + '">' + formatDiff(item.diff) + '</span>';
-            html += '<span class="overview-item-pct ' + cls + '">' + formatPct(item.pct) + '</span>';
-            html += '</div>';
+            html += '</div></div>';
         });
         container.innerHTML = html;
     }
@@ -1740,27 +1740,36 @@ html, body { overflow: hidden; height: 100%; }
         let maxW = 0;
         lefts.forEach(function(el) { maxW = Math.max(maxW, el.offsetWidth); });
         lefts.forEach(function(el) { el.style.width = maxW + 'px'; });
-
-        // カードクリックで銘柄選択 → チャートへスクロール
-        list.querySelectorAll('.score-card').forEach(function(card) {
-            card.addEventListener('click', function() {
-                selectTickerAndScroll(this.dataset.ticker);
-            });
-        });
     }
 
     // ========== 銘柄選択 → チャートスクロール共通 ==========
+    function setTickerOnSelect(sel, ticker) {
+        // Select2 の選択肢にティッカーが存在しなければ動的に追加して選択
+        if (!sel.querySelector('option[value="' + ticker + '"]')) {
+            var opt = document.createElement('option');
+            opt.value = ticker;
+            opt.textContent = ticker;
+            sel.appendChild(opt);
+        }
+        $(sel).val(ticker).trigger('change');
+    }
+
     function selectTickerAndScroll(ticker) {
         const selects = document.querySelectorAll('.ticker-select');
-        let found = false;
-        selects.forEach(function(sel) {
-            if (!$(sel).val() && !found) { $(sel).val(ticker).trigger('change'); found = true; }
-        });
-        if (!found && selects.length < 5) {
+        // 空のセレクタがあればそこに設定
+        for (var i = 0; i < selects.length; i++) {
+            if (!$(selects[i]).val()) {
+                setTickerOnSelect(selects[i], ticker);
+                document.querySelector('.chart-section').scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+        }
+        // 空がなければ新規セレクタを追加
+        if (selects.length < 5) {
             document.getElementById('addTicker').click();
             setTimeout(function() {
                 const newSels = document.querySelectorAll('.ticker-select');
-                $(newSels[newSels.length - 1]).val(ticker).trigger('change');
+                setTickerOnSelect(newSels[newSels.length - 1], ticker);
                 document.querySelector('.chart-section').scrollIntoView({ behavior: 'smooth' });
             }, 100);
         } else {
@@ -1805,12 +1814,6 @@ html, body { overflow: hidden; height: 100%; }
                 + '</div>';
         });
         grid.innerHTML = html;
-
-        grid.querySelectorAll('.heatmap-tile').forEach(function(tile) {
-            tile.addEventListener('click', function() {
-                selectTickerAndScroll(this.dataset.ticker);
-            });
-        });
     }
 
     function fetchHeatmap() {

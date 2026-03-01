@@ -82,21 +82,35 @@ def _calc_intraday_changes_batch(ticker_list, day_start):
 
 
 def _build_ohlcv_dict(records, time_field, time_format='%Y-%m-%d'):
-    """モデルインスタンスのリストから OHLCV 配列を構築する"""
+    """モデルインスタンスのリストから OHLCV 辞書を構築する"""
     timestamps, opens, highs, lows, closes, volumes = [], [], [], [], [], []
     for p in records:
         raw = getattr(p, time_field)
-        if hasattr(raw, 'astimezone'):
-            ts = raw.astimezone(JST).strftime(time_format)
-        else:
-            ts = raw.strftime(time_format)
-        timestamps.append(ts)
+        fmt = raw.astimezone(JST).strftime(time_format) if hasattr(raw, 'astimezone') else raw.strftime(time_format)
+        timestamps.append(fmt)
         opens.append(p.open)
         highs.append(p.high)
         lows.append(p.low)
         closes.append(p.close)
         volumes.append(p.volume)
     return timestamps, opens, highs, lows, closes, volumes
+
+
+def _group_to_charts(queryset, time_field, time_format, time_key):
+    """グループ化済みクエリセットから charts dict を構築する共通処理"""
+    charts = {}
+    for ticker, group in groupby(queryset, key=lambda p: p.ticker):
+        records = list(group)
+        timestamps, opens, highs, lows, closes, volumes = _build_ohlcv_dict(
+            records, time_field, time_format,
+        )
+        charts[ticker] = {
+            'name': STOCKS.get(ticker, ticker),
+            time_key: timestamps,
+            'open': opens, 'high': highs, 'low': lows, 'close': closes,
+            'volume': volumes,
+        }
+    return charts
 
 
 def _find_adjacent_trading_date(tickers, boundary, direction):
@@ -221,19 +235,7 @@ def api_chart_data(request):
         .filter(ticker__in=tickers, timestamp__gte=day_start, timestamp__lt=day_end)
         .order_by('ticker', 'timestamp')
     )
-
-    charts = {}
-    for ticker, group in groupby(all_prices, key=lambda p: p.ticker):
-        records = list(group)
-        timestamps, opens, highs, lows, closes, volumes = _build_ohlcv_dict(
-            records, 'timestamp', '%H:%M',
-        )
-        charts[ticker] = {
-            'name': STOCKS.get(ticker, ticker),
-            'timestamps': timestamps,
-            'open': opens, 'high': highs, 'low': lows, 'close': closes,
-            'volume': volumes,
-        }
+    charts = _group_to_charts(all_prices, 'timestamp', '%H:%M', 'timestamps')
 
     # 前日・翌日: 選択中の銘柄でデータが存在する取引日を検索（各1クエリ）
     prev_date = _find_adjacent_trading_date(tickers, day_start, 'prev')
@@ -264,19 +266,7 @@ def api_daily_chart_data(request):
     if start_date:
         qs = qs.filter(date__gte=start_date)
     all_prices = list(qs.order_by('ticker', 'date'))
-
-    charts = {}
-    for ticker, group in groupby(all_prices, key=lambda p: p.ticker):
-        records = list(group)
-        dates, opens, highs, lows, closes, volumes = _build_ohlcv_dict(
-            records, 'date',
-        )
-        charts[ticker] = {
-            'name': STOCKS.get(ticker, ticker),
-            'dates': dates,
-            'open': opens, 'high': highs, 'low': lows, 'close': closes,
-            'volume': volumes,
-        }
+    charts = _group_to_charts(all_prices, 'date', '%Y-%m-%d', 'dates')
 
     return JsonResponse({'charts': charts})
 
