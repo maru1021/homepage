@@ -140,7 +140,7 @@
 function toolCopy(text, msg) {
     msg = msg || 'コピーしました';
     function showToast() {
-        var t = document.getElementById('toolToast');
+        const t = document.getElementById('toolToast');
         t.textContent = msg;
         t.classList.add('show');
         setTimeout(function() { t.classList.remove('show'); }, 1500);
@@ -151,7 +151,7 @@ function toolCopy(text, msg) {
         fallback();
     }
     function fallback() {
-        var ta = document.createElement('textarea');
+        const ta = document.createElement('textarea');
         ta.value = text;
         ta.style.cssText = 'position:fixed;left:-9999px;';
         document.body.appendChild(ta);
@@ -161,18 +161,18 @@ function toolCopy(text, msg) {
     }
 }
 function toolHelpOpen() {
-    var src = document.getElementById('toolHelpSrc');
+    const src = document.getElementById('toolHelpSrc');
     if (src) {
         document.getElementById('toolHelpBody').innerHTML = src.innerHTML;
     }
-    var overlay = document.getElementById('toolHelpOverlay');
+    const overlay = document.getElementById('toolHelpOverlay');
     overlay.style.display = 'flex';
     requestAnimationFrame(function() {
         overlay.classList.add('active');
     });
 }
 function toolHelpClose() {
-    var overlay = document.getElementById('toolHelpOverlay');
+    const overlay = document.getElementById('toolHelpOverlay');
     overlay.classList.remove('active');
     setTimeout(function() {
         if (!overlay.classList.contains('active')) {
@@ -187,17 +187,17 @@ document.addEventListener('click', function(e) {
     if (e.target.id === 'toolHelpOverlay') toolHelpClose();
 });
 (function() {
-    var src = document.getElementById('toolHelpSrc');
+    const src = document.getElementById('toolHelpSrc');
     if (!src) return;
-    var page = document.querySelector('.tool-page');
+    const page = document.querySelector('.tool-page') || document.querySelector('.netsim-page');
     if (!page) return;
-    var h1 = page.querySelector('h1');
+    const h1 = page.querySelector('h1');
     if (!h1) return;
-    var wrap = document.createElement('div');
+    const wrap = document.createElement('div');
     wrap.className = 'tool-header';
     h1.parentNode.insertBefore(wrap, h1);
     wrap.appendChild(h1);
-    var btn = document.createElement('button');
+    const btn = document.createElement('button');
     btn.className = 'tool-help-btn';
     btn.title = '使い方';
     btn.textContent = '?';

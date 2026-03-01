@@ -7,7 +7,7 @@
 {% block content %}
 <div class="stock-monitor">
     <div class="stock-header">
-        <h1>株価リアルタイムモニター</h1>
+        <h1>株価リアルタイムモニター <button class="stock-help-btn" title="使い方" onclick="stockHelpOpen()">?</button></h1>
     </div>
 
     <div class="category-tabs" id="categoryTabs"></div>
@@ -117,6 +117,49 @@
     </div>
 </div>
 
+<!-- Help Modal -->
+<div id="stockHelpOverlay" class="stock-help-overlay">
+    <div class="stock-help-modal">
+        <div class="stock-help-modal-header">
+            <div class="stock-help-modal-title">
+                <span class="stock-help-modal-icon">?</span>
+                使い方ガイド
+            </div>
+            <button class="stock-help-modal-close" onclick="stockHelpClose()">&times;</button>
+        </div>
+        <div class="stock-help-modal-scroll">
+            <div class="stock-help-modal-body">
+                <h3>カテゴリタブ</h3>
+                <ul>
+                    <li><strong>日経225</strong> — 日経平均採用銘柄の値動き</li>
+                    <li><strong>米国株</strong> — GAFAM等の主要米国銘柄</li>
+                    <li><strong>為替</strong> — USD/JPY, EUR/JPY 等の主要通貨ペア</li>
+                    <li><strong>仮想通貨</strong> — BTC, ETH 等の暗号資産</li>
+                </ul>
+                <h3>表示モード</h3>
+                <ul>
+                    <li><strong>値動き</strong> — 銘柄一覧を変動率順にランキング表示</li>
+                    <li><strong>ヒートマップ</strong> — 全銘柄の値動きを色分けで一覧表示。上昇は緑、下落は赤</li>
+                    <li><strong>スコア分析</strong> — テクニカル指標に基づく短期・長期スコアを表示</li>
+                    <li><strong>ファンダメンタルズ</strong> — PER・PBR・配当利回り・ROE等の指標で比較</li>
+                </ul>
+                <h3>チャート機能</h3>
+                <ul>
+                    <li><strong>銘柄選択</strong> — ランキングやヒートマップの銘柄をクリックするとチャートを表示</li>
+                    <li><strong>チャート種類</strong> — 折れ線グラフとろうそく足を切り替え可能</li>
+                    <li><strong>テクニカル指標</strong> — BB（ボリンジャーバンド）、RSI、MACD、STOCH、一目均衡表、VWAPをオーバーレイ表示</li>
+                    <li><strong>銘柄追加</strong> — 「＋」ボタンで複数銘柄を同時に表示・比較</li>
+                </ul>
+                <h3>データ更新</h3>
+                <ul>
+                    <li>株価データは自動的に定期更新されます</li>
+                    <li>市場時間外は最終取引価格が表示されます</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 /* 株価モニターページ: body の二重スクロールバーを防止 */
 html, body { overflow: hidden; height: 100%; }
@@ -134,6 +177,92 @@ html, body { overflow: hidden; height: 100%; }
     margin-bottom: 1rem;
 }
 .stock-header h1 { font-size: 1.4rem; margin: 0; }
+/* Help button */
+.stock-help-btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: none; background: linear-gradient(135deg, #a78bfa, #818cf8);
+    color: #fff; font-size: 0.82rem; font-weight: 800;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); flex-shrink: 0; line-height: 1; padding: 0;
+    box-shadow: 0 2px 8px rgba(167,139,250,0.35);
+    vertical-align: middle; margin-left: 0.4rem;
+}
+.stock-help-btn:hover {
+    transform: scale(1.2) rotate(8deg);
+    box-shadow: 0 4px 16px rgba(167,139,250,0.5);
+}
+/* Help modal */
+.stock-help-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,0); display: none;
+    justify-content: center; align-items: center;
+    transition: background 0.3s ease;
+}
+.stock-help-overlay.active { display: flex; background: rgba(99,80,170,0.25); backdrop-filter: blur(4px); }
+.stock-help-modal {
+    background: #fff;
+    border-radius: 20px;
+    max-width: 540px; width: 92%; max-height: 75vh;
+    overflow: hidden; padding: 0;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(129,140,248,0.2), 0 0 0 1px rgba(167,139,250,0.15);
+    transform: translateY(24px) scale(0.95); opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease;
+}
+.stock-help-overlay.active .stock-help-modal {
+    transform: translateY(0) scale(1); opacity: 1;
+}
+.stock-help-modal-header {
+    position: sticky; top: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.3rem;
+    background: linear-gradient(135deg, #c4b5fd, #a5b4fc);
+    color: #fff;
+}
+.stock-help-modal-title {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 1rem; font-weight: 700; margin: 0;
+}
+.stock-help-modal-icon {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 800; flex-shrink: 0;
+}
+.stock-help-modal-close {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,0.2);
+    color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; line-height: 1; transition: all 0.2s;
+}
+.stock-help-modal-close:hover {
+    background: rgba(255,255,255,0.35);
+    transform: rotate(90deg);
+}
+.stock-help-modal-scroll { max-height: calc(75vh - 56px); overflow-y: auto; }
+.stock-help-modal-body { padding: 1.3rem 1.3rem 1.5rem; }
+.stock-help-modal-body h3 {
+    font-size: 0.88rem; font-weight: 700; color: #6d5cae;
+    margin: 1.3rem 0 0.5rem 0; padding: 0.35rem 0.8rem;
+    background: linear-gradient(90deg, #f0ecff, transparent);
+    border-left: 3px solid #a78bfa; border-radius: 0 6px 6px 0;
+    display: block;
+}
+.stock-help-modal-body h3:first-child { margin-top: 0; }
+.stock-help-modal-body ul {
+    color: #555; line-height: 1.8;
+    margin: 0.4rem 0 0.8rem 0; padding-left: 0; list-style: none; font-size: 0.9rem;
+}
+.stock-help-modal-body li {
+    margin-bottom: 0.4rem; padding: 0.35rem 0.7rem;
+    background: #faf9ff; border-radius: 8px;
+    border: 1px solid #eeebff;
+}
+.stock-help-modal-body li strong { color: #5b4a9e; }
+.stock-help-modal-scroll::-webkit-scrollbar { width: 5px; }
+.stock-help-modal-scroll::-webkit-scrollbar-track { background: transparent; }
+.stock-help-modal-scroll::-webkit-scrollbar-thumb { background: #d4cdf5; border-radius: 3px; }
 .stock-info { color: #888; font-size: 0.85rem; margin-bottom: 1rem; }
 
 /* カテゴリタブ */
@@ -570,6 +699,22 @@ html, body { overflow: hidden; height: 100%; }
 <script src="{% static 'vendor/jquery.min.js' %}"></script>
 <script src="{% static 'vendor/select2/select2.min.js' %}"></script>
 <script src="{% static 'vendor/chartjs/chart.min.js' %}"></script>
+<script>
+function stockHelpOpen() {
+    const overlay = document.getElementById('stockHelpOverlay');
+    overlay.style.display = 'flex';
+    requestAnimationFrame(function() { overlay.classList.add('active'); });
+}
+function stockHelpClose() {
+    const overlay = document.getElementById('stockHelpOverlay');
+    overlay.classList.remove('active');
+    setTimeout(function() {
+        if (!overlay.classList.contains('active')) overlay.style.display = 'none';
+    }, 300);
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') stockHelpClose(); });
+document.addEventListener('click', function(e) { if (e.target.id === 'stockHelpOverlay') stockHelpClose(); });
+</script>
 <script>
 (function() {
     const REFRESH_SEC = 300;

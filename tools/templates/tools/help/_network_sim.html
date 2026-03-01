@@ -1,10 +1,47 @@
-<h3>使い方</h3>
+<h3>基本操作</h3>
 <ul>
-    <li>ネットワーク機器を配置・接続し、パケットの流れをシミュレーションします。</li>
+    <li><strong>機器配置</strong> — パレットから機器（PC・ルーター・スイッチ等）をクリックし、キャンバス上でクリックして配置</li>
+    <li><strong>移動</strong> — 配置済みの機器をドラッグで移動</li>
+    <li><strong>ケーブル接続</strong> — 「ケーブル接続」ボタンをクリック後、2つの機器を順にクリックして接続</li>
+    <li><strong>削除</strong> — 「削除」ボタンをクリック後、機器またはケーブルをクリックして削除</li>
+    <li><strong>全クリア</strong> — キャンバス上の全機器・接続を一括削除</li>
 </ul>
-<h3>機能</h3>
+<h3>プリセット構成</h3>
 <ul>
-    <li><strong>機器配置</strong> — ルーター・スイッチ・PCをドラッグ&ドロップ</li>
-    <li><strong>接続</strong> — 機器間をケーブルで接続</li>
-    <li><strong>シミュレーション</strong> — パケット送受信の動作を確認</li>
+    <li><strong>シンプル</strong> — PC-Router-PC の基本構成</li>
+    <li><strong>DNS + Web構成</strong> — DNSサーバーとWebサーバーを含む構成</li>
+    <li><strong>冗長ルーター</strong> — 2経路の冗長ルーター構成</li>
+    <li><strong>企業ネットワーク</strong> — ファイアウォール + DMZ を含む企業構成</li>
+    <li><strong>データセンター</strong> — コア・アグリ・アクセスの3層構成</li>
+    <li><strong>メールシステム</strong> — SMTP中継によるメール送受信構成</li>
+    <li><strong>企業フル構成</strong> — DHCP + DNS + Mail + LB を含む総合構成</li>
+</ul>
+<h3>ターミナル</h3>
+<ul>
+    <li><strong>起動方法</strong> — PCを右クリック →「ターミナルを開く」</li>
+    <li><strong>help</strong> — 使用可能なコマンド一覧を表示</li>
+    <li><strong>ping &lt;IP|ホスト名&gt;</strong> — ICMP Echo を送信して疎通確認（パケットの流れをアニメーション表示）</li>
+    <li><strong>traceroute &lt;IP|ホスト名&gt;</strong> — 宛先までの経路をホップごとに表示（tracert でも可）</li>
+    <li><strong>nslookup &lt;ドメイン&gt;</strong> — DNS名前解決（dig でも可）</li>
+    <li><strong>curl &lt;URL|IP&gt;</strong> — HTTP リクエストを送信（wget でも可）</li>
+    <li><strong>ifconfig</strong> — インターフェース情報を表示（ip でも可）</li>
+    <li><strong>arp</strong> — ARPテーブルを表示</li>
+    <li><strong>route</strong> — ルーティングテーブルを表示</li>
+    <li><strong>netstat</strong> — 接続状態を表示</li>
+    <li><strong>dhclient</strong> — DHCPでIPアドレスを自動取得</li>
+    <li><strong>mail &lt;user@domain&gt;</strong> — メールを送信</li>
+    <li><strong>ftp &lt;IP|ホスト名&gt;</strong> — FTP接続</li>
+    <li><strong>ntpdate &lt;IP|ホスト名&gt;</strong> — NTPサーバーと時刻同期</li>
+    <li><strong>tcpdump [キャプチャ名]</strong> — パケットキャプチャログを表示</li>
+    <li><strong>clear</strong> — ターミナル画面をクリア</li>
+</ul>
+<h3>障害シミュレーション</h3>
+<ul>
+    <li><strong>故障設定</strong> — 機器やケーブルを右クリック →「故障を設定」</li>
+    <li>故障中の機器は赤く表示され、パケットが転送されなくなります</li>
+    <li>冗長構成で故障時のフェイルオーバーを確認できます</li>
+</ul>
+<h3>プロパティパネル</h3>
+<ul>
+    <li>機器をクリックすると、IPアドレスやルーティングテーブルなどの設定を確認・編集できます</li>
 </ul>
