@@ -26,7 +26,7 @@ EXCLUDED_IPS = {ip.strip() for ip in _exclude_ips.split(',') if ip.strip()}
 
 # アクセスログ除外User-Agent（検索エンジンボット等）
 EXCLUDED_UA_PATTERNS = re.compile(
-    r'Googlebot|bingbot',
+    r'Googlebot|bingbot|facebookexternalhit',
     re.IGNORECASE,
 )
 
