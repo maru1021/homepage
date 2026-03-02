@@ -188,8 +188,31 @@ def _classification_form_ajax(request, instance=None):
 
 @require_GET
 def api_articles(request):
-    """公開記事からランダム1件を返す（auto_post用）"""
-    article = Article.objects.filter(is_published=True).order_by("?").first()
+    """公開記事からランダム1件を返す（auto_post用）
+
+    クエリパラメータ:
+        classifications: カンマ区切りの分類slug（親slugを指定すると子孫も含む）
+    """
+    qs = Article.objects.filter(is_published=True)
+
+    slugs = request.GET.get("classifications", "")
+    if slugs:
+        slug_list = [s.strip() for s in slugs.split(",") if s.strip()]
+        # 指定slugとその子孫分類を全て取得
+        target_ids = set()
+        for slug in slug_list:
+            parents = Classification.objects.filter(slug=slug)
+            for parent in parents:
+                target_ids.add(parent.id)
+                # 子孫を再帰的に取得（2階層まで）
+                for child in parent.children.all():
+                    target_ids.add(child.id)
+                    for grandchild in child.children.all():
+                        target_ids.add(grandchild.id)
+        if target_ids:
+            qs = qs.filter(classification_id__in=target_ids)
+
+    article = qs.order_by("?").first()
     if not article:
         return JsonResponse({"article": None})
 
