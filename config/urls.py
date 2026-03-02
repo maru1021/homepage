@@ -11,6 +11,24 @@ from tools.sitemaps import ToolsSitemap
 
 
 def robots_txt(request):
+    # AI crawlers and malicious bots to block entirely
+    blocked_bots = [
+        # AI crawlers (US)
+        "GPTBot", "OAI-SearchBot", "ChatGPT-User", "CCBot",
+        "ClaudeBot", "anthropic-ai", "Google-Extended",
+        "Cohere-ai", "PerplexityBot", "Diffbot", "img2dataset",
+        # AI crawlers (China)
+        "Bytespider", "TikTokSpider", "PetalBot",
+        "Baiduspider", "YisouSpider", "Qihoo360Spider",
+        "360Spider", "DeepSeek", "Sogou",
+        # AI crawlers (Other)
+        "YandexBot", "Amazonbot", "meta-externalagent",
+        "FacebookBot", "Timpibot",
+        # SEO crawlers
+        "SemrushBot", "AhrefsBot", "MJ12bot", "DotBot",
+        "MegaIndex", "BLEXBot", "DataForSeoBot",
+        "serpstatbot", "ZoominfoBot",
+    ]
     lines = [
         "User-agent: *",
         "Disallow: /admin/",
@@ -20,15 +38,12 @@ def robots_txt(request):
         "Disallow: /login/",
         "Disallow: /logout/",
         "Disallow: /tools/api/",
+        "Disallow: /vulnerability/api/",
         "",
-        "User-agent: SemrushBot",
-        "Disallow: /",
-        "",
-        "User-agent: TikTokSpider",
-        "Disallow: /",
-        "",
-        f"Sitemap: https://{request.get_host()}/sitemap.xml",
     ]
+    for bot in blocked_bots:
+        lines.extend([f"User-agent: {bot}", "Disallow: /", ""])
+    lines.append(f"Sitemap: https://{request.get_host()}/sitemap.xml")
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
 
