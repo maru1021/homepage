@@ -7,12 +7,31 @@ services:
       POSTGRES_DB: blog
       POSTGRES_USER: blog
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=48MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=128MB
+      - -c
+      - max_connections=20
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - wal_buffers=1MB
+      - -c
+      - checkpoint_completion_target=0.9
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U blog"]
       interval: 5s
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    mem_limit: 100m
 
   web:
     build: .
@@ -38,6 +57,7 @@ services:
         condition: service_healthy
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     restart: unless-stopped
+    mem_limit: 200m
 
   stock_fetcher:
     build: .
@@ -57,6 +77,7 @@ services:
         condition: service_healthy
     command: python manage.py run_stock_scheduler
     restart: unless-stopped
+    mem_limit: 80m
 
 volumes:
   postgres_data:
