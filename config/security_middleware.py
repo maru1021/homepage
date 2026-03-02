@@ -24,6 +24,12 @@ EXCLUDED_PATHS = ('/static/', '/media/', '/favicon.ico')
 _exclude_ips = os.environ.get('ACCESS_LOG_EXCLUDE_IPS', '')
 EXCLUDED_IPS = {ip.strip() for ip in _exclude_ips.split(',') if ip.strip()}
 
+# アクセスログ除外User-Agent（検索エンジンボット等）
+EXCLUDED_UA_PATTERNS = re.compile(
+    r'Googlebot|bingbot',
+    re.IGNORECASE,
+)
+
 
 def get_client_ip(request):
     """クライアントIPアドレスを取得（プロキシ対応）"""
@@ -64,12 +70,13 @@ class AccessLoggingMiddleware:
         response = self.get_response(request)
 
         client_ip = get_client_ip(request)
-        if client_ip not in EXCLUDED_IPS:
+        user_agent = request.META.get('HTTP_USER_AGENT', '-')
+        if client_ip not in EXCLUDED_IPS and not EXCLUDED_UA_PATTERNS.search(user_agent):
             access_logger.info(
                 '%s,%s,%s,%s,%s,%s',
                 client_ip, _get_username(request), request.method,
                 request.path, response.status_code,
-                request.META.get('HTTP_USER_AGENT', '-'),
+                user_agent,
             )
 
         return response
