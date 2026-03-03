@@ -20,6 +20,7 @@ services:
     volumes:
       - ./media:/app/media
       - ./static:/app/static
+      - ./staticfiles:/app/staticfiles
       - ./templates:/app/templates
     env_file:
       - .env
