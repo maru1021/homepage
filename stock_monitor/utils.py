@@ -2,6 +2,7 @@
 import logging
 import math
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone as dt_timezone
 
 from curl_cffi import requests as cffi_requests
@@ -22,6 +23,8 @@ BATCH_SIZE = 50
 BATCH_DELAY = 5
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 30
+YF_DOWNLOAD_TIMEOUT = 30        # yf.download() の HTTP タイムアウト (秒)
+BATCH_TOTAL_TIMEOUT = 300       # 1バッチ全体の上限時間 (秒)
 
 
 # ========== リトライ共通 ==========
@@ -91,7 +94,22 @@ def fetch_yahoo_chart_batch(tickers, range_='1d', interval='1m'):
 
 
 def _download_batch(tickers, range_, interval):
-    """1バッチ分の yf.download() をリトライ付きで実行して結果を返す。"""
+    """1バッチ分の yf.download() をリトライ付きで実行して結果を返す。
+
+    BATCH_TOTAL_TIMEOUT 秒を超えた場合はタイムアウトとして空結果を返す。
+    """
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_download_batch_inner, tickers, range_, interval)
+            return future.result(timeout=BATCH_TOTAL_TIMEOUT)
+    except FuturesTimeoutError:
+        logger.error('yf.download() タイムアウト (%d銘柄, %d秒超過)',
+                     len(tickers), BATCH_TOTAL_TIMEOUT)
+        return {}
+
+
+def _download_batch_inner(tickers, range_, interval):
+    """_download_batch の実体。ThreadPoolExecutor 内で実行される。"""
     import yfinance as yf
 
     ticker_str = ' '.join(tickers)
@@ -105,6 +123,7 @@ def _download_batch(tickers, range_, interval):
                 group_by='ticker',
                 progress=False,
                 threads=True,
+                timeout=YF_DOWNLOAD_TIMEOUT,
             )
         except Exception as e:
             logger.error('yf.download() エラー (%d/%d): %s',
