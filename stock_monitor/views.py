@@ -22,11 +22,17 @@ def index(request):
 
 # ========== 共通ヘルパー ==========
 
-def _get_latest_trading_date():
-    """DB に保存されている最新の取引日を返す"""
+def _get_latest_trading_date(tickers=None):
+    """DB に保存されている最新の取引日を返す。
+
+    tickers が指定された場合、その銘柄のデータがある最新日を返す。
+    これにより未開場のカテゴリでは前日のデータが表示される。
+    """
+    qs = StockPrice.objects
+    if tickers:
+        qs = qs.filter(ticker__in=tickers)
     ts = (
-        StockPrice.objects
-        .order_by('-timestamp')
+        qs.order_by('-timestamp')
         .values_list('timestamp', flat=True)
         .first()
     )
@@ -167,7 +173,7 @@ def api_prices(request):
     category = _parse_category(request)
     category_stocks = get_stocks_for_category(category)
 
-    trading_date = _get_latest_trading_date()
+    trading_date = _get_latest_trading_date(category_stocks.keys())
     if not trading_date:
         return JsonResponse({
             'stocks': [],
@@ -222,7 +228,7 @@ def api_chart_data(request):
         except ValueError:
             return JsonResponse({'charts': {}})
     else:
-        trading_date = _get_latest_trading_date()
+        trading_date = _get_latest_trading_date(tickers)
         if not trading_date:
             return JsonResponse({'charts': {}})
 
@@ -275,7 +281,8 @@ def api_market_overview(request):
     """カテゴリに応じたマーケット概況データを返却"""
     category = _parse_category(request)
     overview = get_market_overview_for_category(category)
-    trading_date = _get_latest_trading_date()
+    category_stocks = get_stocks_for_category(category)
+    trading_date = _get_latest_trading_date(category_stocks.keys())
     no_data = {'price': None, 'diff': None, 'pct': None}
 
     if not trading_date:
