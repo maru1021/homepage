@@ -1,4 +1,0 @@
-services:
-  web:
-    ports:
-      - "8080:8000"

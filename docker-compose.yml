@@ -7,43 +7,84 @@ services:
       POSTGRES_DB: blog
       POSTGRES_USER: blog
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=48MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=128MB
+      - -c
+      - max_connections=50
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - wal_buffers=1MB
+      - -c
+      - checkpoint_completion_target=0.9
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U blog"]
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+    mem_limit: 100m
 
   web:
     build: .
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:8080:8000"
     volumes:
       - ./media:/app/media
       - ./static:/app/static
-      - ./staticfiles:/app/staticfiles
       - ./templates:/app/templates
+      - ./log:/app/log
     env_file:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
-      - DEBUG=${DEBUG:-false}
+      - ALLOWED_HOSTS=maruomosquit.com,www.maruomosquit.com,localhost,127.0.0.1
+      - CSRF_TRUSTED_ORIGINS=https://maruomosquit.com,https://www.maruomosquit.com
       - DATABASE_NAME=blog
       - DATABASE_USER=blog
       - DATABASE_HOST=db
       - DATABASE_PORT=5432
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    mem_limit: 200m
+
+  autoheal:
+    image: willfarrell/autoheal
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=30
+      - AUTOHEAL_START_PERIOD=60
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    mem_limit: 20m
 
   stock_fetcher:
     build: .
+    volumes:
+      - ./media:/app/media
+      - ./log:/app/log
     env_file:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
-      - DEBUG=${DEBUG:-false}
       - DATABASE_NAME=blog
       - DATABASE_USER=blog
       - DATABASE_HOST=db
@@ -53,15 +94,7 @@ services:
         condition: service_healthy
     command: python manage.py run_stock_scheduler
     restart: unless-stopped
-
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-    environment:
-      - ADMIN_IPS=${ADMIN_IPS:-172.16.0.0/12,192.168.0.0/16}
-    depends_on:
-      - web
+    mem_limit: 120m
 
 volumes:
   postgres_data:
