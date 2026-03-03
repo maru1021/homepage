@@ -41,9 +41,15 @@ def _run_command(label, *args):
 
 
 def _run_command_with_lock(label, *args):
-    """排他ロック付きで管理コマンドを実行する"""
-    with _yf_lock:
+    """排他ロック付きで管理コマンドを実行する（最大5分待機）"""
+    acquired = _yf_lock.acquire(timeout=300)
+    if not acquired:
+        logger.warning('%s: ロック取得タイムアウト（他ジョブ実行中）、スキップします', label)
+        return
+    try:
         _run_command(label, *args)
+    finally:
+        _yf_lock.release()
 
 
 class Command(BaseCommand):
