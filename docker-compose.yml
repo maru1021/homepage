@@ -96,5 +96,22 @@ services:
     restart: unless-stopped
     mem_limit: 120m
 
+  weather_fetcher:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - DATABASE_NAME=blog
+      - DATABASE_USER=blog
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python manage.py run_weather_scheduler
+    restart: unless-stopped
+    mem_limit: 80m
+
 volumes:
   postgres_data:

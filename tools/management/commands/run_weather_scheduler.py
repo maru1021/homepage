@@ -31,13 +31,13 @@ class Command(BaseCommand):
 
         scheduler.add_job(
             self._run_fetch,
-            IntervalTrigger(hours=1),
+            IntervalTrigger(hours=6),
             id='weather_fetch',
             name='天気データ取得',
         )
 
         self.stdout.write(self.style.SUCCESS(
-            '天気取得スケジューラを起動しました（1時間間隔）'
+            '天気取得スケジューラを起動しました（6時間間隔）'
         ))
 
         try:
