@@ -22,7 +22,7 @@ _YF_HEADERS = {
 BATCH_SIZE = 20
 BATCH_DELAY = 5
 MAX_RETRIES = 3
-RETRY_BACKOFF_BASE = 30
+RETRY_BACKOFF_BASE = 10
 YF_DOWNLOAD_TIMEOUT = 30        # yf.download() の HTTP タイムアウト (秒)
 BATCH_TOTAL_TIMEOUT = 300       # 1バッチ全体の上限時間 (秒)
 
@@ -98,14 +98,16 @@ def _download_batch(tickers, range_, interval):
 
     BATCH_TOTAL_TIMEOUT 秒を超えた場合はタイムアウトとして空結果を返す。
     """
+    executor = ThreadPoolExecutor(max_workers=1)
     try:
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_download_batch_inner, tickers, range_, interval)
-            return future.result(timeout=BATCH_TOTAL_TIMEOUT)
+        future = executor.submit(_download_batch_inner, tickers, range_, interval)
+        return future.result(timeout=BATCH_TOTAL_TIMEOUT)
     except FuturesTimeoutError:
         logger.error('yf.download() タイムアウト (%d銘柄, %d秒超過)',
                      len(tickers), BATCH_TOTAL_TIMEOUT)
         return {}
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 def _download_batch_inner(tickers, range_, interval):
