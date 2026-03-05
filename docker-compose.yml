@@ -94,7 +94,7 @@ services:
         condition: service_healthy
     command: python manage.py run_stock_scheduler
     restart: unless-stopped
-    mem_limit: 180m
+    mem_limit: 250m
 
   weather_fetcher:
     build: .
