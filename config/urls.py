@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 
 from blog.sitemaps import ArticleSitemap, CategorySitemap, StaticSitemap
 from tools.sitemaps import ToolsSitemap
+from vulnerability.sitemaps import VulnerabilitySitemap
 
 
 def robots_txt(request):
@@ -52,6 +53,7 @@ sitemaps = {
     "categories": CategorySitemap,
     "static": StaticSitemap,
     "tools": ToolsSitemap,
+    "vulnerability": VulnerabilitySitemap,
 }
 
 urlpatterns = [
