@@ -35,7 +35,7 @@
     {% block og_image %}<meta property="og:image" content="https://{{ request.get_host }}{% static 'image/og-default.png' %}">{% endblock %}
     <!-- Twitter Card -->
     <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
-    <meta name="twitter:site" content="@maru1121433">
+    <meta name="twitter:site" content="@maru1151157">
     <meta name="twitter:title" content="{% block twitter_title %}{{ SITE_NAME }}{% endblock %}">
     <meta name="twitter:description" content="{% block twitter_description %}{{ SITE_NAME }} - IT技術を初心者にもわかりやすく解説するブログ{% endblock %}">
     {% block twitter_image %}<meta name="twitter:image" content="https://{{ request.get_host }}{% static 'image/og-default.png' %}">{% endblock %}
@@ -88,6 +88,12 @@
         <main id="main-content" hx-history-elt>
             {% block content %}{% endblock %}
             <footer>
+                <nav class="footer-links">
+                    <a href="{% url 'blog:about' %}">運営者情報</a>
+                    <a href="{% url 'blog:privacy_policy' %}">プライバシーポリシー</a>
+                    <a href="{% url 'blog:disclaimer' %}">免責事項</a>
+                    <a href="{% url 'blog:contact' %}">お問い合わせ</a>
+                </nav>
                 <p>&copy; 2026 {{ SITE_NAME }}</p>
             </footer>
         </main>

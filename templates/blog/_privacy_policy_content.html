@@ -1,0 +1,44 @@
+{% include "blog/_breadcrumb.html" with breadcrumb_current="プライバシーポリシー" %}
+
+<article class="article-detail">
+    <header>
+        <h1>プライバシーポリシー</h1>
+    </header>
+    <div class="article-content">
+        <p>{{ SITE_NAME }}（以下「当サイト」）は、ユーザーの個人情報の取り扱いについて、以下のとおりプライバシーポリシーを定めます。</p>
+
+        <h2 class="section-title">個人情報の収集について</h2>
+        <p>当サイトでは、お問い合わせの際にメールアドレス等の個人情報をご提供いただく場合があります。取得した個人情報は、お問い合わせへの回答や必要な情報のご連絡のために利用し、それ以外の目的では利用いたしません。</p>
+
+        <h2 class="section-title">Cookie（クッキー）について</h2>
+        <p>当サイトでは、ユーザーの利便性向上やアクセス解析のためにCookieを使用しています。Cookieとは、Webサイトがユーザーのブラウザに送信する小さなデータファイルです。</p>
+        <p>ブラウザの設定によりCookieを無効にすることも可能ですが、一部の機能が正常に動作しなくなる場合があります。</p>
+
+        <h2 class="section-title">アクセス解析ツールについて</h2>
+        <p>当サイトでは、Googleによるアクセス解析ツール「Google Analytics」を使用しています。Google Analyticsはデータの収集のためにCookieを使用しますが、このデータは匿名で収集されており、個人を特定するものではありません。</p>
+        <p>Google Analyticsのデータ収集・処理の仕組みについては、<a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">Google のサービスを使用するサイトやアプリから収集した情報の Google による使用</a>をご覧ください。</p>
+
+        <h2 class="section-title">広告配信について</h2>
+        <p>当サイトでは、第三者配信の広告サービス「Google AdSense」を利用する予定です。Google AdSenseでは、ユーザーの興味に応じた広告を表示するためにCookieを使用することがあります。</p>
+        <p>Google AdSenseの詳細については、<a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer">Google の広告に関するポリシー</a>をご確認ください。</p>
+        <p>ユーザーは、Googleの<a href="https://adssettings.google.com/" target="_blank" rel="noopener noreferrer">広告設定ページ</a>で、パーソナライズ広告を無効にすることができます。</p>
+
+        <h2 class="section-title">個人情報の第三者提供について</h2>
+        <p>当サイトでは、取得した個人情報を以下の場合を除き、第三者に提供することはありません。</p>
+        <ul>
+            <li>ユーザー本人の同意がある場合</li>
+            <li>法令に基づく場合</li>
+        </ul>
+
+        <h2 class="section-title">個人情報の安全管理について</h2>
+        <p>当サイトでは、個人情報の漏洩、滅失、毀損を防止するために、適切なセキュリティ対策を講じています。</p>
+
+        <h2 class="section-title">プライバシーポリシーの変更について</h2>
+        <p>当サイトは、必要に応じてプライバシーポリシーを変更することがあります。変更後のプライバシーポリシーは、当ページに掲載した時点から効力を生じるものとします。</p>
+
+        <h2 class="section-title">お問い合わせ</h2>
+        <p>プライバシーポリシーに関するお問い合わせは、<a href="{% url 'blog:contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
+
+        <p class="info-box">制定日: 2026年3月7日</p>
+    </div>
+</article>

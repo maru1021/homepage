@@ -10,6 +10,10 @@ urlpatterns = [
     path("", views.article_list, name="article_list"),
     path("search/", views.article_search, name="article_search"),
     path("feed/", LatestArticlesFeed(), name="feed"),
+    path("privacy/", views.privacy_policy, name="privacy_policy"),
+    path("contact/", views.contact, name="contact"),
+    path("about/", views.about, name="about"),
+    path("disclaimer/", views.disclaimer, name="disclaimer"),
     path("category/<path:path>/", views.category_detail, name="category_detail"),
     path("article/<path:path>/", views.article_detail, name="article_detail"),
     # 分類管理

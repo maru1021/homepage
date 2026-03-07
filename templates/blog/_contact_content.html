@@ -1,0 +1,44 @@
+{% include "blog/_breadcrumb.html" with breadcrumb_current="お問い合わせ" %}
+
+<article class="article-detail">
+    <header>
+        <h1>お問い合わせ</h1>
+    </header>
+    <div class="article-content">
+        <p>当サイトに関するお問い合わせ、ご意見、ご要望は、以下のフォームよりお気軽にご連絡ください。</p>
+
+        {% if sent %}
+        <div class="info-box">
+            <p><strong>お問い合わせを受け付けました。</strong></p>
+            <p>内容を確認の上、返信いたします。通常3営業日以内に回答いたしますので、しばらくお待ちください。</p>
+        </div>
+        {% endif %}
+
+        <h2 class="section-title">お問い合わせフォーム</h2>
+        <form method="post" action="{% url 'blog:contact' %}" class="contact-form">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }} <span class="required">*</span></label>
+                {{ field }}
+                {% if field.errors %}
+                <div class="field-error">{{ field.errors.0 }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary contact-submit">送信する</button>
+        </form>
+
+        <h2 class="section-title">X (Twitter) でのお問い合わせ</h2>
+        <p>X（旧Twitter）のダイレクトメッセージでもお問い合わせを受け付けております。</p>
+        <div class="info-box">
+            <p><strong>X アカウント:</strong> <a href="https://x.com/maru1151157" target="_blank" rel="noopener noreferrer">@maru1151157</a></p>
+        </div>
+
+        <h2 class="section-title">お問い合わせの際のお願い</h2>
+        <ul>
+            <li>お問い合わせの内容によっては、回答にお時間をいただく場合がございます。</li>
+            <li>すべてのお問い合わせに回答できない場合もございますので、あらかじめご了承ください。</li>
+        </ul>
+    </div>
+</article>

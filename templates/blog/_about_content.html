@@ -1,0 +1,32 @@
+{% include "blog/_breadcrumb.html" with breadcrumb_current="運営者情報" %}
+
+<article class="article-detail">
+    <header>
+        <h1>運営者情報</h1>
+    </header>
+    <div class="article-content">
+        <h2 class="section-title">サイトについて</h2>
+        <p>{{ SITE_NAME }}は、プログラミング・サーバー構築・ネットワーク・セキュリティ・AI活用など、IT技術を初心者にもわかりやすく解説する技術ブログです。</p>
+        <p>実務で得た知識や経験をもとに、実践的で役立つ情報を発信することを目指しています。</p>
+
+        <h2 class="section-title">取り扱いジャンル</h2>
+        <ul>
+            <li><strong>プログラミング</strong> — Python, JavaScript, PHP, Ruby, HTML/CSS</li>
+            <li><strong>フレームワーク</strong> — Django, React, Laravel, Ruby on Rails, Bootstrap</li>
+            <li><strong>インフラ・DevOps</strong> — Linux, Docker, nginx, Git</li>
+            <li><strong>ネットワーク・セキュリティ</strong> — SSH, SSL/TLS, ファイアウォール</li>
+            <li><strong>データベース</strong> — SQL, PostgreSQL, MySQL</li>
+            <li><strong>AI・機械学習</strong> — Claude, 自然言語処理</li>
+        </ul>
+
+        <h2 class="section-title">運営者プロフィール</h2>
+        <div class="info-box">
+            <p><strong>運営者:</strong> マルオモスキート</p>
+            <p><strong>X (Twitter):</strong> <a href="https://x.com/maru1151157" target="_blank" rel="noopener noreferrer">@maru1151157</a></p>
+        </div>
+        <p>Web開発・インフラ構築の経験を活かし、技術的な知見を記事にまとめています。初心者がつまずきやすいポイントを丁寧に解説することを心がけています。</p>
+
+        <h2 class="section-title">お問い合わせ</h2>
+        <p>サイトに関するご質問やご意見は、<a href="{% url 'blog:contact' %}">お問い合わせページ</a>よりお気軽にご連絡ください。</p>
+    </div>
+</article>

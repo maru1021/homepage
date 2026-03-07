@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}プライバシーポリシー - {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}{{ SITE_NAME }}のプライバシーポリシーです。個人情報の取り扱い、Cookie、Google Analytics、Google AdSenseについて説明しています。{% endblock %}
+
+{% block robots %}<meta name="robots" content="noindex, follow">{% endblock %}
+
+{% block content %}
+{% include "blog/_privacy_policy_content.html" %}
+{% endblock %}
