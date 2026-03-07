@@ -200,16 +200,6 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# メール設定（お問い合わせフォーム用）
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'poprockguitarmeru@gmail.com')
-CONTACT_EMAIL = os.environ.get('CONTACT_EMAIL', 'poprockguitarmeru@gmail.com')
-
 # Slack通知設定
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '')
 

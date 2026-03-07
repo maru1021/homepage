@@ -1,8 +1,10 @@
+import json
 import logging
+import urllib.request
+import urllib.error
 
 from django.conf import settings as django_settings
 from django.contrib.admin.views.decorators import staff_member_required
-from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
@@ -147,6 +149,33 @@ def privacy_policy(request):
                        title=f"プライバシーポリシー - {SITE_NAME}")
 
 
+def _notify_contact_to_slack(name, email, subject, message):
+    """お問い合わせ内容を Slack #homepage-contact に投稿する。"""
+    token = django_settings.SLACK_BOT_TOKEN
+    if not token:
+        logger.warning("SLACK_BOT_TOKEN が未設定のためSlack通知をスキップ")
+        return
+
+    text = f"*[お問い合わせ] {subject}*\n名前: {name}\nメール: {email}\n\n{message}"
+    payload = json.dumps({
+        'channel': '#homepage-contact',
+        'text': text,
+    }).encode('utf-8')
+
+    req = urllib.request.Request(
+        'https://slack.com/api/chat.postMessage',
+        data=payload,
+        headers={
+            'Content-Type': 'application/json; charset=utf-8',
+            'Authorization': f'Bearer {token}',
+        },
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        body = json.loads(resp.read().decode('utf-8'))
+        if not body.get('ok'):
+            logger.error("Slack API エラー: %s", body.get('error'))
+
+
 def contact(request):
     """お問い合わせフォーム"""
     sent = False
@@ -158,16 +187,10 @@ def contact(request):
             email = form.cleaned_data["email"]
             subject = form.cleaned_data["subject"]
             message = form.cleaned_data["message"]
-            body = f"名前: {name}\nメール: {email}\n\n{message}"
             try:
-                send_mail(
-                    subject=f"[お問い合わせ] {subject}",
-                    message=body,
-                    from_email=django_settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[django_settings.CONTACT_EMAIL],
-                )
+                _notify_contact_to_slack(name, email, subject, message)
             except Exception:
-                logger.exception("お問い合わせメール送信失敗")
+                logger.exception("お問い合わせSlack通知失敗")
             sent = True
             form = ContactForm()
     return htmx_render(request, "blog/contact.html", "blog/_contact_content.html",
