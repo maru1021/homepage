@@ -1,5 +1,8 @@
+import logging
+
 from django.conf import settings as django_settings
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
@@ -8,9 +11,11 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.views.decorators.http import require_GET
 
+logger = logging.getLogger(__name__)
+
 from config.htmx import htmx_render
 from .models import Classification, Article
-from .forms import ClassificationForm
+from .forms import ClassificationForm, ContactForm
 
 ARTICLES_PER_PAGE = 12
 RELATED_ARTICLES_COUNT = 5
@@ -132,6 +137,54 @@ def article_detail(request, path):
         "ancestors": ancestors,
         "related_articles": related_articles,
     }, title=f"{article.title} - {SITE_NAME}")
+
+
+# --- 固定ページ ---
+
+def privacy_policy(request):
+    """プライバシーポリシー"""
+    return htmx_render(request, "blog/privacy_policy.html", "blog/_privacy_policy_content.html",
+                       title=f"プライバシーポリシー - {SITE_NAME}")
+
+
+def contact(request):
+    """お問い合わせフォーム"""
+    sent = False
+    form = ContactForm()
+    if request.method == "POST":
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"]
+            email = form.cleaned_data["email"]
+            subject = form.cleaned_data["subject"]
+            message = form.cleaned_data["message"]
+            body = f"名前: {name}\nメール: {email}\n\n{message}"
+            try:
+                send_mail(
+                    subject=f"[お問い合わせ] {subject}",
+                    message=body,
+                    from_email=django_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[django_settings.CONTACT_EMAIL],
+                )
+            except Exception:
+                logger.exception("お問い合わせメール送信失敗")
+            sent = True
+            form = ContactForm()
+    return htmx_render(request, "blog/contact.html", "blog/_contact_content.html",
+                       {"form": form, "sent": sent},
+                       title=f"お問い合わせ - {SITE_NAME}")
+
+
+def about(request):
+    """運営者情報"""
+    return htmx_render(request, "blog/about.html", "blog/_about_content.html",
+                       title=f"運営者情報 - {SITE_NAME}")
+
+
+def disclaimer(request):
+    """免責事項"""
+    return htmx_render(request, "blog/disclaimer.html", "blog/_disclaimer_content.html",
+                       title=f"免責事項 - {SITE_NAME}")
 
 
 # --- 分類管理（staff のみ） ---
