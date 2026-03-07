@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.sitemaps.views import sitemap
+from django.contrib.sitemaps.views import index as sitemap_index, sitemap
 from django.http import HttpResponse
 from django.urls import path, include
 from django.conf import settings
@@ -58,7 +58,8 @@ sitemaps = {
 
 urlpatterns = [
     path('robots.txt', robots_txt, name='robots_txt'),
-    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
+    path('sitemap.xml', sitemap_index, {'sitemaps': sitemaps, 'sitemap_url_name': 'sitemaps'}),
+    path('sitemap-<section>.xml', sitemap, {'sitemaps': sitemaps}, name='sitemaps'),
     path('login/', LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
     path('admin/', admin.site.urls),
