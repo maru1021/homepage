@@ -779,3 +779,32 @@ def api_geocoding(request):
         return JsonResponse({"error": "ジオコーディングに失敗しました"}, status=502)
 
     return JsonResponse({"results": data} if mode == "search" else {"result": data})
+
+
+# プログラミングクイズ
+def code_quiz(request):
+    return htmx_render(request, "tools/code_quiz.html", "tools/_code_quiz_content.html", title="プログラミングクイズ - 無料オンラインツール")
+
+
+def api_code_quiz(request):
+    from tools.models import QuizQuestion
+    language = request.GET.get("language", "").strip().lower()
+    if language and language not in ('html', 'css', 'javascript', 'python'):
+        return JsonResponse({"error": "無効な言語です"}, status=400)
+
+    questions = QuizQuestion.get_random(language=language or None, count=1)
+    if not questions:
+        return JsonResponse({"error": "問題が登録されていません"}, status=404)
+
+    q = questions[0]
+    return JsonResponse({
+        "id": q.id,
+        "language": q.language,
+        "format": q.question_format,
+        "difficulty": q.difficulty,
+        "question": q.question_text,
+        "code": q.code_snippet,
+        "choices": [q.choice_1, q.choice_2, q.choice_3, q.choice_4],
+        "correct": q.correct_choice,
+        "explanation": q.explanation,
+    })

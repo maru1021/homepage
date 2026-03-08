@@ -61,6 +61,7 @@ urlpatterns = [
     path("holidays/", views.holidays, name="holidays"),
     path("wikipedia/", views.wikipedia, name="wikipedia"),
     path("geocoding/", views.geocoding, name="geocoding"),
+    path("code-quiz/", views.code_quiz, name="code_quiz"),
     # API
     path("api/ogp-preview/", views.api_ogp_preview, name="api_ogp_preview"),
     path("api/ip-lookup/", views.api_ip_lookup, name="api_ip_lookup"),
@@ -71,4 +72,5 @@ urlpatterns = [
     path("api/weather/", views.api_weather, name="api_weather"),
     path("api/wikipedia/", views.api_wikipedia, name="api_wikipedia"),
     path("api/geocoding/", views.api_geocoding, name="api_geocoding"),
+    path("api/code-quiz/", views.api_code_quiz, name="api_code_quiz"),
 ]

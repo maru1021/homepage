@@ -1,0 +1,242 @@
+<div class="tool-page" style="max-width:800px;">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; プログラミングクイズ</div>
+    <h1>プログラミングクイズ</h1>
+    <p class="tool-desc">HTML, CSS, JavaScript, Python の問題にチャレンジしよう</p>
+    <template id="toolHelpSrc">{% include "tools/help/_code_quiz.html" %}</template>
+
+    <div class="cq-controls">
+        <div class="cq-lang-tabs">
+            <button class="cq-lang active" data-lang="">全言語</button>
+            <button class="cq-lang" data-lang="html">HTML</button>
+            <button class="cq-lang" data-lang="css">CSS</button>
+            <button class="cq-lang" data-lang="javascript">JavaScript</button>
+            <button class="cq-lang" data-lang="python">Python</button>
+        </div>
+        <button id="cqNext" class="cq-btn-next">出題</button>
+    </div>
+
+    <div class="cq-stats" id="cqStats">
+        <span id="cqCorrect">0</span> / <span id="cqTotal">0</span> 正解
+        <span class="cq-rate" id="cqRate">( - %)</span>
+    </div>
+
+    <div id="cqArea" class="cq-area">
+        <div class="cq-placeholder">言語を選んで「出題」を押してください</div>
+    </div>
+</div>
+
+{% include "tools/_tool_style.html" %}
+
+<style>
+.cq-controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+.cq-lang-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.cq-lang {
+    padding:6px 14px; border:1px solid var(--color-border); border-radius:var(--radius-md);
+    background:var(--color-bg-white); cursor:pointer; font-size:.85rem; transition:all .2s;
+}
+.cq-lang.active { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+.cq-btn-next {
+    padding:8px 24px; background:linear-gradient(135deg,#6c5ce7,#a855f7); color:#fff;
+    border:none; border-radius:var(--radius-md); cursor:pointer; font-size:.9rem; font-weight:600;
+    transition:opacity .2s;
+}
+.cq-btn-next:hover { opacity:.85; }
+.cq-btn-next:disabled { opacity:.5; cursor:not-allowed; }
+.cq-stats {
+    padding:10px 16px; background:var(--color-bg-subtle); border-radius:var(--radius-md);
+    font-size:.9rem; margin-bottom:16px; display:flex; align-items:center; gap:4px;
+}
+.cq-rate { color:var(--color-primary); font-weight:600; margin-left:4px; }
+.cq-area { min-height:200px; }
+.cq-placeholder { text-align:center; color:var(--color-text-muted); padding:60px 0; font-size:.95rem; }
+
+.cq-badge {
+    display:inline-block; padding:3px 10px; border-radius:var(--radius-sm); font-size:.75rem;
+    font-weight:600; text-transform:uppercase; margin-right:6px;
+}
+.cq-badge-html { background:#e8f5e9; color:#2e7d32; }
+.cq-badge-css { background:#e3f2fd; color:#1565c0; }
+.cq-badge-javascript { background:#fff8e1; color:#f57f17; }
+.cq-badge-python { background:#fce4ec; color:#c62828; }
+.cq-badge-fill { background:#ede7f6; color:#4527a0; }
+.cq-badge-choice { background:#e0f2f1; color:#00695c; }
+.cq-badge-output { background:#fff3e0; color:#e65100; }
+.cq-badge-error { background:#fbe9e7; color:#bf360c; }
+
+.cq-question {
+    background:var(--color-bg-white); border:1px solid var(--color-border);
+    border-radius:var(--radius-lg); padding:20px; margin-bottom:16px;
+}
+.cq-question-text { font-size:.95rem; line-height:1.7; margin-bottom:12px; }
+.cq-code {
+    background:#1e1e2e; color:#cdd6f4; padding:16px; border-radius:var(--radius-md);
+    font-family:'Fira Code',monospace; font-size:.82rem; line-height:1.6;
+    overflow-x:auto; white-space:pre; margin-bottom:16px;
+}
+.cq-blank { background:#f9e2af; color:#1e1e2e; padding:1px 12px; border-radius:3px; font-weight:700; }
+
+.cq-choices { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+.cq-choice {
+    padding:14px 18px; border:2px solid var(--color-border); border-radius:var(--radius-md);
+    background:var(--color-bg-white); cursor:pointer; font-size:.9rem; transition:all .2s;
+    display:flex; align-items:flex-start; gap:10px;
+}
+.cq-choice:hover:not(.cq-answered) { border-color:var(--color-primary); background:#f5f3ff; }
+.cq-choice-num {
+    flex-shrink:0; width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; background:var(--color-bg-subtle); font-weight:700; font-size:.8rem;
+}
+.cq-choice-text { flex:1; word-break:break-all; white-space:pre-wrap; }
+.cq-choice.cq-correct { border-color:#22c55e; background:#f0fdf4; }
+.cq-choice.cq-correct .cq-choice-num { background:#22c55e; color:#fff; }
+.cq-choice.cq-wrong { border-color:#ef4444; background:#fef2f2; }
+.cq-choice.cq-wrong .cq-choice-num { background:#ef4444; color:#fff; }
+.cq-choice.cq-answered { cursor:default; }
+
+.cq-explanation {
+    padding:16px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:var(--radius-md);
+    font-size:.88rem; line-height:1.7; display:none;
+}
+.cq-explanation-title { font-weight:700; color:var(--color-primary); margin-bottom:6px; }
+
+.cq-result-icon { font-size:1.2rem; margin-right:6px; }
+.cq-btn-next-q {
+    display:block; width:100%; margin-top:14px; padding:10px; background:linear-gradient(135deg,#6c5ce7,#a855f7);
+    color:#fff; border:none; border-radius:var(--radius-md); cursor:pointer; font-size:.9rem; font-weight:600;
+    transition:opacity .2s;
+}
+.cq-btn-next-q:hover { opacity:.85; }
+</style>
+
+<script>
+(function() {
+    var lang = '';
+    var correct = 0, total = 0;
+
+    var elStats = document.getElementById('cqStats');
+    var elCorrect = document.getElementById('cqCorrect');
+    var elTotal = document.getElementById('cqTotal');
+    var elRate = document.getElementById('cqRate');
+    var elArea = document.getElementById('cqArea');
+    var elNext = document.getElementById('cqNext');
+
+    document.querySelectorAll('.cq-lang').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.cq-lang').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            lang = btn.dataset.lang;
+        });
+    });
+
+    function updateStats() {
+        elCorrect.textContent = correct;
+        elTotal.textContent = total;
+        if (total > 0) {
+            elRate.textContent = '(' + Math.round(correct / total * 100) + '%)';
+        } else {
+            elRate.textContent = '( - %)';
+        }
+    }
+
+    function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function renderCode(code) {
+        return escapeHtml(code).replace(/___/g, '<span class="cq-blank">???</span>');
+    }
+
+    function formatMap() {
+        return { fill:'穴埋め', choice:'選択', output:'出力予測', error:'エラー発見' };
+    }
+
+    function loadQuestion() {
+        elNext.disabled = true;
+        elArea.innerHTML = '<div class="cq-placeholder">読み込み中...</div>';
+        var url = '{% url "tools:api_code_quiz" %}';
+        if (lang) url += '?language=' + lang;
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+            elNext.disabled = false;
+            if (data.error) {
+                elArea.innerHTML = '<div class="cq-placeholder">' + escapeHtml(data.error) + '</div>';
+                return;
+            }
+            renderQuestion(data);
+        }).catch(function() {
+            elNext.disabled = false;
+            elArea.innerHTML = '<div class="cq-placeholder">読み込みに失敗しました</div>';
+        });
+    }
+
+    function renderQuestion(q) {
+        var fm = formatMap();
+        var html = '<div class="cq-question">';
+        html += '<div style="margin-bottom:10px;">';
+        html += '<span class="cq-badge cq-badge-' + q.language + '">' + escapeHtml(q.language) + '</span>';
+        html += '<span class="cq-badge cq-badge-' + q.format + '">' + escapeHtml(fm[q.format] || q.format) + '</span>';
+        html += '</div>';
+        html += '<div class="cq-question-text">' + escapeHtml(q.question) + '</div>';
+        if (q.code) {
+            html += '<div class="cq-code">' + renderCode(q.code) + '</div>';
+        }
+        html += '</div>';
+
+        html += '<div class="cq-choices" id="cqChoices">';
+        var labels = ['A','B','C','D'];
+        for (var i = 0; i < q.choices.length; i++) {
+            html += '<div class="cq-choice" data-idx="' + (i+1) + '">';
+            html += '<span class="cq-choice-num">' + labels[i] + '</span>';
+            html += '<span class="cq-choice-text">' + escapeHtml(q.choices[i]) + '</span>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        html += '<div class="cq-explanation" id="cqExplanation">';
+        html += '<div class="cq-explanation-title"><span class="cq-result-icon" id="cqResultIcon"></span><span id="cqResultText"></span></div>';
+        html += '<div>' + escapeHtml(q.explanation) + '</div>';
+        html += '<button class="cq-btn-next-q" id="cqNextQ">次の問題へ</button>';
+        html += '</div>';
+
+        elArea.innerHTML = html;
+
+        var answered = false;
+        document.querySelectorAll('.cq-choice').forEach(function(el) {
+            el.addEventListener('click', function() {
+                if (answered) return;
+                answered = true;
+                total++;
+                var idx = parseInt(el.dataset.idx);
+                var isCorrect = (idx === q.correct);
+                if (isCorrect) correct++;
+                updateStats();
+
+                document.querySelectorAll('.cq-choice').forEach(function(c) {
+                    c.classList.add('cq-answered');
+                    var ci = parseInt(c.dataset.idx);
+                    if (ci === q.correct) c.classList.add('cq-correct');
+                    if (ci === idx && !isCorrect) c.classList.add('cq-wrong');
+                });
+
+                var expEl = document.getElementById('cqExplanation');
+                var iconEl = document.getElementById('cqResultIcon');
+                var textEl = document.getElementById('cqResultText');
+                if (isCorrect) {
+                    iconEl.textContent = '\u2705';
+                    textEl.textContent = ' \u6b63\u89e3\uff01';
+                } else {
+                    iconEl.textContent = '\u274c';
+                    textEl.textContent = ' \u4e0d\u6b63\u89e3\u2026\u6b63\u89e3\u306f ' + labels[q.correct - 1];
+                }
+                expEl.style.display = 'block';
+                expEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+                document.getElementById('cqNextQ').addEventListener('click', loadQuestion);
+            });
+        });
+    }
+
+    elNext.addEventListener('click', loadQuestion);
+})();
+</script>

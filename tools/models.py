@@ -1,4 +1,52 @@
+import random
+
 from django.db import models
+
+
+class QuizQuestion(models.Model):
+    LANGUAGE_CHOICES = [
+        ('html', 'HTML'),
+        ('css', 'CSS'),
+        ('javascript', 'JavaScript'),
+        ('python', 'Python'),
+    ]
+    FORMAT_CHOICES = [
+        ('fill', '穴埋め'),
+        ('choice', '選択'),
+        ('output', '出力予測'),
+        ('error', 'エラー発見'),
+    ]
+
+    language = models.CharField('言語', max_length=20, choices=LANGUAGE_CHOICES, db_index=True)
+    question_format = models.CharField('形式', max_length=20, choices=FORMAT_CHOICES)
+    difficulty = models.IntegerField('難易度', default=1, help_text='1=初級, 2=中級, 3=上級')
+    question_text = models.TextField('問題文')
+    code_snippet = models.TextField('コードスニペット', blank=True)
+    choice_1 = models.CharField('選択肢1', max_length=500)
+    choice_2 = models.CharField('選択肢2', max_length=500)
+    choice_3 = models.CharField('選択肢3', max_length=500)
+    choice_4 = models.CharField('選択肢4', max_length=500)
+    correct_choice = models.IntegerField('正解番号', help_text='1〜4')
+    explanation = models.TextField('解説')
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'クイズ問題'
+        verbose_name_plural = 'クイズ問題'
+
+    def __str__(self):
+        return f'[{self.language}] {self.question_text[:50]}'
+
+    @classmethod
+    def get_random(cls, language=None, count=1):
+        qs = cls.objects.all()
+        if language:
+            qs = qs.filter(language=language)
+        ids = list(qs.values_list('id', flat=True))
+        if not ids:
+            return []
+        selected = random.sample(ids, min(count, len(ids)))
+        return list(qs.filter(id__in=selected))
 
 
 class WeatherForecast(models.Model):
