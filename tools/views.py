@@ -797,7 +797,7 @@ def api_code_quiz(request):
         return JsonResponse({"error": "問題が登録されていません"}, status=404)
 
     q = questions[0]
-    return JsonResponse({
+    resp = JsonResponse({
         "id": q.id,
         "language": q.language,
         "format": q.question_format,
@@ -808,3 +808,5 @@ def api_code_quiz(request):
         "correct": q.correct_choice,
         "explanation": q.explanation,
     })
+    resp["Cache-Control"] = "no-store"
+    return resp
