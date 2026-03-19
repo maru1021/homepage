@@ -14,7 +14,7 @@ _LINK_CACHE_TIMEOUT = 300  # 5分
 
 # preserve 対象の正規表現パターン
 _PRESERVE_BLOCK_RE = re.compile(
-    r'<(pre|code|h1|h2|h3|h4)[^>]*>.*?</\1>', re.DOTALL
+    r'<(pre|code|script|h1|h2|h3|h4)[^>]*>.*?</\1>', re.DOTALL
 )
 _PRESERVE_SPAN_RE = re.compile(
     r'<span class="(tag|category|glossary-term)"[^>]*>.*?</span>', re.DOTALL

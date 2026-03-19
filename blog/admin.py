@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Classification, Article, GlossaryTerm, UserProfile
+from .models import Classification, Article, GlossaryTerm, UserProfile, AffiliateLink
 
 
 @admin.register(Classification)
@@ -13,8 +13,9 @@ class ClassificationAdmin(admin.ModelAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ["title", "short_title", "classification", "is_published", "published_at"]
+    list_display = ["title", "short_title", "classification", "order", "is_published", "published_at"]
     list_filter = ["classification", "is_published"]
+    list_editable = ["order"]
     search_fields = ["title", "content"]
     prepopulated_fields = {"slug": ("title",)}
 
@@ -23,6 +24,15 @@ class ArticleAdmin(admin.ModelAdmin):
 class GlossaryTermAdmin(admin.ModelAdmin):
     list_display = ["term", "reading", "description"]
     search_fields = ["term", "reading"]
+
+
+@admin.register(AffiliateLink)
+class AffiliateLinkAdmin(admin.ModelAdmin):
+    list_display = ["service_name", "url", "order", "is_active"]
+    list_filter = ["is_active", "classifications"]
+    search_fields = ["service_name", "description"]
+    filter_horizontal = ["classifications"]
+    list_editable = ["order", "is_active"]
 
 
 @admin.register(UserProfile)

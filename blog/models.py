@@ -54,13 +54,14 @@ class Article(models.Model):
         blank=True,
         related_name="articles",
     )
+    order = models.IntegerField("表示順", default=0)
     is_published = models.BooleanField("公開", default=False)
     published_at = models.DateTimeField("公開日時", blank=True, null=True)
     created_at = models.DateTimeField("作成日時", auto_now_add=True)
     updated_at = models.DateTimeField("更新日時", auto_now=True)
 
     class Meta:
-        ordering = ["-published_at"]
+        ordering = ["order", "-published_at"]
         verbose_name = "記事"
         verbose_name_plural = "記事"
 
@@ -91,6 +92,33 @@ class GlossaryTerm(models.Model):
 
     def __str__(self):
         return self.term
+
+
+class AffiliateLink(models.Model):
+    service_name = models.CharField("サービス名", max_length=100)
+    url = models.URLField("アフィリエイトURL", max_length=500)
+    description = models.TextField("説明文", max_length=300, blank=True)
+    display_text = models.CharField("表示テキスト", max_length=100, default="詳しく見る")
+    icon = models.CharField("アイコン（Bootstrap Icons）", max_length=50, blank=True, help_text="例: bi-hdd-rack, bi-globe, bi-server")
+    badge = models.CharField("バッジテキスト", max_length=30, blank=True, help_text="例: おすすめ, 人気No.1")
+    color = models.CharField("テーマカラー", max_length=7, default="#10b981", help_text="例: #10b981")
+    classifications = models.ManyToManyField(
+        Classification,
+        verbose_name="対象分類",
+        related_name="affiliate_links",
+        blank=True,
+    )
+    order = models.IntegerField("表示順", default=0)
+    is_active = models.BooleanField("有効", default=True)
+    created_at = models.DateTimeField("作成日時", auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "service_name"]
+        verbose_name = "アフィリエイトリンク"
+        verbose_name_plural = "アフィリエイトリンク"
+
+    def __str__(self):
+        return self.service_name
 
 
 class UserProfile(models.Model):

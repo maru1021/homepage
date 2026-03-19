@@ -35,3 +35,288 @@
     </div>
 </section>
 {% endif %}
+
+{% if affiliate_links %}
+<section class="affiliate-recommendations" id="affiliate-section">
+    <h2>おすすめサービス</h2>
+    <div class="affiliate-list">
+        {% for link in affiliate_links %}
+        <a href="{{ link.url }}" class="affiliate-card" target="_blank" rel="noopener noreferrer sponsored" style="--card-color: {{ link.color }}" data-anim="{{ link.icon }}" data-color="{{ link.color }}">
+            <div class="affiliate-three"></div>
+            <div class="affiliate-icon">
+                <i class="bi {{ link.icon|default:'bi-box-arrow-up-right' }}"></i>
+            </div>
+            <div class="affiliate-info">
+                <span class="affiliate-name">{{ link.service_name }}</span>
+                {% if link.description %}
+                <p class="affiliate-desc">{{ link.description }}</p>
+                {% endif %}
+            </div>
+            <span class="affiliate-cta">{{ link.display_text }} <i class="bi bi-arrow-right"></i></span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+<script>
+(function(){
+  const section = document.getElementById('affiliate-section');
+  if (!section) return;
+  let loaded = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !loaded) {
+      loaded = true;
+      observer.disconnect();
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+      s.onload = initThreeCards;
+      document.head.appendChild(s);
+    }
+  }, { rootMargin: '200px' });
+  observer.observe(section);
+
+  function hexToThree(hex) {
+    return parseInt(hex.replace('#',''), 16);
+  }
+
+  function initThreeCards() {
+    const cards = section.querySelectorAll('.affiliate-card');
+    cards.forEach(card => {
+      const container = card.querySelector('.affiliate-three');
+      const anim = card.dataset.anim || '';
+      const color = card.dataset.color || '#10b981';
+      const col = hexToThree(color);
+      const rect = card.getBoundingClientRect();
+      const w = rect.width, h = rect.height;
+      // カードの右60%にだけ3Dを表示
+      const aspect = w / h;
+
+      const scene = new THREE.Scene();
+      const frustum = 3;
+      const camera = new THREE.OrthographicCamera(
+        -frustum * aspect, frustum * aspect,
+        frustum, -frustum, 0.1, 100
+      );
+      camera.position.set(0, 0, 10);
+      camera.lookAt(0, 0, 0);
+
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      // カードの右寄り（右40%あたりに中心）
+      const rightX = frustum * aspect * 0.35;
+
+      let animFn;
+      if (anim.includes('hdd-rack')) animFn = createNetwork(scene, col, rightX);
+      else if (anim.includes('server')) animFn = createDataFlow(scene, col, rightX, frustum);
+      else if (anim.includes('globe')) animFn = createGlobe(scene, col, rightX);
+      else animFn = createNetwork(scene, col, rightX);
+
+      let running = true;
+      function loop() {
+        if (!running) return;
+        requestAnimationFrame(loop);
+        animFn();
+        renderer.render(scene, camera);
+      }
+      loop();
+
+      card.addEventListener('mouseenter', () => animFn.boost && animFn.boost(true));
+      card.addEventListener('mouseleave', () => animFn.boost && animFn.boost(false));
+      window.addEventListener('beforeunload', () => { running = false; renderer.dispose(); });
+    });
+  }
+
+  // === VPS: サイバーグリッド + ネオンノード ===
+  function createNetwork(scene, color, cx) {
+    // 六角形グリッド
+    const gridMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.12 });
+    for (let row = -3; row <= 3; row++) {
+      for (let col = -3; col <= 4; col++) {
+        const x = cx + col * 1.1 + (row % 2) * 0.55;
+        const y = row * 0.95;
+        const pts = [];
+        for (let k = 0; k <= 6; k++) {
+          const a = Math.PI / 3 * k + Math.PI / 6;
+          pts.push(new THREE.Vector3(x + Math.cos(a)*0.5, y + Math.sin(a)*0.5, -1));
+        }
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
+      }
+    }
+
+    // ノード + グロー
+    const nodeMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8 });
+    const glowMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.15 });
+    const lineMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.3 });
+    const nodes = [];
+    for (let i = 0; i < 22; i++) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), nodeMat);
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), glowMat);
+      m.position.set(cx + (Math.random()-0.4)*5, (Math.random()-0.5)*4, (Math.random()-0.5)*2);
+      glow.position.copy(m.position);
+      m.userData.vel = new THREE.Vector3((Math.random()-0.5)*0.015, (Math.random()-0.5)*0.012, 0);
+      m.userData.glow = glow;
+      scene.add(m); scene.add(glow);
+      nodes.push(m);
+    }
+    let lines = [], speed = 1;
+    const fn = function() {
+      nodes.forEach(n => {
+        n.position.add(n.userData.vel.clone().multiplyScalar(speed));
+        n.userData.glow.position.copy(n.position);
+        if (n.position.x < cx-3 || n.position.x > cx+4) n.userData.vel.x *= -1;
+        if (Math.abs(n.position.y) > 2.5) n.userData.vel.y *= -1;
+      });
+      lines.forEach(l => { scene.remove(l); l.geometry.dispose(); });
+      lines = [];
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i+1; j < nodes.length; j++) {
+          if (nodes[i].position.distanceTo(nodes[j].position) < 1.8) {
+            const g = new THREE.BufferGeometry().setFromPoints([nodes[i].position.clone(), nodes[j].position.clone()]);
+            const l = new THREE.Line(g, lineMat);
+            scene.add(l); lines.push(l);
+          }
+        }
+      }
+    };
+    fn.boost = (on) => { speed = on ? 2.5 : 1; };
+    return fn;
+  }
+
+  // === レンタルサーバー: ホログラフィックデータレイン ===
+  function createDataFlow(scene, color, cx, frustum) {
+    // 縦グリッド
+    const gridMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.06 });
+    for (let i = -4; i <= 5; i++) {
+      const pts = [new THREE.Vector3(cx + i*0.7, -frustum-1, -1), new THREE.Vector3(cx + i*0.7, frustum+1, -1)];
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
+    }
+
+    // パーティクル
+    const count = 250;
+    const positions = new Float32Array(count * 3);
+    const velocities = [];
+    for (let i = 0; i < count; i++) {
+      positions[i*3] = cx + (Math.random()-0.3)*6;
+      positions[i*3+1] = (Math.random()-0.5)*8;
+      positions[i*3+2] = (Math.random()-0.5)*2;
+      velocities.push(0.01 + Math.random()*0.03);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color, size: 0.08, transparent: true, opacity: 0.6 })));
+
+    // 光のバー
+    const barMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.2 });
+    const bars = [];
+    for (let i = 0; i < 5; i++) {
+      const h = 0.4 + Math.random()*2;
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.1, h, 0.1), barMat);
+      bar.position.set(cx + (i-2)*1.3, -frustum + h/2 + Math.random(), 0);
+      bar.userData.phase = Math.random()*Math.PI*2;
+      scene.add(bar); bars.push(bar);
+    }
+
+    // 水平スキャンライン
+    const scanMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.1 });
+    const scan = new THREE.Mesh(new THREE.PlaneGeometry(6, 0.02), scanMat);
+    scan.position.set(cx, 0, 0.5);
+    scan.userData.phase = 0;
+    scene.add(scan);
+
+    let speed = 1;
+    const fn = function() {
+      const pos = geo.attributes.position.array;
+      for (let i = 0; i < count; i++) {
+        pos[i*3+1] += velocities[i] * speed;
+        if (pos[i*3+1] > frustum+1) { pos[i*3+1] = -frustum-1; pos[i*3] = cx + (Math.random()-0.3)*6; }
+      }
+      geo.attributes.position.needsUpdate = true;
+      bars.forEach(b => { b.userData.phase += 0.025*speed; b.scale.y = 0.5 + Math.sin(b.userData.phase)*0.5; });
+      scan.userData.phase += 0.02 * speed;
+      scan.position.y = Math.sin(scan.userData.phase) * frustum;
+    };
+    fn.boost = (on) => { speed = on ? 3 : 1; };
+    return fn;
+  }
+
+  // === ドメイン: ホロ地球 + 軌道 + スキャン ===
+  function createGlobe(scene, color, cx) {
+    // ワイヤー地球
+    const globe = new THREE.Mesh(
+      new THREE.SphereGeometry(1.6, 30, 30),
+      new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.18 })
+    );
+    globe.position.x = cx;
+    scene.add(globe);
+
+    // 内部グロー
+    const inner = new THREE.Mesh(
+      new THREE.SphereGeometry(1.5, 16, 16),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.05 })
+    );
+    inner.position.x = cx;
+    scene.add(inner);
+
+    // 軌道リング
+    const rings = [];
+    for (let i = 0; i < 3; i++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.9 + i*0.25, 0.015, 8, 90),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.25 })
+      );
+      ring.position.x = cx;
+      ring.rotation.x = Math.PI/2 + (i-1)*0.4;
+      ring.rotation.y = (i-1)*0.25;
+      scene.add(ring); rings.push(ring);
+    }
+
+    // 周回ドット + グロー
+    const orbitDots = [];
+    for (let i = 0; i < 10; i++) {
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 6, 6),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 })
+      );
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 6, 6),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.15 })
+      );
+      dot.userData = { ring: i%3, angle: Math.random()*Math.PI*2, speed: 0.012+Math.random()*0.015, glow };
+      scene.add(dot); scene.add(glow);
+      orbitDots.push(dot);
+    }
+
+    // スキャンライン
+    const scan = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.5, 0.03),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.15 })
+    );
+    scan.position.set(cx, 0, 1);
+    scan.userData.phase = 0;
+    scene.add(scan);
+
+    let speed = 1;
+    const fn = function() {
+      globe.rotation.y += 0.005 * speed;
+      inner.rotation.y -= 0.003 * speed;
+      rings.forEach((r,i) => { r.rotation.z += (0.003 + i*0.001) * speed; });
+      orbitDots.forEach(d => {
+        d.userData.angle += d.userData.speed * speed;
+        const r = 1.9 + d.userData.ring * 0.25;
+        const ring = rings[d.userData.ring];
+        d.position.x = cx + Math.cos(d.userData.angle) * r;
+        d.position.y = Math.sin(d.userData.angle) * r * Math.cos(ring.rotation.x);
+        d.position.z = Math.sin(d.userData.angle) * r * Math.sin(ring.rotation.x);
+        d.userData.glow.position.copy(d.position);
+      });
+      scan.userData.phase += 0.015 * speed;
+      scan.position.y = Math.sin(scan.userData.phase) * 2;
+    };
+    fn.boost = (on) => { speed = on ? 2.5 : 1; };
+    return fn;
+  }
+})();
+</script>
+{% endif %}

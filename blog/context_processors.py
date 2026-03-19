@@ -11,15 +11,15 @@ def site_name(request):
 
 def sidebar_classifications(request):
     """サイドバー用: ルート分類を全テンプレートに渡す"""
-    published_articles = Prefetch("articles", queryset=Article.objects.filter(is_published=True))
+    published_qs = Article.objects.filter(is_published=True)
     roots = (
         Classification.objects
         .filter(parent=None)
         .prefetch_related(
             "children__children__children",
-            published_articles,
-            Prefetch("children__articles", queryset=Article.objects.filter(is_published=True)),
-            Prefetch("children__children__articles", queryset=Article.objects.filter(is_published=True)),
+            Prefetch("articles", queryset=published_qs),
+            Prefetch("children__articles", queryset=published_qs),
+            Prefetch("children__children__articles", queryset=published_qs),
         )
     )
     return {"sidebar_roots": roots}

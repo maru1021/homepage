@@ -16,7 +16,7 @@ from django.views.decorators.http import require_GET
 logger = logging.getLogger(__name__)
 
 from config.htmx import htmx_render
-from .models import Classification, Article
+from .models import Classification, Article, AffiliateLink
 from .forms import ClassificationForm, ContactForm
 
 ARTICLES_PER_PAGE = 12
@@ -134,10 +134,21 @@ def article_detail(request, path):
             .order_by("-published_at")[:RELATED_ARTICLES_COUNT]
         )
 
+    affiliate_links = []
+    if ancestors:
+        ancestor_ids = [c.pk for c in ancestors]
+        affiliate_links = list(
+            AffiliateLink.objects
+            .filter(is_active=True, classifications__pk__in=ancestor_ids)
+            .distinct()
+            .order_by("order")
+        )
+
     return htmx_render(request, "blog/article_detail.html", "blog/_article_detail_content.html", {
         "article": article,
         "ancestors": ancestors,
         "related_articles": related_articles,
+        "affiliate_links": affiliate_links,
     }, title=f"{article.title} - {SITE_NAME}")
 
 
@@ -274,17 +285,11 @@ def api_articles(request):
     slugs = request.GET.get("classifications", "")
     if slugs:
         slug_list = [s.strip() for s in slugs.split(",") if s.strip()]
-        # 指定slugとその子孫分類を全て取得
-        target_ids = set()
+        target_ids = []
         for slug in slug_list:
-            parents = Classification.objects.filter(slug=slug)
-            for parent in parents:
-                target_ids.add(parent.id)
-                # 子孫を再帰的に取得（2階層まで）
-                for child in parent.children.all():
-                    target_ids.add(child.id)
-                    for grandchild in child.children.all():
-                        target_ids.add(grandchild.id)
+            for cls in Classification.objects.filter(slug=slug):
+                target_ids.append(cls.pk)
+                _collect_descendant_ids(cls, target_ids)
         if target_ids:
             qs = qs.filter(classification_id__in=target_ids)
 
