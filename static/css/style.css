@@ -891,6 +891,7 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
 
 /* レスポンシブ */
 @media (max-width: 768px) {
+    .layout { z-index: auto; }
     .sidebar-toggle { display: block; }
 
     .header-search { display: none; }
