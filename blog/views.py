@@ -11,7 +11,8 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
 
 logger = logging.getLogger(__name__)
 
@@ -275,12 +276,17 @@ def _classification_form_ajax(request, instance=None):
 
 @require_GET
 def api_articles(request):
-    """公開記事からランダム1件を返す（auto_post用）
+    """公開記事から1件を返す（auto_post用）
 
     クエリパラメータ:
         classifications: カンマ区切りの分類slug（親slugを指定すると子孫も含む）
+        exclude_tweeted: 1 なら投稿済み記事を除外
+        ordered: 1 なら order 昇順（簡単→難しい）、省略時はランダム
     """
     qs = Article.objects.filter(is_published=True)
+
+    if request.GET.get("exclude_tweeted") == "1":
+        qs = qs.filter(is_tweeted=False)
 
     slugs = request.GET.get("classifications", "")
     if slugs:
@@ -293,13 +299,38 @@ def api_articles(request):
         if target_ids:
             qs = qs.filter(classification_id__in=target_ids)
 
-    article = qs.order_by("?").first()
+    if request.GET.get("ordered") == "1":
+        article = qs.order_by("order", "pk").first()
+    else:
+        article = qs.order_by("?").first()
+
     if not article:
         return JsonResponse({"article": None})
 
     return JsonResponse({"article": {
+        "id": article.pk,
         "title": article.title,
         "excerpt": article.excerpt or "",
         "content_text": strip_tags(article.content)[:1000],
         "url": article.get_absolute_url(),
     }})
+
+
+@csrf_exempt
+@require_POST
+def api_mark_tweeted(request):
+    """記事を投稿済みとしてマークする（auto_post用）"""
+    import json
+    try:
+        data = json.loads(request.body)
+        article_id = data.get("article_id")
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "invalid request"}, status=400)
+
+    try:
+        article = Article.objects.get(pk=article_id)
+        article.is_tweeted = True
+        article.save(update_fields=["is_tweeted"])
+        return JsonResponse({"ok": True})
+    except Article.DoesNotExist:
+        return JsonResponse({"error": "not found"}, status=404)

@@ -7,15 +7,6 @@
         <span class="category">{{ article.classification.name }}</span>
         {% endif %}
         <h1>{{ article.title }}</h1>
-        <div class="article-meta">
-            <div class="article-dates">
-                <time datetime="{{ article.published_at|date:'Y-m-d' }}">{{ article.published_at|date:"Y年n月j日" }} 公開</time>
-                {% if article.updated_at and article.updated_at != article.published_at %}
-                <time datetime="{{ article.updated_at|date:'Y-m-d' }}" class="updated-date">{{ article.updated_at|date:"Y年n月j日" }} 更新</time>
-                {% endif %}
-            </div>
-            <span class="reading-time">{{ article.content|reading_time }}分で読めます</span>
-        </div>
     </header>
     <div class="article-content">
         {{ article.content|glossary_tooltip|auto_internal_links:article }}
@@ -29,7 +20,6 @@
         {% for related in related_articles %}
         <a href="{{ related.get_absolute_url }}" class="related-article-card htmx-link">
             <span class="related-article-title">{{ related.title }}</span>
-            <time datetime="{{ related.published_at|date:'Y-m-d' }}">{{ related.published_at|date:"Y年n月j日" }}</time>
         </a>
         {% endfor %}
     </div>

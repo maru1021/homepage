@@ -13,9 +13,9 @@ class ClassificationAdmin(admin.ModelAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ["title", "short_title", "classification", "order", "is_published", "published_at"]
-    list_filter = ["classification", "is_published"]
-    list_editable = ["order"]
+    list_display = ["title", "short_title", "classification", "order", "is_published", "is_tweeted", "published_at"]
+    list_filter = ["classification", "is_published", "is_tweeted"]
+    list_editable = ["order", "is_tweeted"]
     search_fields = ["title", "content"]
     prepopulated_fields = {"slug": ("title",)}
 

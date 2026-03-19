@@ -8,6 +8,5 @@
         {% endif %}
         <h2><a href="{{ article.get_absolute_url }}" class="htmx-link">{{ article.title }}</a></h2>
         <p>{{ article.excerpt }}</p>
-        <time datetime="{{ article.published_at|date:'Y-m-d' }}">{{ article.published_at|date:"Y年n月j日" }}</time>
     </div>
 </article>

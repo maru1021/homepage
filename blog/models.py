@@ -57,6 +57,7 @@ class Article(models.Model):
     order = models.IntegerField("表示順", default=0)
     is_published = models.BooleanField("公開", default=False)
     published_at = models.DateTimeField("公開日時", blank=True, null=True)
+    is_tweeted = models.BooleanField("X投稿済み", default=False)
     created_at = models.DateTimeField("作成日時", auto_now_add=True)
     updated_at = models.DateTimeField("更新日時", auto_now=True)
 

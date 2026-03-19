@@ -7,6 +7,7 @@ app_name = "blog"
 
 urlpatterns = [
     path("api/articles/", views.api_articles, name="api_articles"),
+    path("api/articles/mark-tweeted/", views.api_mark_tweeted, name="api_mark_tweeted"),
     path("", views.article_list, name="article_list"),
     path("search/", views.article_search, name="article_search"),
     path("feed/", LatestArticlesFeed(), name="feed"),
