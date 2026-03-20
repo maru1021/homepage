@@ -1,8 +1,42 @@
+// htmx遷移時のクリーンアップコールバック（Leaflet/Three.js等が登録する）
+window.__htmxCleanup = [];
+
 document.addEventListener("DOMContentLoaded", () => {
     setupCodeTabs(document);
     setupHtmxLinks(document);
     initGlossaryTooltips();
     highlightActiveLink();
+
+    // 現在表示中と同じURLへのリンククリックをブロック（JS状態破壊を防止）
+    document.addEventListener("htmx:beforeRequest", (e) => {
+        const elt = e.detail.elt;
+        if (!elt || !elt.closest(".htmx-link")) return;
+        if (e.detail.pathInfo?.requestPath === location.pathname) {
+            e.preventDefault();
+        }
+    });
+
+    // htmxコンテンツ差し替え前にインタラクティブ要素を破棄
+    document.addEventListener("htmx:beforeSwap", () => {
+        // 登録済みクリーンアップを実行
+        window.__htmxCleanup.forEach((fn) => { try { fn(); } catch(ex) {} });
+        window.__htmxCleanup = [];
+
+        // DOM ベースのフォールバック（登録漏れ対策）
+        const main = document.getElementById("main-content");
+        if (!main) return;
+        main.querySelectorAll(".leaflet-container").forEach((el) => {
+            el.innerHTML = "";
+            delete el._leaflet_id;
+        });
+        main.querySelectorAll("canvas").forEach((c) => {
+            try {
+                const gl = c.getContext("webgl") || c.getContext("webgl2");
+                const ext = gl?.getExtension?.("WEBGL_lose_context");
+                if (ext) ext.loseContext();
+            } catch(ex) {}
+        });
+    });
 
     document.addEventListener("htmx:afterSettle", (e) => {
         setupHtmxLinks(e.detail.target);
@@ -225,7 +259,7 @@ function initGlossaryTooltips() {
     }
 
     for (const [showEvt, hideEvt] of [["mouseover", "mouseout"], ["focusin", "focusout"]]) {
-        document.addEventListener(showEvt, (e) => { if (e.target.closest(".glossary-term")) show(e.target.closest(".glossary-term")); });
+        document.addEventListener(showEvt, (e) => { const t = e.target.closest(".glossary-term"); if (t) show(t); });
         document.addEventListener(hideEvt, (e) => { if (e.target.closest(".glossary-term")) hide(); });
     }
 }

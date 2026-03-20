@@ -49,6 +49,7 @@
 </section>
 <script>
 (function(){
+  window.__htmxCleanup = window.__htmxCleanup || [];
   const section = document.getElementById('affiliate-section');
   if (!section) return;
   let loaded = false;
@@ -56,6 +57,7 @@
     if (entries[0].isIntersecting && !loaded) {
       loaded = true;
       observer.disconnect();
+      if (typeof THREE !== 'undefined') { initThreeCards(); return; }
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
       s.onload = initThreeCards;
@@ -69,6 +71,9 @@
   }
 
   function initThreeCards() {
+    const renderers = [];
+    let running = true;
+
     const cards = section.querySelectorAll('.affiliate-card');
     cards.forEach(card => {
       const container = card.querySelector('.affiliate-three');
@@ -77,7 +82,6 @@
       const col = hexToThree(color);
       const rect = card.getBoundingClientRect();
       const w = rect.width, h = rect.height;
-      // カードの右60%にだけ3Dを表示
       const aspect = w / h;
 
       const scene = new THREE.Scene();
@@ -93,8 +97,8 @@
       renderer.setSize(w, h);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       container.appendChild(renderer.domElement);
+      renderers.push(renderer);
 
-      // カードの右寄り（右40%あたりに中心）
       const rightX = frustum * aspect * 0.35;
 
       let animFn;
@@ -103,7 +107,6 @@
       else if (anim.includes('globe')) animFn = createGlobe(scene, col, rightX);
       else animFn = createNetwork(scene, col, rightX);
 
-      let running = true;
       function loop() {
         if (!running) return;
         requestAnimationFrame(loop);
@@ -114,7 +117,12 @@
 
       card.addEventListener('mouseenter', () => animFn.boost && animFn.boost(true));
       card.addEventListener('mouseleave', () => animFn.boost && animFn.boost(false));
-      window.addEventListener('beforeunload', () => { running = false; renderer.dispose(); });
+    });
+
+    // 一括クリーンアップを登録（htmx遷移時に sidebar.js が呼び出す）
+    window.__htmxCleanup.push(() => {
+      running = false;
+      renderers.forEach(r => { r.dispose(); r.domElement.remove(); });
     });
   }
 
