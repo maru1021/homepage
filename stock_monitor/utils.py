@@ -42,28 +42,31 @@ def _request_with_retry(url, label='', default=None):
         失敗時: default 引数の値
     """
     session = _create_cffi_session()
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            resp = session.get(url, headers=_YF_HEADERS, timeout=15)
-            if resp.status_code == 429:
+    try:
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                resp = session.get(url, headers=_YF_HEADERS, timeout=15)
+                if resp.status_code == 429:
+                    if attempt < MAX_RETRIES:
+                        wait = RETRY_BACKOFF_BASE * (2 ** attempt)
+                        logger.warning('%s: 429 rate limited, %d秒後にリトライ (%d/%d)',
+                                       label, wait, attempt + 1, MAX_RETRIES + 1)
+                        time.sleep(wait)
+                        continue
+                    logger.warning('%s: 429 rate limited, 全リトライ失敗', label)
+                    return default
+                resp.raise_for_status()
+                return resp.json()
+            except Exception as e:
                 if attempt < MAX_RETRIES:
                     wait = RETRY_BACKOFF_BASE * (2 ** attempt)
-                    logger.warning('%s: 429 rate limited, %d秒後にリトライ (%d/%d)',
-                                   label, wait, attempt + 1, MAX_RETRIES + 1)
+                    logger.warning('%s: %s, %d秒後にリトライ', label, e, wait)
                     time.sleep(wait)
                     continue
-                logger.warning('%s: 429 rate limited, 全リトライ失敗', label)
+                logger.warning('%s: %s (全リトライ失敗)', label, e)
                 return default
-            resp.raise_for_status()
-            return resp.json()
-        except Exception as e:
-            if attempt < MAX_RETRIES:
-                wait = RETRY_BACKOFF_BASE * (2 ** attempt)
-                logger.warning('%s: %s, %d秒後にリトライ', label, e, wait)
-                time.sleep(wait)
-                continue
-            logger.warning('%s: %s (全リトライ失敗)', label, e)
-            return default
+    finally:
+        session.close()
 
 
 # ========== yf.download() バッチ取得 ==========
@@ -98,16 +101,15 @@ def _download_batch(tickers, range_, interval):
 
     BATCH_TOTAL_TIMEOUT 秒を超えた場合はタイムアウトとして空結果を返す。
     """
-    executor = ThreadPoolExecutor(max_workers=1)
-    try:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(_download_batch_inner, tickers, range_, interval)
-        return future.result(timeout=BATCH_TOTAL_TIMEOUT)
-    except FuturesTimeoutError:
-        logger.error('yf.download() タイムアウト (%d銘柄, %d秒超過)',
-                     len(tickers), BATCH_TOTAL_TIMEOUT)
-        return {}
-    finally:
-        executor.shutdown(wait=False, cancel_futures=True)
+        try:
+            return future.result(timeout=BATCH_TOTAL_TIMEOUT)
+        except FuturesTimeoutError:
+            logger.error('yf.download() タイムアウト (%d銘柄, %d秒超過)',
+                         len(tickers), BATCH_TOTAL_TIMEOUT)
+            future.cancel()
+            return {}
 
 
 def _download_batch_inner(tickers, range_, interval):

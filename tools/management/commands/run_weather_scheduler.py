@@ -7,6 +7,7 @@
 使い方:
   python manage.py run_weather_scheduler
 """
+import gc
 import logging
 from zoneinfo import ZoneInfo
 
@@ -15,6 +16,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
+from django import db
 
 JST = ZoneInfo("Asia/Tokyo")
 logger = logging.getLogger(__name__)
@@ -52,3 +54,6 @@ class Command(BaseCommand):
         except Exception as e:
             logger.error('天気データ取得エラー: %s', e)
             self.stderr.write(f'天気データ取得エラー: {e}')
+        finally:
+            db.close_old_connections()
+            gc.collect()
