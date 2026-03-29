@@ -259,6 +259,92 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
     text-decoration: underline;
 }
 
+/* グリーティングバナー */
+.greeting-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 1.5rem;
+}
+.greeting-date {
+    margin-left: auto;
+    margin-right: 4em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: "M PLUS Rounded 1c", sans-serif;
+    line-height: 1.2;
+    opacity: 0.7;
+}
+.greeting-date-day {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-dark);
+}
+.greeting-date-weekday {
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+    letter-spacing: 0.05em;
+}
+.greeting-icon {
+    font-size: 2.2rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.greeting-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.greeting-main {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    font-family: "Rounded Mplus 1c", "M PLUS Rounded 1c", -apple-system, sans-serif;
+    letter-spacing: 0.04em;
+}
+.greeting-sub {
+    margin: 0;
+    margin-left: 0.5em;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    font-family: "Rounded Mplus 1c", "M PLUS Rounded 1c", -apple-system, sans-serif;
+    letter-spacing: 0.02em;
+}
+
+/* 日替わりTips */
+.daily-tip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    margin-bottom: 1.5rem;
+    border-left: 3px solid var(--color-primary);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    background: var(--color-bg-subtle);
+}
+.daily-tip-label {
+    font-family: "M PLUS Rounded 1c", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-bg-white);
+    background: var(--color-primary);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+}
+.daily-tip-text {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+    font-family: "M PLUS Rounded 1c", sans-serif;
+}
+
 /* 記事一覧 */
 .article-list { display: flex; flex-direction: column; gap: 1.5rem; }
 
@@ -480,22 +566,7 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
     opacity: 1;
 }
 
-/* 内部リンク */
-.internal-link {
-    color: var(--color-primary);
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.15s;
-}
-.internal-link:hover {
-    border-bottom-color: var(--color-primary);
-}
-/* リンク内のglossary-term: リンク色を継承 */
-.internal-link .glossary-term {
-    color: var(--color-primary);
-    cursor: pointer;
-}
-/* スマホ: ツールチップ非表示、リンク遷移優先 */
+/* スマホ: ツールチップ非表示 */
 @media (hover: none) {
     .glossary-tooltip-box,
     .glossary-tooltip-arrow {

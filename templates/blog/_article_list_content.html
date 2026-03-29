@@ -1,3 +1,25 @@
+{% load blog_tags %}
+{% if page_obj.number == 1 %}
+{% now "n" as month %}{% now "j" as day %}{% now "D" as weekday %}
+{% greeting as greeting_msg %}
+{% daily_tip as tip %}
+<div class="greeting-banner">
+    <span class="greeting-icon">&#127793;</span>
+    <div class="greeting-text">
+        <p class="greeting-main">{{ greeting_msg }}</p>
+        <p class="greeting-sub">自分のペースで学習楽しもう</p>
+    </div>
+    <div class="greeting-date">
+        <span class="greeting-date-day">{{ month }}/{{ day }}</span>
+        <span class="greeting-date-weekday">{{ weekday }}</span>
+    </div>
+</div>
+<div class="daily-tip">
+    <span class="daily-tip-label">Today's Tip</span>
+    <p class="daily-tip-text">{{ tip }}</p>
+</div>
+{% endif %}
+
 <h1>最新記事</h1>
 <div class="article-list">
     {% for article in articles %}

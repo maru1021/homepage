@@ -22,8 +22,8 @@ class ArticleAdmin(admin.ModelAdmin):
 
 @admin.register(GlossaryTerm)
 class GlossaryTermAdmin(admin.ModelAdmin):
-    list_display = ["term", "reading", "description"]
-    search_fields = ["term", "reading"]
+    list_display = ["term", "description"]
+    search_fields = ["term"]
 
 
 @admin.register(AffiliateLink)

@@ -83,7 +83,6 @@ class Article(models.Model):
 
 class GlossaryTerm(models.Model):
     term = models.CharField("用語", max_length=100, unique=True)
-    reading = models.CharField("読み", max_length=100, blank=True)
     description = models.TextField("説明")
 
     class Meta:

@@ -1,16 +1,64 @@
 import re
+from datetime import date
 from html import escape
 
 from django import template
-from django.core.cache import cache
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 
 register = template.Library()
 
-_MIN_KEYWORD_LENGTH = 4
-_MAX_LINKS_PER_ARTICLE = 10
-_LINK_CACHE_KEY = "auto_internal_links_keywords"
-_LINK_CACHE_TIMEOUT = 300  # 5分
+_TIPS = [
+    "Ctrl+Shift+I でブラウザの開発者ツールを開けます",
+    "git stash で作業中の変更を一時退避できます",
+    "Python の f'{変数=}' でデバッグが捗ります",
+    "CSS の clamp() でレスポンシブなフォントサイズが作れます",
+    "VS Code で Ctrl+D を連打すると同じ単語を複数選択できます",
+    "console.table() でオブジェクトを表形式で表示できます",
+    "Django の select_related() でN+1問題を解決できます",
+    "git bisect で不具合が入ったコミットを二分探索できます",
+    "HTML の <details> タグで折りたたみUIが作れます",
+    "Python の enumerate() でインデックス付きループができます",
+    "JavaScript の ?? 演算子で null/undefined のみをフォールバックできます",
+    "Linux で Ctrl+R でコマンド履歴を検索できます",
+    "CSS Grid の repeat(auto-fit, minmax()) でレスポンシブ対応が簡単に",
+    "docker compose logs -f でリアルタイムにログを確認できます",
+    "Python の pathlib を使うとファイルパス操作が直感的になります",
+    "git log --oneline --graph でブランチの流れが見やすくなります",
+    "JavaScript の structuredClone() でオブジェクトを深いコピーできます",
+    "SSH の -L オプションでポートフォワーディングができます",
+    "Django の values_list(flat=True) でリスト取得が簡潔に",
+    "HTML の loading='lazy' で画像の遅延読み込みができます",
+    "Python の collections.Counter で要素の出現回数を簡単にカウント",
+    "CSS の :has() セレクタで親要素を条件付きでスタイリングできます",
+    "git diff --staged でステージ済みの変更だけを確認できます",
+    "JavaScript の Array.at(-1) で末尾の要素を取得できます",
+    "curl -I でHTTPレスポンスヘッダーだけを確認できます",
+    "Django の Q オブジェクトで複雑なOR条件のクエリが書けます",
+    "CSS の scroll-margin-top でアンカーリンクの余白を調整できます",
+    "Python の functools.lru_cache でメモ化が簡単にできます",
+    "HTML の inputmode 属性でモバイルキーボードを制御できます",
+    "git cherry-pick で特定のコミットだけを取り込めます",
+]
+
+
+@register.simple_tag
+def greeting():
+    """時間帯に応じた挨拶を返す"""
+    hour = timezone.localtime().hour
+    if 5 <= hour < 11:
+        return "おはようございます！"
+    elif 11 <= hour < 17:
+        return "こんにちは！"
+    else:
+        return "お疲れ様！"
+
+
+@register.simple_tag
+def daily_tip():
+    """日替わりのTipsを返す（日付ベースで1日1つ固定）"""
+    day_index = date.today().toordinal() % len(_TIPS)
+    return _TIPS[day_index]
 
 # preserve 対象の正規表現パターン
 _PRESERVE_BLOCK_RE = re.compile(
@@ -19,7 +67,6 @@ _PRESERVE_BLOCK_RE = re.compile(
 _PRESERVE_SPAN_RE = re.compile(
     r'<span class="(tag|category|glossary-term)"[^>]*>.*?</span>', re.DOTALL
 )
-_PRESERVE_LINK_RE = re.compile(r'<a\s[^>]*>.*?</a>', re.DOTALL)
 _TEXT_NODE_RE = re.compile(r'(?<=>)[^<]+(?=<|$)')
 
 
@@ -128,101 +175,3 @@ def glossary_tooltip(content):
         marker="GT",
     )
     return mark_safe(result)
-
-
-def _get_keyword_map():
-    """short_title → (pk, url) のマッピングをキャッシュ付きで取得"""
-    mapping = cache.get(_LINK_CACHE_KEY)
-    if mapping is not None:
-        return mapping
-
-    from blog.models import Article
-
-    mapping = {}
-    articles = (
-        Article.objects.filter(is_published=True)
-        .exclude(short_title="")
-        .values_list(
-            "pk", "short_title", "slug",
-            "classification__slug",
-            "classification__parent__slug",
-            "classification__parent__parent__slug",
-        )
-    )
-    for pk, short_title, slug, c_slug, p_slug, gp_slug in articles:
-        if len(short_title) < _MIN_KEYWORD_LENGTH or short_title in mapping:
-            continue
-        parts = [p for p in [gp_slug, p_slug, c_slug] if p]
-        url = "/article/" + "/".join(parts + [slug]) + "/"
-        mapping[short_title] = (pk, url)
-
-    cache.set(_LINK_CACHE_KEY, mapping, _LINK_CACHE_TIMEOUT)
-    return mapping
-
-
-_GLOSSARY_SPAN_RE = re.compile(
-    r'<span class="glossary-term"[^>]*>([^<]+)</span>'
-)
-
-
-@register.filter
-def auto_internal_links(content, article):
-    """記事本文に他記事への内部リンクを自動挿入する。
-
-    glossary_tooltip 処理済みの HTML を受け取り:
-    1. glossary-term span に対応記事があれば <a> で囲む（ツールチップ+リンク両立）
-    2. それ以外のテキスト中の short_title を <a> リンクに変換
-    """
-    keyword_map = _get_keyword_map()
-    if not keyword_map:
-        return content
-
-    current_pk = article.pk if hasattr(article, "pk") else None
-    keywords = sorted(keyword_map.keys(), key=len, reverse=True)
-
-    # Phase 1: glossary-term span を記事リンクで囲む
-    linked_keywords = set()
-
-    def _wrap_glossary(match):
-        span_html = match.group(0)
-        inner_text = match.group(1)
-        if inner_text in keyword_map and inner_text not in linked_keywords:
-            pk, url = keyword_map[inner_text]
-            if pk != current_pk:
-                linked_keywords.add(inner_text)
-                return (
-                    f'<a href="{url}" class="internal-link"'
-                    f' target="_blank" rel="noopener">{span_html}</a>'
-                )
-        return span_html
-
-    work = _GLOSSARY_SPAN_RE.sub(_wrap_glossary, content)
-
-    if len(linked_keywords) >= _MAX_LINKS_PER_ARTICLE:
-        return mark_safe(work)
-
-    # Phase 2: 残りのキーワードをリンク化
-    remaining = _MAX_LINKS_PER_ARTICLE - len(linked_keywords)
-    replacements = []
-    for kw in keywords:
-        if kw in linked_keywords:
-            continue
-        pk, url = keyword_map[kw]
-        if pk == current_pk:
-            continue
-        link_html = (
-            f'<a href="{url}" class="internal-link"'
-            f' target="_blank" rel="noopener">{kw}</a>'
-        )
-        replacements.append((kw, link_html))
-
-    if replacements:
-        work = _preserve_and_replace(
-            work,
-            [_PRESERVE_BLOCK_RE, _PRESERVE_LINK_RE, _PRESERVE_SPAN_RE],
-            replacements,
-            marker="IL",
-            max_replacements=remaining,
-        )
-
-    return mark_safe(work)

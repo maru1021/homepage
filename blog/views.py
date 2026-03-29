@@ -58,7 +58,7 @@ def _collect_descendant_ids(classification, id_list):
 
 def article_list(request):
     """トップページ: 最新記事（ページネーション対応）"""
-    page_obj = _paginate(_published_articles().all(), request)
+    page_obj = _paginate(_published_articles().order_by("-published_at"), request)
     page_num = page_obj.number
     title = f"{page_num}ページ目 - {SITE_NAME} - Web開発・プログラミング技術ブログ" if page_num > 1 else f"{SITE_NAME} - Web開発・プログラミング技術ブログ"
     return htmx_render(request, "blog/article_list.html", "blog/_article_list_content.html", {
