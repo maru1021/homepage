@@ -113,16 +113,16 @@
       const midSection = document.createElement('div');
       midSection.className = 'snack-break';
       midSection.innerHTML =
-        '<div class="snack-break-inner">' +
-          '<p class="snack-heading">\u4F11\u61A9\u306B\u3044\u304B\u304C\u3067\u3059\u304B\uFF1F</p>' +
-          '<a href="' + pick.url + '" class="snack-card" target="_blank" rel="noopener noreferrer sponsored">' +
-            '<div class="snack-img"><img src="' + pick.img + '" alt="' + pick.name + '" loading="lazy" onerror="this.style.display=\'none\'"></div>' +
-            '<div class="snack-detail">' +
-              '<span class="snack-name">' + pick.name + '</span>' +
-              '<span class="snack-cta"><i class="bi bi-cart3"></i> Amazon\u3067\u898B\u308B</span>' +
-            '</div>' +
-          '</a>' +
-        '</div>';
+        '<a href="' + pick.url + '" class="snack-card" target="_blank" rel="noopener noreferrer sponsored">' +
+          '<div class="snack-label-area">' +
+            '<span class="snack-heading">\u4F11\u61A9\u306B\u3044\u304B\u304C\u3067\u3059\u304B\uFF1F</span>' +
+          '</div>' +
+          '<div class="snack-img"><img src="' + pick.img + '" alt="' + pick.name + '" loading="lazy" onerror="this.style.display=\'none\'"></div>' +
+          '<div class="snack-detail">' +
+            '<span class="snack-name">' + pick.name + '</span>' +
+            '<span class="snack-cta"><i class="bi bi-cart3"></i> Amazon\u3067\u898B\u308B</span>' +
+          '</div>' +
+        '</a>';
       midHeading.parentNode.insertBefore(midSection, midHeading);
     }
   }

@@ -814,59 +814,61 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
 /* 記事中間のお菓子カード */
 .snack-break {
     margin: 2.5rem 0;
-    padding: 1.4rem 1.6rem;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #fef9f0 0%, #fdf0dc 50%, #fce8c8 100%);
-    border: 1px solid rgba(230,160,60,0.18);
-    box-shadow: 0 2px 16px rgba(200,140,40,0.08);
-}
-
-.snack-break-inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.snack-heading {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #9a7030;
-    margin: 0;
-    letter-spacing: 0.04em;
 }
 
 .snack-card {
     display: flex;
     align-items: center;
-    gap: 1.2rem;
-    padding: 1rem 1.4rem;
-    border-radius: 14px;
+    gap: 1.4rem;
+    padding: 1.5rem 1.8rem;
+    border-radius: 16px;
     text-decoration: none;
-    background: #fff;
-    border: 1px solid rgba(230,160,60,0.15);
-    transition: all 0.3s ease;
-    box-shadow: 0 3px 12px rgba(180,120,30,0.08);
-    width: 100%;
-    max-width: 100%;
+    background: linear-gradient(135deg, #fdfaf5 0%, #f8efe0 50%, #f2e4d0 100%);
+    border: 1px solid rgba(190,140,60,0.15);
+    transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 0 2px 14px rgba(160,110,30,0.08), 0 4px 20px rgba(0,0,0,0.04);
+    overflow: hidden;
 }
 
 .snack-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(200,140,40,0.15);
-    border-color: rgba(230,160,60,0.35);
+    transform: translateY(-3px);
+    box-shadow:
+        0 8px 32px rgba(180,120,30,0.14),
+        0 4px 16px rgba(0,0,0,0.06);
+    border-color: rgba(200,140,40,0.35);
+}
+
+.snack-label-area {
+    flex-shrink: 0;
+}
+
+.snack-heading {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #b07820;
+    letter-spacing: 0.04em;
+    writing-mode: vertical-rl;
+    white-space: nowrap;
 }
 
 .snack-img {
     flex-shrink: 0;
-    width: 80px;
-    height: 80px;
-    border-radius: 12px;
+    width: 78px;
+    height: 78px;
+    border-radius: 10px;
     overflow: hidden;
-    background: #fdf5ea;
+    background: #faf5ed;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow:
+        3px 3px 10px rgba(0,0,0,0.08),
+        -1px -1px 3px rgba(255,255,255,0.8);
+    transition: transform 0.3s;
+}
+
+.snack-card:hover .snack-img {
+    transform: scale(1.06);
 }
 
 .snack-img img {
@@ -879,38 +881,39 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.5rem;
 }
 
 .snack-name {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 800;
-    color: #3a2a10;
+    color: #2d2015;
+    line-height: 1.4;
 }
 
 .snack-cta {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.78rem;
+    gap: 0.4rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: #fff;
-    background: linear-gradient(135deg, #e8940a, #d47e00);
-    padding: 0.45rem 1.1rem;
-    border-radius: 18px;
+    background: linear-gradient(135deg, #d48a10, #b87508);
+    padding: 0.5rem 1.3rem;
+    border-radius: 22px;
     width: fit-content;
     transition: all 0.25s;
-    box-shadow: 0 2px 8px rgba(210,130,10,0.3);
+    box-shadow: 0 3px 10px rgba(180,110,20,0.3);
 }
 
 .snack-card:hover .snack-cta {
-    background: linear-gradient(135deg, #f0a020, #e89410);
+    background: linear-gradient(135deg, #e09818, #d48a10);
     transform: scale(1.05);
-    box-shadow: 0 4px 14px rgba(210,130,10,0.4);
+    box-shadow: 0 5px 18px rgba(180,110,20,0.4);
 }
 
 .snack-cta i {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
 }
 
 /* サービスカード（Xserver等） */
@@ -1002,9 +1005,12 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
     }
     .book-cover { width: 62px; height: 88px; }
     .book-title { font-size: 0.9rem; }
-    .snack-break { padding: 1.1rem; margin: 2rem 0; }
-    .snack-card { padding: 0.8rem 1rem; gap: 1rem; max-width: 100%; }
-    .snack-img { width: 68px; height: 68px; }
+    .snack-break { margin: 2rem 0; }
+    .snack-card { padding: 1.1rem 1.2rem; gap: 1rem; }
+    .snack-heading { writing-mode: horizontal-tb; font-size: 0.7rem; }
+    .snack-label-area { width: 100%; flex-basis: 100%; }
+    .snack-card { flex-wrap: wrap; }
+    .snack-img { width: 62px; height: 62px; }
     .affiliate-card {
         flex-wrap: wrap;
         padding: 1rem;
