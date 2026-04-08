@@ -99,6 +99,8 @@ class AffiliateLink(models.Model):
     url = models.URLField("アフィリエイトURL", max_length=500)
     description = models.TextField("説明文", max_length=300, blank=True)
     display_text = models.CharField("表示テキスト", max_length=100, default="詳しく見る")
+    book_title = models.CharField("書籍タイトル", max_length=200, blank=True, help_text="書籍の場合に設定。書籍カードとして表示される")
+    image_url = models.URLField("画像URL", max_length=500, blank=True, help_text="書影画像のURL")
     icon = models.CharField("アイコン（Bootstrap Icons）", max_length=50, blank=True, help_text="例: bi-hdd-rack, bi-globe, bi-server")
     badge = models.CharField("バッジテキスト", max_length=30, blank=True, help_text="例: おすすめ, 人気No.1")
     color = models.CharField("テーマカラー", max_length=7, default="#10b981", help_text="例: #10b981")
