@@ -42,74 +42,89 @@
 </section>
 {% endif %}
 
-{% if affiliate_links %}
 <script>
 (function() {
+  // --- 書籍カード（関連記事の上） ---
   const dataEl = document.getElementById('affiliate-data');
-  if (!dataEl) return;
+  if (dataEl) {
+    const items = dataEl.querySelectorAll('.affiliate-item-data');
 
-  const items = dataEl.querySelectorAll('.affiliate-item-data');
+    function buildBookCard(d) {
+      return '<a href="' + d.dataset.url + '" class="book-card" target="_blank" rel="noopener noreferrer sponsored">' +
+        '<div class="book-card-glow"></div>' +
+        '<div class="book-cover">' +
+          '<img src="' + d.dataset.imageUrl + '" alt="' + d.dataset.bookTitle + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<i class=&quot;bi bi-book&quot;></i>\'">' +
+        '</div>' +
+        '<div class="book-info">' +
+          '<span class="book-label"><i class="bi bi-award"></i> おすすめ書籍</span>' +
+          '<span class="book-title">' + d.dataset.bookTitle + '</span>' +
+          '<span class="book-cta"><i class="bi bi-cart3"></i> Amazonで購入する</span>' +
+        '</div>' +
+      '</a>';
+    }
 
-  function buildBookCard(d) {
-    return '<a href="' + d.dataset.url + '" class="book-card" target="_blank" rel="noopener noreferrer sponsored">' +
-      '<div class="book-cover">' +
-        '<img src="' + d.dataset.imageUrl + '" alt="' + d.dataset.bookTitle + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<i class=&quot;bi bi-book&quot;></i>\'">' +
-      '</div>' +
-      '<div class="book-info">' +
-        '<span class="book-label">おすすめ書籍</span>' +
-        '<span class="book-title">' + d.dataset.bookTitle + '</span>' +
-        '<span class="book-cta">Amazonで見る <i class="bi bi-box-arrow-up-right"></i></span>' +
-      '</div>' +
-    '</a>';
+    function buildServiceCard(d) {
+      return '<a href="' + d.dataset.url + '" class="affiliate-card" target="_blank" rel="noopener noreferrer sponsored" style="--card-color: ' + d.dataset.color + '">' +
+        '<div class="affiliate-icon"><i class="bi ' + (d.dataset.icon || 'bi-box-arrow-up-right') + '"></i></div>' +
+        '<div class="affiliate-info">' +
+          '<span class="affiliate-name">' + d.dataset.serviceName + '</span>' +
+          (d.dataset.description ? '<p class="affiliate-desc">' + d.dataset.description + '</p>' : '') +
+        '</div>' +
+        '<span class="affiliate-cta">' + d.dataset.displayText + ' <i class="bi bi-arrow-right"></i></span>' +
+      '</a>';
+    }
+
+    function buildCards() {
+      let html = '';
+      items.forEach(function(d) {
+        html += d.dataset.bookTitle ? buildBookCard(d) : buildServiceCard(d);
+      });
+      return html;
+    }
+
+    const related = document.querySelector('.related-articles');
+    const articleEl = document.querySelector('.article-detail');
+    const insertTarget = related || (articleEl ? articleEl.nextElementSibling : null);
+    const bottomSection = document.createElement('section');
+    bottomSection.className = 'affiliate-recommendations';
+    bottomSection.innerHTML = '<h2><i class="bi bi-book"></i> この分野のおすすめ書籍</h2><div class="affiliate-list">' + buildCards() + '</div>';
+    if (insertTarget) {
+      insertTarget.parentNode.insertBefore(bottomSection, insertTarget);
+    } else if (articleEl) {
+      articleEl.parentNode.appendChild(bottomSection);
+    }
+    dataEl.remove();
   }
 
-  function buildServiceCard(d) {
-    return '<a href="' + d.dataset.url + '" class="affiliate-card" target="_blank" rel="noopener noreferrer sponsored" style="--card-color: ' + d.dataset.color + '">' +
-      '<div class="affiliate-icon"><i class="bi ' + (d.dataset.icon || 'bi-box-arrow-up-right') + '"></i></div>' +
-      '<div class="affiliate-info">' +
-        '<span class="affiliate-name">' + d.dataset.serviceName + '</span>' +
-        (d.dataset.description ? '<p class="affiliate-desc">' + d.dataset.description + '</p>' : '') +
-      '</div>' +
-      '<span class="affiliate-cta">' + d.dataset.displayText + ' <i class="bi bi-arrow-right"></i></span>' +
-    '</a>';
-  }
+  // --- 中間広告（お菓子・飲み物ランダム） ---
+  const snacks = [
+    { name: '午後の紅茶 レモンティー', url: 'https://amzn.to/4vhYgVC', emoji: '\uD83C\uDF4B' },
+    { name: 'チロルチョコ', url: 'https://amzn.to/4cv93Et', emoji: '\uD83C\uDF6B' },
+    { name: 'チョコワ', url: 'https://amzn.to/4cv93Et', emoji: '\uD83E\uDD63' },
+    { name: 'ブラックサンダー', url: 'https://amzn.to/47OUYiN', emoji: '\u26A1' },
+  ];
 
-  function buildCards() {
-    let html = '';
-    items.forEach(function(d) {
-      html += d.dataset.bookTitle ? buildBookCard(d) : buildServiceCard(d);
-    });
-    return html;
-  }
-
-  // 関連記事の上に表示
-  const related = document.querySelector('.related-articles');
-  const articleEl = document.querySelector('.article-detail');
-  const insertTarget = related || (articleEl ? articleEl.nextElementSibling : null);
-  const bottomSection = document.createElement('section');
-  bottomSection.className = 'affiliate-recommendations';
-  bottomSection.innerHTML = '<h2>おすすめ</h2><div class="affiliate-list">' + buildCards() + '</div>';
-  if (insertTarget) {
-    insertTarget.parentNode.insertBefore(bottomSection, insertTarget);
-  } else if (articleEl) {
-    articleEl.parentNode.appendChild(bottomSection);
-  }
-
-  // 記事の中間に表示
   const content = document.querySelector('.article-content');
   if (content) {
     const headings = content.querySelectorAll('h2');
     if (headings.length >= 3) {
       const midIdx = Math.floor(headings.length / 2);
       const midHeading = headings[midIdx];
+      const pick = snacks[Math.floor(Math.random() * snacks.length)];
       const midSection = document.createElement('div');
-      midSection.className = 'affiliate-inline';
-      midSection.innerHTML = buildCards();
+      midSection.className = 'snack-break';
+      midSection.innerHTML =
+        '<div class="snack-break-inner">' +
+          '<p class="snack-message">\u2615 \u4F11\u61A9\u306B\u3044\u304B\u304C\u3067\u3059\u304B\uFF1F</p>' +
+          '<a href="' + pick.url + '" class="snack-card" target="_blank" rel="noopener noreferrer sponsored">' +
+            '<span class="snack-emoji">' + pick.emoji + '</span>' +
+            '<span class="snack-name">' + pick.name + '</span>' +
+            '<span class="snack-cta">Amazon\u3067\u898B\u308B <i class="bi bi-box-arrow-up-right"></i></span>' +
+          '</a>' +
+          '<p class="snack-support">\u904B\u55B6\u8CBB\u7528\u306E\u3054\u5354\u529B\u3088\u308D\u3057\u304F\u304A\u9858\u3044\u3057\u307E\u3059\u3002</p>' +
+        '</div>';
       midHeading.parentNode.insertBefore(midSection, midHeading);
     }
   }
-
-  dataEl.remove();
 })();
 </script>
-{% endif %}
