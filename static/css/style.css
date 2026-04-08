@@ -847,7 +847,6 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
     font-weight: 700;
     color: #b07820;
     letter-spacing: 0.04em;
-    writing-mode: vertical-rl;
     white-space: nowrap;
 }
 
@@ -1007,9 +1006,8 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
     .book-title { font-size: 0.9rem; }
     .snack-break { margin: 2rem 0; }
     .snack-card { padding: 1.1rem 1.2rem; gap: 1rem; }
-    .snack-heading { writing-mode: horizontal-tb; font-size: 0.7rem; }
-    .snack-label-area { width: 100%; flex-basis: 100%; }
     .snack-card { flex-wrap: wrap; }
+    .snack-label-area { flex-basis: 100%; }
     .snack-img { width: 62px; height: 62px; }
     .affiliate-card {
         flex-wrap: wrap;
