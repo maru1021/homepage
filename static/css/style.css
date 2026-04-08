@@ -779,10 +779,11 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
 }
 
 .book-title {
-    font-size: 1.05rem;
+    font-size: 1.08rem;
     font-weight: 800;
     color: #2d2015;
     line-height: 1.45;
+    letter-spacing: 0.02em;
 }
 
 .book-cta {
@@ -843,11 +844,12 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
 }
 
 .snack-heading {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #b07820;
-    letter-spacing: 0.04em;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #9a7030;
+    letter-spacing: 0.06em;
     white-space: nowrap;
+    font-style: italic;
 }
 
 .snack-img {
@@ -884,10 +886,11 @@ h1 { font-size: 1.8rem; margin-bottom: 1rem; }
 }
 
 .snack-name {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: #2d2015;
     line-height: 1.4;
+    letter-spacing: 0.02em;
 }
 
 .snack-cta {
