@@ -51,14 +51,13 @@
 
     function buildBookCard(d) {
       return '<a href="' + d.dataset.url + '" class="book-card" target="_blank" rel="noopener noreferrer sponsored">' +
-        '<div class="book-card-glow"></div>' +
         '<div class="book-cover">' +
-          '<img src="' + d.dataset.imageUrl + '" alt="' + d.dataset.bookTitle + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<i class=&quot;bi bi-book&quot;></i>\'">' +
+          '<img src="' + d.dataset.imageUrl + '" alt="' + d.dataset.bookTitle + '" loading="lazy" onerror="this.parentElement.classList.add(\'no-img\')">' +
         '</div>' +
         '<div class="book-info">' +
-          '<span class="book-label"><i class="bi bi-award"></i> おすすめ書籍</span>' +
+          '<span class="book-label"><i class="bi bi-bookmark-star-fill"></i> \u304A\u3059\u3059\u3081\u66F8\u7C4D</span>' +
           '<span class="book-title">' + d.dataset.bookTitle + '</span>' +
-          '<span class="book-cta"><i class="bi bi-cart3"></i> Amazonで購入する</span>' +
+          '<span class="book-cta"><i class="bi bi-cart3"></i> Amazon\u3067\u8CFC\u5165\u3059\u308B</span>' +
         '</div>' +
       '</a>';
     }
@@ -87,7 +86,7 @@
     const insertTarget = related || (articleEl ? articleEl.nextElementSibling : null);
     const bottomSection = document.createElement('section');
     bottomSection.className = 'affiliate-recommendations';
-    bottomSection.innerHTML = '<h2><i class="bi bi-book"></i> この分野のおすすめ書籍</h2><div class="affiliate-list">' + buildCards() + '</div>';
+    bottomSection.innerHTML = '<h2><i class="bi bi-book-half"></i> \u3053\u306E\u5206\u91CE\u306E\u304A\u3059\u3059\u3081\u66F8\u7C4D</h2><div class="affiliate-list">' + buildCards() + '</div>';
     if (insertTarget) {
       insertTarget.parentNode.insertBefore(bottomSection, insertTarget);
     } else if (articleEl) {
@@ -98,10 +97,10 @@
 
   // --- 中間広告（お菓子・飲み物ランダム） ---
   const snacks = [
-    { name: '午後の紅茶 レモンティー', url: 'https://amzn.to/4vhYgVC', emoji: '\uD83C\uDF4B' },
-    { name: 'チロルチョコ', url: 'https://amzn.to/41oQjQT', emoji: '\uD83C\uDF6B' },
-    { name: 'チョコワ', url: 'https://amzn.to/4cv93Et', emoji: '\uD83E\uDD63' },
-    { name: 'ブラックサンダー', url: 'https://amzn.to/47OUYiN', emoji: '\u26A1' },
+    { name: '\u5348\u5F8C\u306E\u7D05\u8336 \u30EC\u30E2\u30F3\u30C6\u30A3\u30FC', url: 'https://amzn.to/4vhYgVC', img: 'https://images-fe.ssl-images-amazon.com/images/P/B08WXT9L3M.09.LZZZZZZZ.jpg' },
+    { name: '\u30C1\u30ED\u30EB\u30C1\u30E7\u30B3', url: 'https://amzn.to/41oQjQT', img: 'https://images-fe.ssl-images-amazon.com/images/P/B0CKZ9PXX1.09.LZZZZZZZ.jpg' },
+    { name: '\u30C1\u30E7\u30B3\u30EF', url: 'https://amzn.to/4cv93Et', img: 'https://images-fe.ssl-images-amazon.com/images/P/B07YP8G2Q7.09.LZZZZZZZ.jpg' },
+    { name: '\u30D6\u30E9\u30C3\u30AF\u30B5\u30F3\u30C0\u30FC', url: 'https://amzn.to/47OUYiN', img: 'https://images-fe.ssl-images-amazon.com/images/P/B0FGH8FM4W.09.LZZZZZZZ.jpg' },
   ];
 
   const content = document.querySelector('.article-content');
@@ -115,11 +114,13 @@
       midSection.className = 'snack-break';
       midSection.innerHTML =
         '<div class="snack-break-inner">' +
-          '<p class="snack-message">\u2615 \u4F11\u61A9\u306B\u3044\u304B\u304C\u3067\u3059\u304B\uFF1F</p>' +
+          '<p class="snack-heading">\u4F11\u61A9\u306B\u3044\u304B\u304C\u3067\u3059\u304B\uFF1F</p>' +
           '<a href="' + pick.url + '" class="snack-card" target="_blank" rel="noopener noreferrer sponsored">' +
-            '<span class="snack-emoji">' + pick.emoji + '</span>' +
-            '<span class="snack-name">' + pick.name + '</span>' +
-            '<span class="snack-cta">Amazon\u3067\u898B\u308B <i class="bi bi-box-arrow-up-right"></i></span>' +
+            '<div class="snack-img"><img src="' + pick.img + '" alt="' + pick.name + '" loading="lazy" onerror="this.style.display=\'none\'"></div>' +
+            '<div class="snack-detail">' +
+              '<span class="snack-name">' + pick.name + '</span>' +
+              '<span class="snack-cta"><i class="bi bi-cart3"></i> Amazon\u3067\u898B\u308B</span>' +
+            '</div>' +
           '</a>' +
           '<p class="snack-support">\u904B\u55B6\u8CBB\u7528\u306E\u3054\u5354\u529B\u3088\u308D\u3057\u304F\u304A\u9858\u3044\u3057\u307E\u3059\u3002</p>' +
         '</div>';
