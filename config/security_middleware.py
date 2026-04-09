@@ -18,7 +18,7 @@ access_logger = logging.getLogger('access')
 performance_logger = logging.getLogger('performance')
 
 # 共通: 静的ファイル等のログ除外パス
-EXCLUDED_PATHS = ('/static/', '/media/', '/favicon.ico')
+EXCLUDED_PATHS = ('/static/', '/media/', '/favicon.ico', '/vulnerability/api/')
 
 # アクセスログ除外IPアドレス（自分自身のアクセスを除外）
 _exclude_ips = os.environ.get('ACCESS_LOG_EXCLUDE_IPS', '')
