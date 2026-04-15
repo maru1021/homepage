@@ -106,8 +106,8 @@ class SeafloorDepth(models.Model):
     def zoom_to_quantize(cls, zoom):
         if zoom >= 12:
             return 0
-        if zoom >= 9:
+        if zoom >= 10:
             return 1
-        if zoom >= 6:
+        if zoom >= 8:
             return 2
         return 3

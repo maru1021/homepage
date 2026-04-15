@@ -786,8 +786,12 @@ def api_geocoding(request):
 
 
 def api_fishing_depth(request):
+    """クリック/断面プロファイル用の点単位 API。
+
+    L0→L3 の順でキャッシュ参照し、全て外れた点だけ opentopodata から L0 取得。
+    """
     from tools.models import SeafloorDepth
-    import time as _time
+    from tools import seafloor
 
     locations = request.GET.get("locations", "").strip()
     if not locations:
@@ -803,68 +807,59 @@ def api_fishing_depth(request):
     if len(items) > 900:
         return JsonResponse({"error": "too many points"}, status=400)
 
-    scale = SeafloorDepth.QUANTIZE_SCALES[0]
-    keys = []
+    pts = []
     for it in items:
         try:
             la, lo = it.split(",")
-            keys.append((int(round(float(la) * scale)), int(round(float(lo) * scale))))
+            pts.append((float(la), float(lo)))
         except ValueError:
             return JsonResponse({"error": "invalid coord format"}, status=400)
 
-    unique_keys = set(keys)
-    cached = {}
-    if unique_keys:
-        from django.db.models import Q
-        q = Q()
-        for la, lo in unique_keys:
-            q |= Q(lat_q=la, lon_q=lo)
-        for row in SeafloorDepth.objects.filter(quantize=0).filter(q).values("lat_q", "lon_q", "elevation"):
-            cached[(row["lat_q"], row["lon_q"])] = row["elevation"]
+    elevations, source = seafloor.lookup_multi_lod(pts)
+    n = len(pts)
 
-    missing = [k for k in unique_keys if k not in cached]
-    cache_hit = len(unique_keys) - len(missing)
-
-    if missing:
-        missing_list = list(missing)
+    # 未ヒットを opentopodata から L0 取得
+    missing_idxs = [i for i in range(n) if source[i] is None]
+    fetched_count = 0
+    if missing_idxs:
+        scale = SeafloorDepth.QUANTIZE_SCALES[0]
+        uniq = {}
+        for i in missing_idxs:
+            la, lo = pts[i]
+            uniq.setdefault(
+                (int(round(la * scale)), int(round(lo * scale))), []
+            ).append(i)
+        pending = list(uniq.keys())
         try:
-            for idx, i in enumerate(range(0, len(missing_list), 100)):
-                if idx > 0:
-                    _time.sleep(1.05)
-                chunk_keys = missing_list[i:i + 100]
-                chunk = "|".join(f"{la / scale:.4f},{lo / scale:.4f}" for la, lo in chunk_keys)
-                url = f"https://api.opentopodata.org/v1/gebco2020?locations={urllib.request.quote(chunk, safe=',|')}"
-                req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "maruomosquit-tools/1.0"})
-                with urllib.request.urlopen(req, timeout=15) as resp:
-                    data = json.loads(resp.read().decode())
-                results = data.get("results") or []
-                rows = []
-                for (la, lo), r in zip(chunk_keys, results):
-                    elev = r.get("elevation")
-                    cached[(la, lo)] = elev
-                    rows.append(SeafloorDepth(quantize=0, lat_q=la, lon_q=lo, elevation=elev))
-                SeafloorDepth.objects.bulk_create(rows, ignore_conflicts=True)
+            result = seafloor.fetch_and_save(pending, level=0)
         except (urllib.error.URLError, TimeoutError):
             return JsonResponse({"error": "depth fetch failed"}, status=502)
+        for (la_q, lo_q), elev in zip(pending, result["elevations"]):
+            for idx in uniq.get((la_q, lo_q), []):
+                elevations[idx] = elev
+                source[idx] = "fetched"
+        fetched_count = result["saved_sea"] + result["land"] + result["null"]
 
-    elevations = [cached.get(k) for k in keys]
-    resp = {"elevations": elevations, "cached": cache_hit, "fetched": len(missing)}
-    if len(elevations) == 1:
+    cached_count = sum(1 for s in source if isinstance(s, int))
+    resp = {
+        "elevations": elevations,
+        "cached": cached_count,
+        "fetched": fetched_count,
+    }
+    if n == 1:
         resp["elevation"] = elevations[0]
+        resp["source"] = source[0] if source[0] is not None else "miss"
     return JsonResponse(resp)
 
 
 def api_fishing_depth_bbox(request):
-    """bbox 内のキャッシュ済み水深点を、ズームに応じた LOD で返す。
+    """bbox 内のキャッシュ済み水深点をズームに応じた LOD で返す。
 
-    データ取得は管理コマンド `fetch_seafloor_depth` で事前実施する前提。
-    当該 LOD にデータが無ければ L0 の既存キャッシュから平均集約して永続化する
-    (外部 API は呼ばない)。最大 MAX_POINTS で打ち切り。
-    海(elevation < 0)のみを返す。
+    target LOD のキャッシュ → 細かい LOD から in-memory 集約 → 粗い LOD、の順で
+    フォールバック。外部 API は呼ばない (管理コマンドで事前取得する前提)。
     """
     from tools.models import SeafloorDepth
-
-    MAX_POINTS = 4000
+    from tools import seafloor
 
     bbox = request.GET.get("bbox", "").strip()
     try:
@@ -876,78 +871,34 @@ def api_fishing_depth_bbox(request):
     except ValueError:
         return JsonResponse({"error": "invalid bbox/zoom"}, status=400)
 
-    if not (-90 <= south < north <= 90 and -180 <= west < east <= 180):
+    south = max(-90.0, south)
+    north = min(90.0, north)
+    west = max(-180.0, west)
+    east = min(180.0, east)
+    if not (south < north and west < east):
         return JsonResponse({"error": "invalid bbox range"}, status=400)
-    if (north - south) > 40 or (east - west) > 40:
-        return JsonResponse({"error": "bbox too large"}, status=400)
 
     level = SeafloorDepth.zoom_to_quantize(zoom)
-    scale = SeafloorDepth.QUANTIZE_SCALES[level]
+    limit = seafloor.MAX_POINTS_PER_BBOX
 
-    import math as _math
-    s_q = int(_math.floor(south * scale))
-    n_q = int(_math.ceil(north * scale))
-    w_q = int(_math.floor(west * scale))
-    e_q = int(_math.ceil(east * scale))
+    used_level, rows, source = seafloor.collect_for_view(
+        south, west, north, east, level, limit=limit,
+    )
 
-    def fetch(lv, lv_scale):
-        la_lo = (lv_scale / scale)
-        return list(
-            SeafloorDepth.objects.filter(
-                quantize=lv,
-                lat_q__gte=int(_math.floor(s_q * la_lo)),
-                lat_q__lte=int(_math.ceil(n_q * la_lo)),
-                lon_q__gte=int(_math.floor(w_q * la_lo)),
-                lon_q__lte=int(_math.ceil(e_q * la_lo)),
-                elevation__lt=0,
-            ).values_list("lat_q", "lon_q", "elevation")[: MAX_POINTS + 1]
-        )
-
-    rows = fetch(level, scale)
-    aggregated = 0
-
-    # 粗いレベルに無ければ最細 (L0) から集約して保存 → 再読込
-    if not rows and level > 0:
-        fine_scale = SeafloorDepth.QUANTIZE_SCALES[0]
-        ratio = fine_scale // scale
-        fine_rows = SeafloorDepth.objects.filter(
-            quantize=0,
-            lat_q__gte=s_q * ratio,
-            lat_q__lte=n_q * ratio + ratio - 1,
-            lon_q__gte=w_q * ratio,
-            lon_q__lte=e_q * ratio + ratio - 1,
-            elevation__lt=0,
-        ).values_list("lat_q", "lon_q", "elevation")
-        bucket = {}
-        for la, lo, el in fine_rows:
-            key = (la // ratio, lo // ratio)
-            bucket.setdefault(key, []).append(el)
-        if bucket:
-            new_rows = [
-                SeafloorDepth(
-                    quantize=level,
-                    lat_q=k[0],
-                    lon_q=k[1],
-                    elevation=sum(v) / len(v),
-                )
-                for k, v in bucket.items()
-            ]
-            SeafloorDepth.objects.bulk_create(new_rows, ignore_conflicts=True)
-            aggregated = len(new_rows)
-            rows = fetch(level, scale)
-
-    truncated = len(rows) > MAX_POINTS
+    used_scale = SeafloorDepth.QUANTIZE_SCALES[used_level]
+    truncated = len(rows) > limit
     if truncated:
-        rows = rows[:MAX_POINTS]
+        rows = rows[:limit]
 
-    points = [[round(la / scale, 4), round(lo / scale, 4), round(el, 1)] for la, lo, el in rows]
+    points = [[round(la / used_scale, 4), round(lo / used_scale, 4), round(el, 1)] for la, lo, el in rows]
 
     return JsonResponse({
-        "level": level,
-        "scale": scale,
-        "cell_deg": round(1.0 / scale, 5),
+        "level": used_level,
+        "requested_level": level,
+        "scale": used_scale,
+        "cell_deg": round(1.0 / used_scale, 5),
         "count": len(points),
-        "aggregated": aggregated,
+        "source": source,
         "truncated": truncated,
         "points": points,
     })

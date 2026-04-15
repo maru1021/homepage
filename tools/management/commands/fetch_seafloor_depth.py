@@ -1,30 +1,21 @@
 """海底水深を opentopodata (GEBCO2020) からバッチ取得して SeafloorDepth にキャッシュする。
 
 - 指定 bbox と LOD レベルのグリッド全セルを順に取得
-- 既にキャッシュ済みのセル (同じ quantize, lat_q, lon_q) はスキップ → レジューム可
-- 陸 (elevation >= 0) は保存しない
+- 既にキャッシュ済みのセルはスキップ → レジューム可
+- 陸 (elevation >= 0) や null 結果もレコード化して再取得を防止
 - opentopodata レート制限: 100 locations/req, 1 req/sec (無料枠 1000 req/day)
-- --max-requests で 1 回の実行での上限を指定、本番転送 → 続き実行の運用を想定
 
 Usage:
     python manage.py fetch_seafloor_depth --bbox 30,128,46,150 --level 2 --max-requests 800
     python manage.py fetch_seafloor_depth --bbox 34,138,36,142 --level 1 --max-requests 800 --clear
 """
 
-import json
-import math
-import time
 import urllib.error
-import urllib.request
 
 from django.core.management.base import BaseCommand, CommandError
 
+from tools import seafloor
 from tools.models import SeafloorDepth
-
-
-API_URL = "https://api.opentopodata.org/v1/gebco2020"
-CHUNK = 100
-SLEEP_SEC = 1.05
 
 
 class Command(BaseCommand):
@@ -52,15 +43,13 @@ class Command(BaseCommand):
             deleted, _ = SeafloorDepth.objects.all().delete()
             self.stdout.write(self.style.WARNING(f"既存 SeafloorDepth を削除しました: {deleted} 行"))
 
-        s_q = int(math.floor(s * scale))
-        n_q = int(math.ceil(n * scale))
-        w_q = int(math.floor(w * scale))
-        e_q = int(math.ceil(e * scale))
+        s_q, n_q, w_q, e_q = seafloor.quantized_bounds(s, w, n, e, scale)
         total_cells = (n_q - s_q + 1) * (e_q - w_q + 1)
         self.stdout.write(
             f"bbox={s},{w},{n},{e} level={level} scale=×{scale} "
             f"(≒{1 / scale:.4f}° / 約 {111 / scale:.1f}km) "
-            f"総セル数 {total_cells:,} / 上限 {max_requests} req × {CHUNK} = 最大 {max_requests * CHUNK:,} 点"
+            f"総セル数 {total_cells:,} / 上限 {max_requests} req × {seafloor.CHUNK_SIZE} = "
+            f"最大 {max_requests * seafloor.CHUNK_SIZE:,} 点"
         )
 
         existing = set(
@@ -70,79 +59,51 @@ class Command(BaseCommand):
                 lon_q__gte=w_q, lon_q__lte=e_q,
             ).values_list("lat_q", "lon_q")
         )
-        self.stdout.write(f"キャッシュ済み: {len(existing):,} セル → 残 {total_cells - len(existing):,} セル")
+        self.stdout.write(
+            f"キャッシュ済み: {len(existing):,} セル → 残 {total_cells - len(existing):,} セル"
+        )
 
-        # 未取得セルを順に列挙
-        pending = []
-        for la_q in range(s_q, n_q + 1):
-            for lo_q in range(w_q, e_q + 1):
-                if (la_q, lo_q) not in existing:
-                    pending.append((la_q, lo_q))
+        pending = [
+            (la_q, lo_q)
+            for la_q in range(s_q, n_q + 1)
+            for lo_q in range(w_q, e_q + 1)
+            if (la_q, lo_q) not in existing
+        ]
 
         if not pending:
             self.stdout.write(self.style.SUCCESS("未取得セルなし (完了済み)"))
             return
 
-        reqs_done = 0
-        saved_sea = 0
-        skipped_land = 0
-        null_results = 0
+        def on_progress(reqs_done, saved_sea, land, null_count):
+            if reqs_done % 20 == 0 or reqs_done == max_requests:
+                self.stdout.write(
+                    f"  req {reqs_done}/{max_requests}  saved_sea={saved_sea:,}  "
+                    f"land={land:,}  null={null_count:,}"
+                )
 
         try:
-            for i in range(0, len(pending), CHUNK):
-                if reqs_done >= max_requests:
-                    self.stdout.write(self.style.WARNING(f"max-requests {max_requests} に到達 → 停止"))
-                    break
-                if reqs_done > 0:
-                    time.sleep(SLEEP_SEC)
-                chunk_keys = pending[i:i + CHUNK]
-                locs = "|".join(f"{la / scale:.4f},{lo / scale:.4f}" for la, lo in chunk_keys)
-                url = f"{API_URL}?locations={urllib.request.quote(locs, safe=',|')}"
-                req = urllib.request.Request(
-                    url,
-                    headers={
-                        "Accept": "application/json",
-                        "User-Agent": "maruomosquit-tools/1.0",
-                    },
-                )
-                try:
-                    with urllib.request.urlopen(req, timeout=30) as resp:
-                        data = json.loads(resp.read().decode())
-                except urllib.error.HTTPError as ex:
-                    self.stdout.write(self.style.ERROR(f"HTTP {ex.code}: {ex.reason} → 停止"))
-                    if ex.code == 429:
-                        self.stdout.write("レート制限に到達した可能性あり。時間を置いて再実行してください。")
-                    break
-                except (urllib.error.URLError, TimeoutError) as ex:
-                    self.stdout.write(self.style.ERROR(f"ネットワークエラー: {ex} → 停止"))
-                    break
-
-                reqs_done += 1
-                results = data.get("results") or []
-                rows = []
-                for (la, lo), r in zip(chunk_keys, results):
-                    elev = r.get("elevation")
-                    if elev is None:
-                        null_results += 1
-                        continue
-                    if elev >= 0:
-                        skipped_land += 1
-                        continue
-                    rows.append(SeafloorDepth(quantize=level, lat_q=la, lon_q=lo, elevation=elev))
-                if rows:
-                    SeafloorDepth.objects.bulk_create(rows, ignore_conflicts=True)
-                    saved_sea += len(rows)
-
-                if reqs_done % 20 == 0 or reqs_done == max_requests:
-                    self.stdout.write(
-                        f"  req {reqs_done}/{max_requests}  saved_sea={saved_sea:,}  "
-                        f"land={skipped_land:,}  null={null_results:,}"
-                    )
+            result = seafloor.fetch_and_save(
+                pending, level=level,
+                max_requests=max_requests,
+                on_progress=on_progress,
+            )
+        except urllib.error.HTTPError as ex:
+            self.stdout.write(self.style.ERROR(f"HTTP {ex.code}: {ex.reason} → 停止"))
+            if ex.code == 429:
+                self.stdout.write("レート制限に到達した可能性あり。時間を置いて再実行してください。")
+            return
+        except (urllib.error.URLError, TimeoutError) as ex:
+            self.stdout.write(self.style.ERROR(f"ネットワークエラー: {ex} → 停止"))
+            return
         except KeyboardInterrupt:
             self.stdout.write(self.style.WARNING("中断 → ここまでの結果は保存済み"))
+            return
 
-        remaining = len(pending) - reqs_done * CHUNK
+        if result["requests"] >= max_requests and len(pending) > max_requests * seafloor.CHUNK_SIZE:
+            self.stdout.write(self.style.WARNING(f"max-requests {max_requests} に到達 → 停止"))
+
+        remaining = max(0, len(pending) - result["requests"] * seafloor.CHUNK_SIZE)
         self.stdout.write(self.style.SUCCESS(
-            f"完了: requests={reqs_done}  saved_sea={saved_sea:,}  "
-            f"land={skipped_land:,}  null={null_results:,}  残 ≈ {max(0, remaining):,} セル"
+            f"完了: requests={result['requests']}  saved_sea={result['saved_sea']:,}  "
+            f"land={result['land']:,}  null={result['null']:,}  残 ≈ {remaining:,} セル"
         ))
