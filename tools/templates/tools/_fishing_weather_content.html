@@ -1,0 +1,1207 @@
+<div class="tool-page fw-page">
+    <div class="tool-breadcrumb"><a href="{% url 'tools:index' %}" class="htmx-link">便利ツール</a> &gt; 海釣り天気・潮汐・海図</div>
+    <h1>海釣り天気・潮汐・海図</h1>
+    <p class="tool-desc">GPSで現在地を取得し、海図・天気・風・波・潮位・海水温・日の出入・月齢をまとめて表示します。地図をタップすると任意の地点の情報も確認できます。</p>
+    <template id="toolHelpSrc">{% include "tools/help/_fishing_weather.html" %}</template>
+
+    <div class="fw-controls">
+        <button type="button" class="fw-btn fw-btn-primary" id="fwTrackBtn">📍 現在地を追跡</button>
+        <button type="button" class="fw-btn" id="fwSeamapBtn">🌊 海図</button>
+        <button type="button" class="fw-btn" id="fwRadarBtn">☔ 雨雲</button>
+        <button type="button" class="fw-btn" id="fwProfileBtn">📈 海底断面</button>
+        <button type="button" class="fw-btn" id="fwBathyBtn">🌊 海底地形</button>
+        <button type="button" class="fw-btn" id="fwAllDepthBtn">🗺 既知の水深(全域)</button>
+        <button type="button" class="fw-btn" id="fwSaveBtn">★ 保存</button>
+        <select class="fw-select" id="fwFavSelect"><option value="">★保存地点...</option></select>
+    </div>
+
+    <div id="fwMap" class="fw-map"></div>
+    <div class="fw-map-hint">💡 地図をクリック/タップで任意地点の情報を取得</div>
+
+    <div id="fwProfileBox" class="fw-profile-box" style="display:none">
+        <div class="fw-profile-head">
+            <div class="fw-card-label">海底断面プロファイル</div>
+            <button type="button" class="fw-btn fw-btn-sm" id="fwProfileClear">クリア</button>
+        </div>
+        <canvas id="fwProfileChart" width="900" height="180"></canvas>
+        <div class="fw-sub" id="fwProfileInfo">地図を2点以上クリックしてください</div>
+    </div>
+
+    <div id="fwBathyLegend" class="fw-bathy-legend" style="display:none">
+        <div class="fw-card-label">海底地形(クリック地点の深さを基準 ±40m)</div>
+        <div class="fw-bathy-bar"></div>
+        <div class="fw-bathy-scale">
+            <span>深 -40m</span><span>-20m</span><span>基準</span><span>+20m</span><span>浅 +40m</span>
+        </div>
+        <div class="fw-sub" id="fwBathyInfo">地図をクリックするとその周辺 約 16km × 16km の海底地形を重ねます(約 5〜6 秒)</div>
+    </div>
+
+    <div id="fwLoading" class="tool-loading" style="display:none">情報を取得中...</div>
+    <div id="fwError" class="tool-error" style="display:none"></div>
+
+    <div id="fwResult" style="display:none">
+        <div class="fw-spot-head">
+            <div class="fw-spot-name" id="fwSpotName">-</div>
+            <div class="fw-spot-coord" id="fwSpotCoord">-</div>
+        </div>
+
+        <div class="fw-grid">
+            <div class="fw-card fw-card-weather">
+                <div class="fw-card-label">天気</div>
+                <div class="fw-weather-main">
+                    <span class="fw-weather-icon" id="fwIcon">-</span>
+                    <span class="fw-weather-temp" id="fwTemp">-</span>
+                </div>
+                <div class="fw-weather-desc" id="fwDesc">-</div>
+                <div class="fw-sub">体感 <strong id="fwFeels">-</strong> / 湿度 <strong id="fwHum">-</strong></div>
+            </div>
+
+            <div class="fw-card">
+                <div class="fw-card-label">風</div>
+                <div class="fw-wind">
+                    <div class="fw-wind-arrow" id="fwWindArrow">↑</div>
+                    <div class="fw-wind-info">
+                        <div class="fw-wind-speed" id="fwWindSpeed">-</div>
+                        <div class="fw-wind-dir" id="fwWindDir">-</div>
+                    </div>
+                </div>
+                <div class="fw-sub">突風 <strong id="fwGust">-</strong></div>
+            </div>
+
+            <div class="fw-card">
+                <div class="fw-card-label">気圧</div>
+                <div class="fw-big" id="fwPressure">-</div>
+                <div class="fw-sub" id="fwPressureTrend">-</div>
+            </div>
+
+            <div class="fw-card">
+                <div class="fw-card-label">波</div>
+                <div class="fw-big" id="fwWave">-</div>
+                <div class="fw-sub">周期 <strong id="fwWavePeriod">-</strong> / 向き <strong id="fwWaveDir">-</strong></div>
+            </div>
+
+            <div class="fw-card">
+                <div class="fw-card-label">海水温</div>
+                <div class="fw-big" id="fwSst">-</div>
+                <div class="fw-sub" id="fwSstHint">-</div>
+            </div>
+
+            <div class="fw-card">
+                <div class="fw-card-label">日の出 / 日の入</div>
+                <div class="fw-sun">
+                    <div>🌅 <strong id="fwSunrise">-</strong></div>
+                    <div>🌇 <strong id="fwSunset">-</strong></div>
+                </div>
+                <div class="fw-sub">朝マズメ <strong id="fwMazumeAm">-</strong> / 夕マズメ <strong id="fwMazumePm">-</strong></div>
+            </div>
+
+            <div class="fw-card">
+                <div class="fw-card-label">月齢</div>
+                <div class="fw-moon">
+                    <span class="fw-moon-icon" id="fwMoonIcon">🌑</span>
+                    <div>
+                        <div class="fw-big-sm" id="fwMoonAge">-</div>
+                        <div class="fw-sub" id="fwMoonPhase">-</div>
+                    </div>
+                </div>
+                <div class="fw-sub">潮まわり <strong id="fwTideType">-</strong></div>
+            </div>
+
+            <div class="fw-card fw-card-tide">
+                <div class="fw-card-label">潮位 (24h)</div>
+                <canvas id="fwTideChart" width="600" height="120"></canvas>
+                <div class="fw-sub" id="fwTideExtrema">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "tools/_tool_style.html" %}
+
+<style>
+.fw-page.tool-page { max-width: 1000px; }
+
+.fw-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0; }
+.fw-btn {
+    padding: 0.5rem 0.9rem; border: 1px solid var(--color-border);
+    background: var(--color-bg-white); border-radius: var(--radius-md);
+    cursor: pointer; font-size: 0.85rem; transition: all 0.15s;
+}
+.fw-btn:hover { background: #f0f0f5; }
+.fw-btn.active { background: #6c5ce7; color: #fff; border-color: #6c5ce7; }
+.fw-btn-primary { background: #6c5ce7; color: #fff; border-color: #6c5ce7; }
+.fw-btn-primary:hover { background: #5a4bcf; }
+.fw-select {
+    padding: 0.5rem 0.7rem; border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); background: var(--color-bg-white);
+    font-size: 0.85rem; cursor: pointer;
+}
+
+.fw-map {
+    width: 100%; height: 420px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    background: #cde5f5;
+    z-index: 0;
+}
+.fw-map-hint { text-align: center; color: var(--color-text-muted); font-size: 0.8rem; padding: 0.3rem; }
+.fw-depth-tip { font-weight: 600; font-size: 0.78rem; padding: 2px 6px; background: rgba(34,40,49,0.92); color: #fff; border: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+.fw-depth-tip::before { border-top-color: rgba(34,40,49,0.92) !important; }
+.fw-profile-box {
+    margin-top: 0.6rem; padding: 0.8rem 1rem;
+    background: var(--color-bg-white); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+.fw-profile-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+.fw-profile-box canvas { width: 100%; height: auto; display: block; }
+.fw-btn-sm { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+.fw-bathy-legend {
+    margin-top: 0.6rem; padding: 0.7rem 1rem;
+    background: var(--color-bg-white); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+.fw-bathy-bar {
+    height: 14px; margin: 0.4rem 0 0.2rem;
+    border-radius: 4px;
+    background: linear-gradient(to right,
+        rgb(20,20,70) 0%, rgb(30,55,130) 10%, rgb(40,95,175) 20%,
+        rgb(70,145,210) 30%, rgb(130,195,230) 40%,
+        rgb(245,245,220) 50%,
+        rgb(200,225,150) 60%, rgb(150,200,90) 70%,
+        rgb(230,200,70) 80%, rgb(220,140,60) 90%, rgb(180,60,40) 100%);
+}
+.fw-bathy-scale { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--color-text-muted); }
+.fw-profile-vertex { background: #ff6b6b; border: 2px solid #fff; border-radius: 50%; width: 22px; height: 22px; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+.fw-gps-marker {
+    width: 18px; height: 18px;
+    background: #6c5ce7;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(108,92,231,0.4), 0 2px 6px rgba(0,0,0,0.3);
+}
+.fw-gps-accuracy {
+    stroke: #6c5ce7; fill: #6c5ce7; fill-opacity: 0.08;
+}
+
+.fw-spot-head {
+    background: linear-gradient(135deg, #6c5ce7 0%, #8478e8 100%);
+    color: #fff; padding: 0.9rem 1.1rem;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    margin-top: 1rem;
+}
+.fw-spot-name { font-size: 1.05rem; font-weight: 700; }
+.fw-spot-coord { font-size: 0.75rem; opacity: 0.85; margin-top: 0.15rem; }
+
+.fw-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.7rem;
+    background: var(--color-bg-white);
+    padding: 0.9rem;
+    border: 1px solid var(--color-border); border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.fw-card {
+    background: #fafbff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.8rem;
+}
+.fw-card-tide { grid-column: 1 / -1; }
+.fw-card-label {
+    font-size: 0.72rem; color: var(--color-text-muted);
+    font-weight: 700; letter-spacing: 0.05em; margin-bottom: 0.4rem;
+}
+.fw-big { font-size: 1.4rem; font-weight: 700; color: var(--color-dark); }
+.fw-big-sm { font-size: 1.1rem; font-weight: 700; color: var(--color-dark); }
+.fw-sub { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem; }
+.fw-sub strong { color: var(--color-dark); }
+
+.fw-weather-main { display: flex; align-items: center; gap: 0.5rem; }
+.fw-weather-icon { font-size: 2rem; }
+.fw-weather-temp { font-size: 1.8rem; font-weight: 700; color: var(--color-dark); }
+.fw-weather-desc { font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.2rem; }
+
+.fw-wind { display: flex; align-items: center; gap: 0.7rem; }
+.fw-wind-arrow {
+    font-size: 1.8rem; width: 2.2rem; height: 2.2rem;
+    display: flex; align-items: center; justify-content: center;
+    background: #eee8ff; border-radius: 50%; color: #6c5ce7;
+    transition: transform 0.3s;
+}
+.fw-wind-speed { font-size: 1.25rem; font-weight: 700; color: var(--color-dark); }
+.fw-wind-dir { font-size: 0.75rem; color: var(--color-text-muted); }
+
+.fw-sun { display: flex; gap: 0.9rem; font-size: 0.9rem; }
+.fw-sun strong { color: var(--color-dark); font-size: 1rem; }
+
+.fw-moon { display: flex; align-items: center; gap: 0.6rem; }
+.fw-moon-icon { font-size: 2rem; }
+
+#fwTideChart { width: 100%; height: 120px; display: block; margin-top: 0.3rem; }
+
+@media (max-width: 600px) {
+    .fw-map { height: 320px; }
+    .fw-grid { grid-template-columns: 1fr 1fr; padding: 0.6rem; gap: 0.5rem; }
+    .fw-card { padding: 0.6rem; }
+    .fw-big { font-size: 1.15rem; }
+    .fw-weather-temp { font-size: 1.4rem; }
+}
+</style>
+
+<script>
+(function() {
+    /* ═══ 定数 ═══ */
+    const WMO = {
+         0:['☀️','快晴'],   1:['🌤️','晴れ'],   2:['⛅','晴れ時々曇り'], 3:['☁️','くもり'],
+        45:['🌫️','霧'],    48:['🌫️','霧氷'],
+        51:['🌦️','小雨'],  53:['🌧️','雨'],    55:['🌧️','強い雨'],
+        61:['🌧️','小雨'],  63:['🌧️','雨'],    65:['🌧️','大雨'],
+        71:['🌨️','小雪'],  73:['🌨️','雪'],    75:['🌨️','大雪'],      77:['🌨️','あられ'],
+        80:['🌦️','にわか雨'], 81:['🌧️','にわか雨'], 82:['⛈️','激しいにわか雨'],
+        85:['🌨️','にわか雪'], 86:['🌨️','激しいにわか雪'],
+        95:['⛈️','雷雨'],  96:['⛈️','雷雨(ひょう)'], 99:['⛈️','激しい雷雨']
+    };
+    const DIR16 = ['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
+    const MOON_ICONS = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+    const MOON_NAMES = ['新月','三日月','上弦','十三夜','満月','十六夜','下弦','有明月'];
+    const LUNAR_DAYS = 29.53;
+    const REFETCH_METERS = 100;
+    const DEFAULT_VIEW = [35.68, 139.76, 10];
+    const FAV_KEY = 'fw_favorites_v1';
+    const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    const LEAFLET_JS  = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    const BATHY_GRID = 24;
+    const BATHY_AREA_KM = 16;
+    const BATHY_CANVAS_PX = 512;
+    const BATHY_REL_RANGE = 40; // クリック地点からの±mを色範囲の上限に
+
+    const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
+        + '?current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl'
+        + '&hourly=pressure_msl&daily=sunrise,sunset&timezone=auto&wind_speed_unit=ms&forecast_days=1';
+    const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine'
+        + '?current=wave_height,wave_direction,wave_period,sea_surface_temperature'
+        + '&hourly=sea_level_height_msl&timezone=auto&forecast_days=1';
+    const DEPTH_URL = '/tools/api/fishing-depth/';
+    const DEPTH_BBOX_URL = '/tools/api/fishing-depth-bbox/';
+
+    /* ═══ DOM / フォーマッタ ═══ */
+    const $ = (id) => document.getElementById(id);
+    const setText = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    const setShown = (id, shown) => { $(id).style.display = shown ? 'block' : 'none'; };
+    const setError = (msg) => { setText('fwError', msg); setShown('fwError', !!msg); };
+
+    const wmo = (code) => WMO[code] || ['❓','不明'];
+    const dir16 = (deg) => deg == null ? '-' : DIR16[Math.round(((deg % 360) / 22.5)) % 16];
+    const fmt = (v, unit, digits) => {
+        if (v == null || isNaN(v)) return '-';
+        return (digits != null ? Number(v).toFixed(digits) : v) + (unit || '');
+    };
+    const pad2 = (n) => ('0' + n).slice(-2);
+    const fmtTime = (iso) => {
+        if (!iso) return '-';
+        const d = new Date(iso);
+        return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    };
+    const shiftTime = (iso, minutes) =>
+        fmtTime(new Date(new Date(iso).getTime() + minutes * 60000).toISOString());
+
+    /* ═══ Leaflet 動的読み込み ═══ */
+    function ensureLeaflet(cb) {
+        if (window.L) return cb();
+        if (!document.getElementById('fwLeafletCss')) {
+            const link = document.createElement('link');
+            link.id = 'fwLeafletCss'; link.rel = 'stylesheet'; link.href = LEAFLET_CSS;
+            document.head.appendChild(link);
+        }
+        if (document.getElementById('fwLeafletJs')) {
+            const iv = setInterval(() => {
+                if (window.L) { clearInterval(iv); cb(); }
+            }, 50);
+            return;
+        }
+        const s = document.createElement('script');
+        s.id = 'fwLeafletJs'; s.src = LEAFLET_JS; s.onload = cb;
+        document.head.appendChild(s);
+    }
+
+    /* ═══ 月齢 / 潮まわり ═══ */
+    function moonInfo(date) {
+        const LP = 2551443; // 朔望周期 (秒)
+        const ref = Date.UTC(1970, 0, 7, 20, 35, 0) / 1000;
+        let phase = ((date.getTime() / 1000 - ref) % LP) / LP;
+        if (phase < 0) phase += 1;
+        return { age: phase * LUNAR_DAYS, idx: Math.round(phase * 8) % 8 };
+    }
+    function tideType(age) {
+        const a = age % LUNAR_DAYS;
+        if (a < 2 || (a > 13.5 && a < 17) || a > 27.5) return '大潮';
+        if (a < 4 || (a > 17 && a < 19.5) || a > 26)   return '中潮';
+        if (a < 6 || (a > 19.5 && a < 22))             return '小潮';
+        if (a < 7 || (a > 22 && a < 23.5))             return '長潮';
+        return '若潮';
+    }
+
+    /* ═══ 海水温ヒント ═══ */
+    function sstHint(sst) {
+        if (sst == null) return '-';
+        if (sst < 12) return '低水温 (冬の魚)';
+        if (sst < 18) return '適水温（多くの魚種が活性）';
+        if (sst < 24) return '好適水温';
+        return '高水温 (夏の魚)';
+    }
+
+    /* ═══ 気圧トレンド ═══ */
+    function pressureTrend(hourly) {
+        const hp = (hourly && hourly.pressure_msl) || [];
+        const h = new Date().getHours();
+        const p0 = hp[Math.max(0, h - 3)];
+        const p1 = hp[h];
+        if (p0 == null || p1 == null) return '-';
+        const diff = p1 - p0;
+        const label = diff > 1 ? '↑ 上昇中' : diff < -1 ? '↓ 下降中（食い渋り注意）' : '→ 安定';
+        return label + ' (3h: ' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + ')';
+    }
+
+    /* ═══ 潮位グラフ ═══ */
+    function drawTide(times, levels) {
+        const canvas = $('fwTideChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const w = canvas.clientWidth || 600;
+        const h = 120;
+        canvas.width = w * dpr; canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        const valid = [];
+        for (let i = 0; i < Math.min(times.length, 24); i++) {
+            if (levels[i] != null) valid.push({ t: i, v: levels[i] });
+        }
+        if (valid.length < 2) {
+            ctx.fillStyle = '#999'; ctx.font = '12px sans-serif';
+            ctx.fillText('潮位データなし', 10, 60);
+            return;
+        }
+
+        let min = Math.min(...valid.map((p) => p.v));
+        let max = Math.max(...valid.map((p) => p.v));
+        if (max - min < 0.2) { max += 0.1; min -= 0.1; }
+
+        const pad = 18;
+        const x = (i) => pad + (w - pad * 2) * i / 23;
+        const y = (v) => h - pad - (h - pad * 2) * (v - min) / (max - min);
+
+        // グリッド
+        ctx.strokeStyle = '#e0e0e8'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        [0, 6, 12, 18].forEach((g) => { ctx.moveTo(x(g), pad); ctx.lineTo(x(g), h - pad); });
+        ctx.stroke();
+
+        // エリア塗り
+        const grad = ctx.createLinearGradient(0, pad, 0, h - pad);
+        grad.addColorStop(0, 'rgba(108,92,231,0.4)');
+        grad.addColorStop(1, 'rgba(108,92,231,0.05)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(x(valid[0].t), h - pad);
+        valid.forEach((p) => ctx.lineTo(x(p.t), y(p.v)));
+        ctx.lineTo(x(valid[valid.length - 1].t), h - pad);
+        ctx.closePath();
+        ctx.fill();
+
+        // 折れ線
+        ctx.strokeStyle = '#6c5ce7'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        valid.forEach((p, i) => {
+            (i === 0 ? ctx.moveTo : ctx.lineTo).call(ctx, x(p.t), y(p.v));
+        });
+        ctx.stroke();
+
+        // 現在時刻
+        const nowH = new Date().getHours();
+        ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(x(nowH), pad); ctx.lineTo(x(nowH), h - pad); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ラベル
+        ctx.fillStyle = '#888'; ctx.font = '10px sans-serif';
+        [0, 6, 12, 18].forEach((hh) => ctx.fillText(hh + '時', x(hh) - 10, h - 4));
+        ctx.fillText(max.toFixed(1) + 'm', 2, pad + 4);
+        ctx.fillText(min.toFixed(1) + 'm', 2, h - pad);
+    }
+
+    function tideExtrema(levels) {
+        const highs = [];
+        const lows = [];
+        for (let i = 1; i < Math.min(levels.length - 1, 23); i++) {
+            const a = levels[i - 1];
+            const b = levels[i];
+            const c = levels[i + 1];
+            if (a == null || b == null || c == null) continue;
+            if (b > a && b > c) highs.push(i);
+            if (b < a && b < c) lows.push(i);
+        }
+        const parts = [];
+        if (highs.length) parts.push('満潮 ' + highs.map((t) => t + '時').join(', '));
+        if (lows.length)  parts.push('干潮 ' + lows.map((t) => t + '時').join(', '));
+        return parts.join(' / ') || '-';
+    }
+
+    /* ═══ レンダラ(カード単位) ═══ */
+    function renderHeader(lat, lon, label) {
+        setText('fwSpotName', label || '選択地点');
+        setText('fwSpotCoord', '緯度 ' + lat.toFixed(4) + ' / 経度 ' + lon.toFixed(4));
+    }
+    function renderWeather(cur) {
+        const w = wmo(cur.weather_code);
+        setText('fwIcon', w[0]);
+        setText('fwDesc', w[1]);
+        setText('fwTemp', fmt(cur.temperature_2m, '°C', 1));
+        setText('fwFeels', fmt(cur.apparent_temperature, '°C', 1));
+        setText('fwHum', fmt(cur.relative_humidity_2m, '%'));
+    }
+    function renderWind(cur) {
+        const wd = cur.wind_direction_10m;
+        setText('fwWindSpeed', fmt(cur.wind_speed_10m, ' m/s', 1));
+        setText('fwWindDir', wd != null ? dir16(wd) + ' (' + Math.round(wd) + '°)' : '-');
+        setText('fwGust', fmt(cur.wind_gusts_10m, ' m/s', 1));
+        $('fwWindArrow').style.transform = 'rotate(' + ((wd || 0) + 180) + 'deg)';
+    }
+    function renderPressure(cur, hourly) {
+        setText('fwPressure', fmt(cur.pressure_msl, ' hPa', 0));
+        setText('fwPressureTrend', pressureTrend(hourly));
+    }
+    function renderMarine(marine) {
+        if (!(marine && marine.current)) {
+            setText('fwWave', '海域外');
+            setText('fwWavePeriod', '-');
+            setText('fwWaveDir', '-');
+            setText('fwSst', '-');
+            setText('fwSstHint', '陸地 / データなし');
+            drawTide([], []);
+            setText('fwTideExtrema', '-');
+            return;
+        }
+        const mc = marine.current;
+        setText('fwWave', fmt(mc.wave_height, ' m', 1));
+        setText('fwWavePeriod', fmt(mc.wave_period, ' s', 1));
+        setText('fwWaveDir', dir16(mc.wave_direction));
+        setText('fwSst', fmt(mc.sea_surface_temperature, '°C', 1));
+        setText('fwSstHint', sstHint(mc.sea_surface_temperature));
+
+        const times  = (marine.hourly && marine.hourly.time) || [];
+        const levels = (marine.hourly && marine.hourly.sea_level_height_msl) || [];
+        drawTide(times, levels);
+        setText('fwTideExtrema', tideExtrema(levels));
+    }
+    function renderAstro(daily) {
+        const sunrise = daily && daily.sunrise && daily.sunrise[0];
+        const sunset  = daily && daily.sunset  && daily.sunset[0];
+        setText('fwSunrise', fmtTime(sunrise));
+        setText('fwSunset',  fmtTime(sunset));
+        setText('fwMazumeAm', sunrise ? shiftTime(sunrise, -30) + '〜' + shiftTime(sunrise,  60) : '-');
+        setText('fwMazumePm', sunset  ? shiftTime(sunset,  -60) + '〜' + shiftTime(sunset,   30) : '-');
+    }
+    function renderMoon() {
+        const m = moonInfo(new Date());
+        setText('fwMoonIcon', MOON_ICONS[m.idx]);
+        setText('fwMoonAge', '月齢 ' + m.age.toFixed(1));
+        setText('fwMoonPhase', MOON_NAMES[m.idx]);
+        setText('fwTideType', tideType(m.age));
+    }
+    function renderSpot(lat, lon, label, forecast, marine) {
+        setShown('fwResult', true);
+        renderHeader(lat, lon, label);
+        const cur = (forecast && forecast.current) || {};
+        renderWeather(cur);
+        renderWind(cur);
+        renderPressure(cur, forecast && forecast.hourly);
+        renderMarine(marine);
+        renderAstro(forecast && forecast.daily);
+        renderMoon();
+    }
+
+    /* ═══ API ═══ */
+    const fetchJson = (url) => fetch(url).then((r) => r.json());
+    const buildUrl = (base, lat, lon) => base + '&latitude=' + lat + '&longitude=' + lon;
+
+    let lastCoord = null;
+    function needRefetch(lat, lon) {
+        if (!lastCoord) return true;
+        const dx = lat - lastCoord[0];
+        const dy = lon - lastCoord[1];
+        return Math.sqrt(dx * dx + dy * dy) * 111000 > REFETCH_METERS;
+    }
+
+    async function fetchSpot(lat, lon, label) {
+        setError('');
+        setShown('fwLoading', true);
+        try {
+            const results = await Promise.allSettled([
+                fetchJson(buildUrl(FORECAST_URL, lat, lon)),
+                fetchJson(buildUrl(MARINE_URL, lat, lon))
+            ]);
+            const forecast = results[0].status === 'fulfilled' ? results[0].value : null;
+            const marine   = results[1].status === 'fulfilled' ? results[1].value : null;
+            if (!forecast) throw new Error('天気情報の取得に失敗しました');
+
+            renderSpot(lat, lon, label, forecast, marine);
+            lastCoord = [lat, lon];
+        } catch (e) {
+            setError(e.message || 'データ取得失敗');
+        } finally {
+            setShown('fwLoading', false);
+        }
+    }
+
+    /* ═══ お気に入り(localStorage) ═══ */
+    const favs = {
+        load() {
+            try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); }
+            catch (e) { return []; }
+        },
+        save(list) { localStorage.setItem(FAV_KEY, JSON.stringify(list)); },
+        add(f) { const l = favs.load(); l.push(f); favs.save(l); },
+        refreshSelect() {
+            const sel = $('fwFavSelect');
+            sel.innerHTML = '<option value="">★保存地点...</option>';
+            favs.load().forEach((f, i) => {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = f.name;
+                sel.appendChild(opt);
+            });
+        }
+    };
+
+    /* ═══ 地図レイヤー ═══ */
+    const TILE_LAYERS = {
+        base: {
+            url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            opts: { maxZoom: 19, attribution: '&copy; OpenStreetMap' }
+        },
+        seamap: {
+            url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+            opts: { maxZoom: 18, attribution: '&copy; OpenSeaMap' }
+        },
+        radarTile: {
+            opts: {
+                maxZoom: 19, minNativeZoom: 1, maxNativeZoom: 6, opacity: 0.65,
+                attribution: '&copy; <a href="https://www.rainviewer.com/">RainViewer</a>'
+            }
+        }
+    };
+    const RAINVIEWER_API = 'https://api.rainviewer.com/public/weather-maps.json';
+
+    const addBaseLayer = (map) =>
+        L.tileLayer(TILE_LAYERS.base.url, TILE_LAYERS.base.opts).addTo(map);
+    const createSeamapLayer = () =>
+        L.tileLayer(TILE_LAYERS.seamap.url, TILE_LAYERS.seamap.opts);
+
+    /* RainViewer: API から最新フレームを取得してタイルレイヤー化 */
+    function loadRadarLayer() {
+        return fetch(RAINVIEWER_API)
+            .then((r) => r.json())
+            .then((data) => {
+                const frames = (data.radar && data.radar.past) || [];
+                if (!frames.length) throw new Error('no frames');
+                const latest = frames[frames.length - 1];
+                const url = data.host + latest.path + '/256/{z}/{x}/{y}/2/1_1.png';
+                return L.tileLayer(url, TILE_LAYERS.radarTile.opts);
+            });
+    }
+
+    /* 汎用: ボタン ↔ レイヤー トグル(レイヤーは後から注入可) */
+    function bindToggle(btn, map, getLayer) {
+        btn.addEventListener('click', () => {
+            const layer = getLayer();
+            if (!layer) return;
+            if (map.hasLayer(layer)) { map.removeLayer(layer); btn.classList.remove('active'); }
+            else { layer.addTo(map); btn.classList.add('active'); }
+        });
+    }
+
+    /* ═══ GPS 追跡 ═══ */
+    function createTracker(map) {
+        let gpsMarker = null;
+        let accCircle = null;
+        let watchId = null;
+        const GPS_ICON = L.divIcon({ className: '', html: '<div class="fw-gps-marker"></div>', iconSize: [18, 18] });
+
+        function updatePosition(lat, lon, acc) {
+            if (gpsMarker) gpsMarker.setLatLng([lat, lon]);
+            else gpsMarker = L.marker([lat, lon], { icon: GPS_ICON }).addTo(map);
+            if (accCircle) map.removeLayer(accCircle);
+            accCircle = L.circle([lat, lon], { radius: acc, className: 'fw-gps-accuracy', weight: 1 }).addTo(map);
+        }
+
+        return {
+            isActive: () => watchId != null,
+            stop() {
+                if (watchId != null) navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            },
+            start(onUpdate, onError) {
+                let first = true;
+                watchId = navigator.geolocation.watchPosition((pos) => {
+                    const c = pos.coords;
+                    updatePosition(c.latitude, c.longitude, c.accuracy);
+                    if (first) { map.setView([c.latitude, c.longitude], 13); first = false; }
+                    onUpdate(c.latitude, c.longitude, c.accuracy);
+                }, (err) => { watchId = null; onError(err); },
+                { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+            }
+        };
+    }
+
+    /* ═══ UI セットアップ(責務別) ═══ */
+    async function fetchDepth(lat, lon) {
+        try {
+            const r = await fetchJson(DEPTH_URL + '?lat=' + lat.toFixed(4) + '&lon=' + lon.toFixed(4));
+            return (r && typeof r.elevation === 'number') ? r.elevation : null;
+        } catch (_) { return null; }
+    }
+
+    function setupMapClick(map, onPick, profile, bathy) {
+        let clickMarker = null;
+        const place = (lat, lon) => {
+            if (clickMarker) map.removeLayer(clickMarker);
+            clickMarker = L.marker([lat, lon]).addTo(map);
+            clickMarker.bindTooltip('水深 取得中…', { permanent: true, direction: 'top', offset: [0, -12], className: 'fw-depth-tip' }).openTooltip();
+            fetchDepth(lat, lon).then((el) => {
+                if (!clickMarker) return;
+                let text;
+                if (el === null) text = '水深 不明';
+                else if (el >= 0) text = '陸地 標高 ' + Math.round(el) + 'm';
+                else text = '水深 約 ' + Math.round(-el) + 'm';
+                clickMarker.setTooltipContent(text);
+            });
+        };
+        map.on('click', (e) => {
+            if (profile && profile.isActive()) {
+                profile.addPoint(e.latlng.lat, e.latlng.lng);
+                return;
+            }
+            place(e.latlng.lat, e.latlng.lng);
+            onPick(e.latlng.lat, e.latlng.lng, '選択地点');
+            if (bathy && bathy.isActive()) bathy.show(e.latlng.lat, e.latlng.lng);
+        });
+        return place;
+    }
+
+    /* ═══ 海底断面プロファイル ═══ */
+    const PROFILE_SAMPLES = 40;
+    const haversineKm = (a, b) => {
+        const R = 6371, toRad = (x) => x * Math.PI / 180;
+        const dLat = toRad(b[0] - a[0]), dLon = toRad(b[1] - a[1]);
+        const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(s));
+    };
+
+    function sampleAlongPolyline(points, n) {
+        if (points.length < 2) return points.slice();
+        const segs = [];
+        let total = 0;
+        for (let i = 0; i < points.length - 1; i++) {
+            const d = haversineKm(points[i], points[i + 1]);
+            segs.push(d); total += d;
+        }
+        if (total === 0) return points.slice();
+        const out = [];
+        for (let k = 0; k < n; k++) {
+            const target = (total * k) / (n - 1);
+            let acc = 0, idx = 0;
+            while (idx < segs.length - 1 && acc + segs[idx] < target) { acc += segs[idx]; idx++; }
+            const t = segs[idx] === 0 ? 0 : (target - acc) / segs[idx];
+            const a = points[idx], b = points[idx + 1];
+            out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+        }
+        return out;
+    }
+
+    async function fetchDepths(samples) {
+        const locs = samples.map((p) => p[0].toFixed(4) + ',' + p[1].toFixed(4)).join('|');
+        try {
+            const r = await fetchJson(DEPTH_URL + '?locations=' + encodeURIComponent(locs));
+            return (r && Array.isArray(r.elevations)) ? r.elevations : null;
+        } catch (_) { return null; }
+    }
+
+    function drawProfile(canvas, samples, elevs, vertexDistances) {
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const pad = { l: 44, r: 12, t: 14, b: 26 };
+        ctx.clearRect(0, 0, W, H);
+        const valid = elevs.map((e, i) => ({ e, i })).filter((x) => typeof x.e === 'number');
+        if (valid.length < 2) { ctx.fillStyle = '#888'; ctx.fillText('データ取得失敗', 10, 20); return; }
+        const depths = elevs.map((e) => (typeof e === 'number') ? e : 0);
+        let minE = Math.min(...depths), maxE = Math.max(...depths);
+        if (maxE < 0) maxE = 0;
+        if (minE === maxE) minE -= 1;
+        const dists = [0];
+        for (let i = 1; i < samples.length; i++) dists.push(dists[i - 1] + haversineKm(samples[i - 1], samples[i]));
+        const totalKm = dists[dists.length - 1];
+        const xAt = (i) => pad.l + (dists[i] / totalKm) * (W - pad.l - pad.r);
+        const yAt = (e) => pad.t + ((maxE - e) / (maxE - minE)) * (H - pad.t - pad.b);
+
+        // 海面(0m)より上=陸、下=海
+        // 海の塗り
+        ctx.beginPath();
+        ctx.moveTo(xAt(0), yAt(depths[0]));
+        for (let i = 1; i < depths.length; i++) ctx.lineTo(xAt(i), yAt(depths[i]));
+        ctx.lineTo(xAt(depths.length - 1), yAt(minE));
+        ctx.lineTo(xAt(0), yAt(minE));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(108,92,231,0.18)';
+        ctx.fill();
+
+        // 海面ライン(0m)
+        if (minE < 0 && maxE >= 0) {
+            const y0 = yAt(0);
+            ctx.strokeStyle = 'rgba(0,120,200,0.6)';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(pad.l, y0); ctx.lineTo(W - pad.r, y0); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = 'rgba(0,120,200,0.8)';
+            ctx.font = '10px sans-serif';
+            ctx.fillText('海面 0m', W - pad.r - 48, y0 - 3);
+        }
+
+        // 海底ライン
+        ctx.beginPath();
+        ctx.moveTo(xAt(0), yAt(depths[0]));
+        for (let i = 1; i < depths.length; i++) ctx.lineTo(xAt(i), yAt(depths[i]));
+        ctx.strokeStyle = '#6c5ce7'; ctx.lineWidth = 2; ctx.stroke();
+
+        // 軸
+        ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H - pad.b);
+        ctx.lineTo(W - pad.r, H - pad.b); ctx.stroke();
+
+        // 頂点マーカー(縦線 + 番号)
+        if (vertexDistances && vertexDistances.length) {
+            vertexDistances.forEach((vd, vi) => {
+                const x = pad.l + (vd / totalKm) * (W - pad.l - pad.r);
+                ctx.strokeStyle = 'rgba(255,107,107,0.7)';
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H - pad.b); ctx.stroke();
+                ctx.setLineDash([]);
+                // 番号バッジ
+                ctx.fillStyle = '#ff6b6b';
+                ctx.beginPath(); ctx.arc(x, pad.t + 2, 9, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(String(vi + 1), x, pad.t + 2);
+                ctx.textBaseline = 'alphabetic';
+                // 距離ラベル
+                ctx.fillStyle = '#555'; ctx.font = '10px sans-serif';
+                ctx.fillText(vd.toFixed(1) + 'km', x, H - pad.b + 14);
+            });
+        }
+
+        // Y ラベル
+        ctx.fillStyle = '#555'; ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        [maxE, (maxE + minE) / 2, minE].forEach((v) => {
+            const y = yAt(v);
+            const label = (v >= 0 ? '+' : '') + Math.round(v) + 'm';
+            ctx.fillText(label, pad.l - 4, y + 3);
+        });
+    }
+
+    function createProfile(map) {
+        const box = $('fwProfileBox');
+        const canvas = $('fwProfileChart');
+        const info = $('fwProfileInfo');
+        const vertexIcon = (n) => L.divIcon({ className: '', html: '<div class="fw-profile-vertex">' + n + '</div>', iconSize: [22, 22] });
+        let active = false;
+        let points = [];
+        let polyline = null;
+        let markers = [];
+
+        const clearLayers = () => {
+            if (polyline) { map.removeLayer(polyline); polyline = null; }
+            markers.forEach((m) => map.removeLayer(m));
+            markers = [];
+        };
+        const clearAll = () => {
+            clearLayers();
+            points = [];
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            info.textContent = '地図を2点以上クリックしてください';
+        };
+        const redraw = async () => {
+            clearLayers();
+            points.forEach((p, i) => markers.push(L.marker(p, { icon: vertexIcon(i + 1) }).addTo(map)));
+            if (points.length >= 2) {
+                polyline = L.polyline(points, { color: '#ff6b6b', weight: 3, opacity: 0.85 }).addTo(map);
+                info.textContent = '取得中...';
+                const samples = sampleAlongPolyline(points, PROFILE_SAMPLES);
+                const elevs = await fetchDepths(samples);
+                if (!elevs) { info.textContent = '取得失敗'; return; }
+                const vertexDists = [0];
+                for (let i = 1; i < points.length; i++) vertexDists.push(vertexDists[i - 1] + haversineKm(points[i - 1], points[i]));
+                drawProfile(canvas, samples, elevs, vertexDists);
+                const valid = elevs.filter((e) => typeof e === 'number');
+                const minD = Math.min(...valid), maxD = Math.max(...valid);
+                const km = vertexDists[vertexDists.length - 1];
+                info.textContent = `全長 ${km.toFixed(2)}km / 最深 ${Math.round(-minD)}m / 最浅 ${Math.round(-maxD)}m (${points.length}点)`;
+            } else {
+                info.textContent = '地図を2点以上クリックしてください';
+            }
+        };
+
+        return {
+            isActive: () => active,
+            toggle() {
+                active = !active;
+                const btn = $('fwProfileBtn');
+                btn.classList.toggle('active', active);
+                box.style.display = active ? 'block' : 'none';
+                if (!active) clearAll();
+                return active;
+            },
+            addPoint(lat, lon) { points.push([lat, lon]); redraw(); },
+            clear: clearAll,
+        };
+    }
+
+    function setupProfileButton(profile) {
+        $('fwProfileBtn').addEventListener('click', () => profile.toggle());
+        $('fwProfileClear').addEventListener('click', () => profile.clear());
+    }
+
+    /* ═══ 海底地形オーバーレイ ═══ */
+    function buildGrid(lat, lon, areaKm, n) {
+        const latKm = 110.574;
+        const lonKm = 111.320 * Math.cos(lat * Math.PI / 180);
+        const halfLat = (areaKm / 2) / latKm;
+        const halfLon = (areaKm / 2) / lonKm;
+        const out = [];
+        for (let j = 0; j < n; j++) {
+            for (let i = 0; i < n; i++) {
+                // 北(上)→南(下)で j=0 が北端
+                const la = lat + halfLat - (2 * halfLat * j) / (n - 1);
+                const lo = lon - halfLon + (2 * halfLon * i) / (n - 1);
+                out.push([la, lo]);
+            }
+        }
+        return { coords: out, bounds: [[lat - halfLat, lon - halfLon], [lat + halfLat, lon + halfLon]] };
+    }
+
+    // クリック地点の深さを基準に、相対差分 d = e - base [m] を
+    // -range(深い) 〜 0(同じ) 〜 +range(浅い) の 11 段階グラデーションで配色
+    const BATHY_STOPS = [
+        [-1.00, [ 20,  20,  70]],   // とても深い: 濃紺
+        [-0.80, [ 30,  55, 130]],
+        [-0.60, [ 40,  95, 175]],   // 深い: 青
+        [-0.40, [ 70, 145, 210]],
+        [-0.20, [130, 195, 230]],   // やや深い: 水色
+        [ 0.00, [245, 245, 220]],   // 基準: 薄黄白
+        [ 0.20, [200, 225, 150]],   // やや浅い: 黄緑
+        [ 0.40, [150, 200,  90]],
+        [ 0.60, [230, 200,  70]],   // 浅い: 黄
+        [ 0.80, [220, 140,  60]],
+        [ 1.00, [180,  60,  40]],   // とても浅い: 赤茶
+    ];
+
+    function bathyColorRel(e, base, range) {
+        if (typeof e !== 'number') return [200, 200, 200, 120];
+        const raw = (e - base) / range;      // [-∞, +∞]、-で深い, +で浅い
+        const t = Math.max(-1, Math.min(1, raw));
+        let a = BATHY_STOPS[0], b = BATHY_STOPS[BATHY_STOPS.length - 1];
+        for (let i = 0; i < BATHY_STOPS.length - 1; i++) {
+            if (t >= BATHY_STOPS[i][0] && t <= BATHY_STOPS[i + 1][0]) {
+                a = BATHY_STOPS[i]; b = BATHY_STOPS[i + 1]; break;
+            }
+        }
+        const span = b[0] - a[0];
+        const u = span === 0 ? 0 : (t - a[0]) / span;
+        return [
+            Math.round(a[1][0] + (b[1][0] - a[1][0]) * u),
+            Math.round(a[1][1] + (b[1][1] - a[1][1]) * u),
+            Math.round(a[1][2] + (b[1][2] - a[1][2]) * u),
+            225,
+        ];
+    }
+
+    function renderBathyCanvas(elevs, n, base, range) {
+        const px = BATHY_CANVAS_PX;
+        const cv = document.createElement('canvas');
+        cv.width = px; cv.height = px;
+        const ctx = cv.getContext('2d');
+        const img = ctx.createImageData(px, px);
+        const at = (i, j) => {
+            const e = elevs[j * n + i];
+            return (typeof e === 'number') ? e : 0;
+        };
+        for (let y = 0; y < px; y++) {
+            const gy = (y / (px - 1)) * (n - 1);
+            const j0 = Math.floor(gy), j1 = Math.min(n - 1, j0 + 1);
+            const fy = gy - j0;
+            for (let x = 0; x < px; x++) {
+                const gx = (x / (px - 1)) * (n - 1);
+                const i0 = Math.floor(gx), i1 = Math.min(n - 1, i0 + 1);
+                const fx = gx - i0;
+                // bilinear
+                const v = at(i0, j0) * (1 - fx) * (1 - fy)
+                        + at(i1, j0) * fx * (1 - fy)
+                        + at(i0, j1) * (1 - fx) * fy
+                        + at(i1, j1) * fx * fy;
+                const c = bathyColorRel(v, base, range);
+                const p = (y * px + x) * 4;
+                img.data[p] = c[0]; img.data[p + 1] = c[1]; img.data[p + 2] = c[2]; img.data[p + 3] = c[3];
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+        return cv.toDataURL('image/png');
+    }
+
+    function createBathyOverlay(map) {
+        const legend = $('fwBathyLegend');
+        let active = false;
+        const overlays = [];
+
+        const clear = () => {
+            overlays.forEach((o) => map.removeLayer(o));
+            overlays.length = 0;
+        };
+
+        return {
+            isActive: () => active,
+            toggle() {
+                active = !active;
+                $('fwBathyBtn').classList.toggle('active', active);
+                legend.style.display = active ? 'block' : 'none';
+                if (!active) clear();
+                return active;
+            },
+            async show(lat, lon) {
+                if (!active) return;
+                $('fwBathyInfo').textContent = '取得中...';
+                const { coords, bounds } = buildGrid(lat, lon, BATHY_AREA_KM, BATHY_GRID);
+                const elevs = await fetchDepths(coords);
+                if (!elevs) { $('fwBathyInfo').textContent = '取得失敗'; return; }
+                // 中心(クリック地点)の深さを基準に
+                const ci = Math.floor(BATHY_GRID / 2);
+                const centerIdx = ci * BATHY_GRID + ci;
+                let base = elevs[centerIdx];
+                if (typeof base !== 'number') {
+                    const valid0 = elevs.filter((e) => typeof e === 'number');
+                    base = valid0.length ? valid0.reduce((s, v) => s + v, 0) / valid0.length : 0;
+                }
+                const url = renderBathyCanvas(elevs, BATHY_GRID, base, BATHY_REL_RANGE);
+                overlays.push(L.imageOverlay(url, bounds, { opacity: 0.8, interactive: false }).addTo(map));
+                const valid = elevs.filter((e) => typeof e === 'number');
+                const minD = Math.min(...valid), maxD = Math.max(...valid);
+                const baseTxt = base >= 0 ? `標高 +${Math.round(base)}m` : `水深 ${Math.round(-base)}m`;
+                $('fwBathyInfo').textContent =
+                    `中心 ${lat.toFixed(3)}, ${lon.toFixed(3)} (基準 ${baseTxt}) / この範囲の最深 ${Math.round(-minD)}m / 最浅 ${Math.round(-maxD)}m`;
+            },
+        };
+    }
+
+    function setupBathyButton(bathy) {
+        $('fwBathyBtn').addEventListener('click', () => bathy.toggle());
+    }
+
+    /* ═══ 既知の水深(全域) ═══
+       地図を動かすたびに現在の bbox + zoom で API を叩き、
+       サーバが LOD を選んで返した水深セルを半透明矩形で重ねる。
+       データは他ユーザーのクリックで溜まったキャッシュのみ(外部 API を叩かない)。 */
+    const ABS_BATHY_STOPS = [
+        [   0, [245, 245, 220]],
+        [ -10, [200, 225, 230]],
+        [ -30, [140, 200, 230]],
+        [ -80, [ 80, 150, 210]],
+        [-200, [ 40,  95, 175]],
+        [-500, [ 25,  55, 130]],
+        [-2000,[ 15,  25,  80]],
+        [-6000,[  5,  10,  40]],
+    ];
+    function bathyAbsColor(e) {
+        if (e >= ABS_BATHY_STOPS[0][0]) return rgb(ABS_BATHY_STOPS[0][1]);
+        for (let i = 0; i < ABS_BATHY_STOPS.length - 1; i++) {
+            const a = ABS_BATHY_STOPS[i], b = ABS_BATHY_STOPS[i + 1];
+            if (e <= a[0] && e >= b[0]) {
+                const u = (e - a[0]) / (b[0] - a[0]);
+                return rgb([
+                    Math.round(a[1][0] + (b[1][0] - a[1][0]) * u),
+                    Math.round(a[1][1] + (b[1][1] - a[1][1]) * u),
+                    Math.round(a[1][2] + (b[1][2] - a[1][2]) * u),
+                ]);
+            }
+        }
+        return rgb(ABS_BATHY_STOPS[ABS_BATHY_STOPS.length - 1][1]);
+    }
+    const rgb = (c) => 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+
+    function createAllDepthOverlay(map) {
+        let active = false;
+        const renderer = L.canvas({ padding: 0.2 });
+        const layer = L.layerGroup();
+        let reqToken = 0;
+        let pending = null;
+
+        async function refresh() {
+            if (!active) return;
+            const b = map.getBounds();
+            const z = map.getZoom();
+            const bboxStr = [
+                b.getSouth().toFixed(4), b.getWest().toFixed(4),
+                b.getNorth().toFixed(4), b.getEast().toFixed(4),
+            ].join(',');
+            const url = DEPTH_BBOX_URL + '?bbox=' + encodeURIComponent(bboxStr) + '&zoom=' + z;
+            const my = ++reqToken;
+            let data;
+            try { data = await fetchJson(url); }
+            catch (_) { return; }
+            if (my !== reqToken || !active) return;
+            layer.clearLayers();
+            const half = (data.cell_deg || 0.004) / 2;
+            for (const p of data.points || []) {
+                const la = p[0], lo = p[1], el = p[2];
+                if (typeof el !== 'number' || el >= 0) continue;
+                L.rectangle(
+                    [[la - half, lo - half], [la + half, lo + half]],
+                    {
+                        renderer,
+                        stroke: false,
+                        fillColor: bathyAbsColor(el),
+                        fillOpacity: 0.55,
+                        interactive: false,
+                    }
+                ).addTo(layer);
+            }
+        }
+
+        function schedule() {
+            if (pending) clearTimeout(pending);
+            pending = setTimeout(refresh, 250);
+        }
+
+        return {
+            isActive: () => active,
+            toggle() {
+                active = !active;
+                $('fwAllDepthBtn').classList.toggle('active', active);
+                if (active) {
+                    layer.addTo(map);
+                    map.on('moveend zoomend', schedule);
+                    refresh();
+                } else {
+                    map.off('moveend zoomend', schedule);
+                    map.removeLayer(layer);
+                    layer.clearLayers();
+                }
+                return active;
+            },
+        };
+    }
+
+    function setupAllDepthButton(allDepth) {
+        $('fwAllDepthBtn').addEventListener('click', () => allDepth.toggle());
+    }
+
+    function setupLayerButtons(map) {
+        let seamapLayer = null;
+        bindToggle($('fwSeamapBtn'), map, () => seamapLayer || (seamapLayer = createSeamapLayer()));
+
+        const radarBtn = $('fwRadarBtn');
+        let radarLayer = null;
+        radarBtn.disabled = true;
+        loadRadarLayer()
+            .then((layer) => { radarLayer = layer; radarBtn.disabled = false; })
+            .catch(() => { radarBtn.title = '雨雲データの取得に失敗しました'; });
+        bindToggle(radarBtn, map, () => radarLayer);
+    }
+
+    function setupTrackButton(tracker) {
+        const btn = $('fwTrackBtn');
+        const LABEL_IDLE   = '📍 現在地を追跡';
+        const LABEL_ACTIVE = '📍 追跡中... (停止)';
+        const reset = () => { btn.classList.remove('active'); btn.textContent = LABEL_IDLE; };
+
+        btn.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                setError('このブラウザは位置情報に対応していません');
+                return;
+            }
+            if (tracker.isActive()) { tracker.stop(); reset(); return; }
+            btn.classList.add('active');
+            btn.textContent = LABEL_ACTIVE;
+            setShown('fwLoading', true);
+            tracker.start((lat, lon, acc) => {
+                if (needRefetch(lat, lon)) fetchSpot(lat, lon, '現在地 (精度 ±' + Math.round(acc) + 'm)');
+            }, (err) => {
+                setShown('fwLoading', false);
+                setError('位置情報の取得に失敗: ' + err.message);
+                reset();
+            });
+        });
+    }
+
+    function setupFavorites(map, setClickMarker) {
+        $('fwSaveBtn').addEventListener('click', () => {
+            const name = prompt('スポット名を入力 (例: 〇〇堤防)', '');
+            if (!name) return;
+            const c = map.getCenter();
+            favs.add({ name, lat: c.lat, lon: c.lng });
+            favs.refreshSelect();
+        });
+        $('fwFavSelect').addEventListener('change', function() {
+            if (this.value === '') return;
+            const f = favs.load()[Number(this.value)];
+            if (f) {
+                map.setView([f.lat, f.lon], 13);
+                setClickMarker(f.lat, f.lon);
+                fetchSpot(f.lat, f.lon, f.name);
+            }
+            this.value = '';
+        });
+        favs.refreshSelect();
+    }
+
+    function setupCleanup(tracker) {
+        // htmx 遷移でマップが DOM から消えたら watch 停止
+        const observer = new MutationObserver(() => {
+            if (!document.body.contains($('fwMap'))) {
+                tracker.stop();
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    /* ═══ 初期化 ═══ */
+    function init() {
+        const map = L.map('fwMap', { zoomControl: true })
+            .setView([DEFAULT_VIEW[0], DEFAULT_VIEW[1]], DEFAULT_VIEW[2]);
+        addBaseLayer(map);
+
+        const tracker = createTracker(map);
+        const profile = createProfile(map);
+        const bathy = createBathyOverlay(map);
+        const allDepth = createAllDepthOverlay(map);
+        const setClickMarker = setupMapClick(map, fetchSpot, profile, bathy);
+
+        setupLayerButtons(map);
+        setupTrackButton(tracker);
+        setupFavorites(map, setClickMarker);
+        setupProfileButton(profile);
+        setupBathyButton(bathy);
+        setupAllDepthButton(allDepth);
+        setupCleanup(tracker);
+
+        fetchSpot(DEFAULT_VIEW[0], DEFAULT_VIEW[1], '東京 (初期表示)');
+    }
+
+    ensureLeaflet(init);
+})();
+</script>

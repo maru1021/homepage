@@ -76,3 +76,38 @@ class WeatherForecast(models.Model):
 
     def __str__(self):
         return f'{self.city_name} {self.forecast_date} {self.temp_max}°/{self.temp_min}°'
+
+
+class SeafloorDepth(models.Model):
+    # 量子化レベルごとの係数: lat_q = round(lat * scale)
+    # 0 が最細。広域表示時は粗いレベルを使い、転送量と描画コストを抑える
+    QUANTIZE_SCALES = {
+        0: 250,  # 約 0.004° (≒450m) — GEBCO2020 ネイティブ。クリック取得・拡大時用
+        1: 50,   # 約 0.02°  (≒2.2km)
+        2: 10,   # 約 0.1°   (≒11km)
+        3: 2,    # 約 0.5°   (≒55km)
+    }
+
+    quantize = models.IntegerField('量子化レベル (0=最細)', default=0)
+    lat_q = models.IntegerField('緯度×scale')
+    lon_q = models.IntegerField('経度×scale')
+    elevation = models.FloatField('標高/水深 (m)', null=True, blank=True)
+    created_at = models.DateTimeField('取得日時', auto_now_add=True)
+
+    class Meta:
+        verbose_name = '海底深度キャッシュ'
+        verbose_name_plural = '海底深度キャッシュ'
+        constraints = [
+            models.UniqueConstraint(fields=['quantize', 'lat_q', 'lon_q'], name='unique_seafloor_qll'),
+        ]
+        indexes = [models.Index(fields=['quantize', 'lat_q', 'lon_q'], name='tools_seafl_qll_idx')]
+
+    @classmethod
+    def zoom_to_quantize(cls, zoom):
+        if zoom >= 12:
+            return 0
+        if zoom >= 9:
+            return 1
+        if zoom >= 6:
+            return 2
+        return 3

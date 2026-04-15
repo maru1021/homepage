@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}海釣り天気・潮汐・海図 - 無料オンラインツール{% endblock %}
+{% block meta_description %}GPSで現在地を取得し、海図・天気・気温・風・波高・潮位・海水温・日の出入・月齢をまとめて表示。海釣りのポイント選びに役立つ無料ツール。{% endblock %}
+{% block og_title %}海釣り天気・潮汐・海図 - 無料オンラインツール{% endblock %}
+{% block og_description %}GPSで現在地を表示し、海図・天気・風・波・潮位・海水温をチェック。海釣り用の統合ツール。{% endblock %}
+{% block twitter_title %}海釣り天気・潮汐・海図{% endblock %}
+{% block twitter_description %}GPSで現在地の海図・天気・潮・波・海水温を表示する海釣りツール{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"海釣り天気・潮汐・海図","description":"GPSで現在地の海図・天気・風・波・潮位・海水温・日の出入・月齢をまとめて表示する海釣り用ツール","url":"https://{{ request.get_host }}{% url 'tools:fishing_weather' %}","applicationCategory":"UtilityApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"inLanguage":"ja","breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"便利ツール","item":"https://{{ request.get_host }}{% url 'tools:index' %}"},{"@type":"ListItem","position":2,"name":"海釣り天気・潮汐・海図"}]}}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "tools/_fishing_weather_content.html" %}
+{% endblock %}

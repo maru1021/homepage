@@ -57,6 +57,7 @@ urlpatterns = [
     path("email-header/", views.email_header, name="email_header"),
     # 情報収集
     path("weather/", views.weather, name="weather"),
+    path("fishing-weather/", views.fishing_weather, name="fishing_weather"),
     path("zip-code/", views.zip_code, name="zip_code"),
     path("holidays/", views.holidays, name="holidays"),
     path("wikipedia/", views.wikipedia, name="wikipedia"),
@@ -73,4 +74,6 @@ urlpatterns = [
     path("api/wikipedia/", views.api_wikipedia, name="api_wikipedia"),
     path("api/geocoding/", views.api_geocoding, name="api_geocoding"),
     path("api/code-quiz/", views.api_code_quiz, name="api_code_quiz"),
+    path("api/fishing-depth/", views.api_fishing_depth, name="api_fishing_depth"),
+    path("api/fishing-depth-bbox/", views.api_fishing_depth_bbox, name="api_fishing_depth_bbox"),
 ]
