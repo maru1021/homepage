@@ -1,3 +1,6 @@
+from .forms import ClassificationForm, ContactForm
+from .models import Classification, Article, AffiliateLink
+from config.htmx import htmx_render
 import json
 import logging
 import urllib.request
@@ -16,9 +19,6 @@ from django.views.decorators.http import require_GET, require_POST
 
 logger = logging.getLogger(__name__)
 
-from config.htmx import htmx_render
-from .models import Classification, Article, AffiliateLink
-from .forms import ClassificationForm, ContactForm
 
 ARTICLES_PER_PAGE = 12
 RELATED_ARTICLES_COUNT = 5
@@ -58,7 +58,7 @@ def _collect_descendant_ids(classification, id_list):
 
 def article_list(request):
     """トップページ: 最新記事（ページネーション対応）"""
-    page_obj = _paginate(_published_articles().order_by("-published_at"), request)
+    page_obj = _paginate(_published_articles().filter(is_landing_page=False).order_by("-published_at"), request)
     page_num = page_obj.number
     title = f"{page_num}ページ目 - {SITE_NAME} - Web開発・プログラミング技術ブログ" if page_num > 1 else f"{SITE_NAME} - Web開発・プログラミング技術ブログ"
     return htmx_render(request, "blog/article_list.html", "blog/_article_list_content.html", {
@@ -145,7 +145,14 @@ def article_detail(request, path):
             .order_by("order")
         )
 
-    return htmx_render(request, "blog/article_detail.html", "blog/_article_detail_content.html", {
+    if article.is_landing_page:
+        full_tpl = "blog/landing_page.html"
+        partial_tpl = "blog/_landing_page_content.html"
+    else:
+        full_tpl = "blog/article_detail.html"
+        partial_tpl = "blog/_article_detail_content.html"
+
+    return htmx_render(request, full_tpl, partial_tpl, {
         "article": article,
         "ancestors": ancestors,
         "related_articles": related_articles,
@@ -283,7 +290,7 @@ def api_articles(request):
         exclude_tweeted: 1 なら投稿済み記事を除外
         ordered: 1 なら order 昇順（簡単→難しい）、省略時はランダム
     """
-    qs = Article.objects.filter(is_published=True)
+    qs = Article.objects.filter(is_published=True, is_landing_page=False)
 
     if request.GET.get("exclude_tweeted") == "1":
         qs = qs.filter(is_tweeted=False)

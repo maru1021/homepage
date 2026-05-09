@@ -5,17 +5,19 @@ from .models import Classification, Article, GlossaryTerm, UserProfile, Affiliat
 
 @admin.register(Classification)
 class ClassificationAdmin(admin.ModelAdmin):
-    list_display = ["name", "parent", "order"]
-    list_filter = ["parent"]
+    list_display = ["name", "parent", "order", "show_in_sidebar"]
+    list_filter = ["parent", "show_in_sidebar"]
+    list_editable = ["show_in_sidebar"]
     search_fields = ["name"]
     prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ["title", "short_title", "classification", "order", "is_published", "is_tweeted", "published_at"]
-    list_filter = ["classification", "is_published", "is_tweeted"]
-    list_editable = ["order", "is_tweeted"]
+    list_display = ["title", "short_title", "classification", "order",
+                    "is_published", "is_tweeted", "is_landing_page", "published_at"]
+    list_filter = ["classification", "is_published", "is_tweeted", "is_landing_page"]
+    list_editable = ["order", "is_tweeted", "is_landing_page"]
     search_fields = ["title", "content"]
     prepopulated_fields = {"slug": ("title",)}
 

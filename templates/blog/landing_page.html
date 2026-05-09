@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load blog_tags static %}
+
+{% block title %}{{ article.title }} - {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}{{ article.excerpt|default:article.title }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="https://{{ request.get_host }}{{ article.get_absolute_url }}">{% endblock %}
+
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ article.title }}{% endblock %}
+{% block og_description %}{{ article.excerpt|default:article.title }}{% endblock %}
+{% block og_image %}{% if article.thumbnail %}<meta property="og:image" content="https://{{ request.get_host }}{{ article.thumbnail.url }}">{% else %}<meta property="og:image" content="https://{{ request.get_host }}{% static 'image/og-default.png' %}">{% endif %}{% endblock %}
+
+{% block twitter_title %}{{ article.title }}{% endblock %}
+{% block twitter_description %}{{ article.excerpt|default:article.title }}{% endblock %}
+{% block twitter_image %}{% if article.thumbnail %}<meta name="twitter:image" content="https://{{ request.get_host }}{{ article.thumbnail.url }}">{% else %}<meta name="twitter:image" content="https://{{ request.get_host }}{% static 'image/og-default.png' %}">{% endif %}{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "{{ article.title }}",
+  "description": "{{ article.excerpt|default:article.title }}",
+  "url": "https://{{ request.get_host }}{{ article.get_absolute_url }}",
+  "datePublished": "{{ article.published_at|date:'c' }}",
+  "dateModified": "{{ article.updated_at|date:'c' }}",
+  {% if article.thumbnail %}"image": "https://{{ request.get_host }}{{ article.thumbnail.url }}",{% else %}"image": "https://{{ request.get_host }}{% static 'image/og-default.png' %}",{% endif %}
+  "author": {
+    "@type": "Person",
+    "name": "マルオモスキート",
+    "url": "https://x.com/maru1151157"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "{{ SITE_NAME }}",
+    "url": "https://{{ request.get_host }}/"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% include "blog/_landing_page_content.html" %}
+{% endblock %}

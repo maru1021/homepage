@@ -1,0 +1,67 @@
+{% include "blog/_breadcrumb.html" with breadcrumb_current=article.title %}
+
+{% load blog_tags %}
+<article class="landing-page">
+    <header class="landing-header">
+        <h1>{{ article.title }}</h1>
+        {% if article.excerpt %}
+        <p class="landing-subtitle">{{ article.excerpt }}</p>
+        {% endif %}
+    </header>
+    <div class="landing-content">
+        {# ランディングページはadmin入力のHTMLをそのまま表示 #}
+        {{ article.content|glossary_tooltip }}
+    </div>
+
+    {% if affiliate_links %}
+    <section class="landing-affiliate-section">
+        <h2><i class="bi bi-star-fill"></i> おすすめサービス</h2>
+        <div class="landing-affiliate-list">
+        {% for link in affiliate_links %}
+            {% if link.book_title %}
+            <a href="{{ link.url }}" class="landing-book-card" target="_blank" rel="noopener noreferrer sponsored">
+                <div class="book-cover">
+                    {% if link.image_url %}
+                    <img src="{{ link.image_url }}" alt="{{ link.book_title }}" loading="lazy">
+                    {% endif %}
+                </div>
+                <div class="book-info">
+                    <span class="book-label"><i class="bi bi-bookmark-star-fill"></i> おすすめ書籍</span>
+                    <span class="book-title">{{ link.book_title }}</span>
+                    {% if link.description %}<p class="landing-item-desc">{{ link.description }}</p>{% endif %}
+                    <span class="book-cta"><i class="bi bi-cart3"></i> Amazonで購入する</span>
+                </div>
+            </a>
+            {% else %}
+            <a href="{{ link.url }}" class="landing-service-card" target="_blank" rel="noopener noreferrer sponsored" style="--card-color: {{ link.color }}">
+                {% if link.badge %}
+                <span class="landing-badge">{{ link.badge }}</span>
+                {% endif %}
+                <div class="landing-card-header">
+                    <div class="affiliate-icon"><i class="bi {{ link.icon|default:'bi-box-arrow-up-right' }}"></i></div>
+                    <span class="affiliate-name">{{ link.service_name }}</span>
+                </div>
+                {% if link.description %}
+                <p class="landing-item-desc">{{ link.description }}</p>
+                {% endif %}
+                <span class="landing-cta">{{ link.display_text }} <i class="bi bi-arrow-right"></i></span>
+            </a>
+            {% endif %}
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</article>
+
+{% if related_articles %}
+<section class="related-articles">
+    <h2>関連記事</h2>
+    <div class="related-articles-list">
+        {% for related in related_articles %}
+        <a href="{{ related.get_absolute_url }}" class="related-article-card htmx-link">
+            <span class="related-article-title">{{ related.title }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}

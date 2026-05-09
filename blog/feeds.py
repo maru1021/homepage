@@ -14,7 +14,7 @@ class LatestArticlesFeed(Feed):
     def items(self):
         return (
             Article.objects
-            .filter(is_published=True)
+            .filter(is_published=True, is_landing_page=False)
             .select_related("classification")
             .order_by("-published_at")[:20]
         )

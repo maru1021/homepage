@@ -14,7 +14,7 @@ def sidebar_classifications(request):
     published_qs = Article.objects.filter(is_published=True)
     roots = (
         Classification.objects
-        .filter(parent=None)
+        .filter(parent=None, show_in_sidebar=True)
         .prefetch_related(
             "children__children__children",
             Prefetch("articles", queryset=published_qs),
